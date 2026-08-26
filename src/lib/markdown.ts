@@ -1,0 +1,202 @@
+import MarkdownIt from 'markdown-it';
+import type { BlockType, Page } from '../state/types';
+
+type Token = ReturnType<MarkdownIt['parse']>[number];
+
+/** Everything the custom inline rules need to resolve a page reference. */
+export interface MarkdownContext {
+  /** Lower-cased page title -> page id, scoped to the current project. */
+  byTitle: Map<string, string>;
+  byId: Map<string, Page>;
+  typeOf: (typeKey: string) => BlockType;
+}
+
+const EMPTY_CONTEXT: MarkdownContext = {
+  byTitle: new Map(),
+  byId: new Map(),
+  typeOf: () => ({ label: 'Note', code: 'NT', color: '#8a919e', fields: [] }),
+};
+
+let context: MarkdownContext = EMPTY_CONTEXT;
+
+const esc = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+/**
+ * Wikilink, live stat reference and dice, in that order. These triggers are not
+ * markdown-it terminator characters, so they are matched in a core pass over the
+ * text tokens the inline rules left behind — which also means they can never fire
+ * inside a code span, a link href or an image alt.
+ */
+const INLINE = /\[\[([^\]\n]+)\]\]|@([A-Za-z0-9'’\- ]+?)\.([a-z_]+)|\b(\d{0,3}d\d{1,3}(?:[+-]\d{1,3})?)\b/g;
+
+const md: MarkdownIt = new MarkdownIt({
+  // Author-entered HTML is never trusted: markdown-it escapes it, and every custom
+  // renderer below escapes its own interpolations, so the output needs no extra pass.
+  html: false,
+  linkify: false,
+  breaks: false,
+});
+
+/* ---------- custom tokens ---------- */
+
+md.core.ruler.push('cartographer_inline', (state) => {
+  for (const block of state.tokens) {
+    if (block.type !== 'inline' || !block.children) continue;
+    const next: Token[] = [];
+    for (const child of block.children) {
+      if (child.type !== 'text' || !INLINE.test(child.content)) {
+        INLINE.lastIndex = 0;
+        next.push(child);
+        continue;
+      }
+      INLINE.lastIndex = 0;
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = INLINE.exec(child.content))) {
+        if (m.index > last) {
+          const t = new state.Token('text', '', 0);
+          t.content = child.content.slice(last, m.index);
+          next.push(t);
+        }
+        const token = new state.Token(m[1] ? 'cg_wikilink' : m[4] ? 'cg_dice' : 'cg_stat', '', 0);
+        token.content = m[0];
+        token.meta = m[1]
+          ? { name: m[1].trim() }
+          : m[4]
+            ? { expr: m[4] }
+            : { name: (m[2] ?? '').trim(), field: m[3] ?? '' };
+        next.push(token);
+        last = m.index + m[0].length;
+      }
+      if (last < child.content.length) {
+        const t = new state.Token('text', '', 0);
+        t.content = child.content.slice(last);
+        next.push(t);
+      }
+    }
+    block.children = next;
+  }
+  return true;
+});
+
+/** `> [!gm] …` / `> [!note] …` become tagged callouts rather than plain quotes. */
+md.core.ruler.push('cartographer_callout', (state) => {
+  const tokens = state.tokens;
+  for (let i = 0; i < tokens.length; i++) {
+    const open = tokens[i];
+    if (!open || open.type !== 'blockquote_open') continue;
+    for (let j = i + 1; j < tokens.length; j++) {
+      const t = tokens[j];
+      if (!t || t.type === 'blockquote_close') break;
+      if (t.type !== 'inline') continue;
+      const m = /^\[!(\w+)\]\s*/.exec(t.content);
+      if (m) {
+        open.attrSet('data-callout', (m[1] ?? '').toUpperCase());
+        t.content = t.content.slice(m[0].length);
+        const first = t.children?.[0];
+        if (first && first.type === 'text') first.content = first.content.replace(/^\[!\w+\]\s*/, '');
+      }
+      break;
+    }
+  }
+  return true;
+});
+
+/* ---------- renderers ---------- */
+
+md.renderer.rules.cg_wikilink = (tokens, idx) => {
+  const name = String(tokens[idx]?.meta?.name ?? '');
+  const id = context.byTitle.get(name.toLowerCase());
+  const page = id ? context.byId.get(id) : undefined;
+  if (!page) {
+    // Unresolved: clicking it creates the page under that exact title.
+    return `<span class="cg-link cg-link--new" data-new="${esc(name)}">${esc(name)} +</span>`;
+  }
+  const t = context.typeOf(page.type);
+  return (
+    `<span class="cg-link" data-page="${esc(page.id)}" style="--chip:${esc(t.color)}">` +
+    `<b>${esc(t.code)}</b>${esc(page.title)}</span>`
+  );
+};
+
+md.renderer.rules.cg_stat = (tokens, idx) => {
+  const token = tokens[idx];
+  const name = String(token?.meta?.name ?? '');
+  const field = String(token?.meta?.field ?? '');
+  const id = context.byTitle.get(name.toLowerCase());
+  const page = id ? context.byId.get(id) : undefined;
+  // Unresolved references stay as literal text rather than becoming a dead chip.
+  if (!page) return esc(String(token?.content ?? ''));
+  const t = context.typeOf(page.type);
+  const value = page.fields[field];
+  return (
+    `<span class="cg-stat" data-page="${esc(page.id)}" style="--chip:${esc(t.color)}">` +
+    `<span>${esc(field)}</span><b>${esc(value == null || value === '' ? '—' : value)}</b></span>`
+  );
+};
+
+md.renderer.rules.cg_dice = (tokens, idx) => {
+  const expr = String(tokens[idx]?.meta?.expr ?? '');
+  return `<span class="cg-dice" data-dice="${esc(expr)}" title="Click to roll">${esc(expr)}</span>`;
+};
+
+md.renderer.rules.blockquote_open = (tokens, idx) => {
+  const tag = tokens[idx]?.attrGet('data-callout');
+  const cls = tag === 'GM' ? 'cg-quote cg-quote--gm' : 'cg-quote';
+  return `<div class="${cls}">` + (tag ? `<div class="cg-quote-tag">${esc(tag)}</div>` : '');
+};
+md.renderer.rules.blockquote_close = () => '</div>';
+
+md.renderer.rules.link_open = (tokens, idx, options, _env, self) => {
+  tokens[idx]?.attrSet('target', '_blank');
+  tokens[idx]?.attrSet('rel', 'noreferrer noopener');
+  return self.renderToken(tokens, idx, options);
+};
+
+md.renderer.rules.image = (tokens, idx) => {
+  const token = tokens[idx];
+  const src = token?.attrGet('src') ?? '';
+  const alt = token?.content ?? '';
+  if (!src || src === 'image-url') {
+    return `<span class="cg-image-placeholder">IMAGE PLACEHOLDER · ${esc(alt || 'drop a file')}</span>`;
+  }
+  return `<img class="cg-image" src="${esc(src)}" alt="${esc(alt)}" />`;
+};
+
+/* ---------- api ---------- */
+
+/**
+ * Render markdown to HTML. The result is inserted with `dangerouslySetInnerHTML`,
+ * which is safe here because raw HTML is disabled, link hrefs go through
+ * markdown-it's `validateLink`, and every custom renderer escapes its own values.
+ */
+export function renderMarkdown(source: string, ctx: MarkdownContext): string {
+  context = ctx;
+  try {
+    return md.render(source ?? '');
+  } finally {
+    context = EMPTY_CONTEXT;
+  }
+}
+
+/** Build the resolution context for one project. */
+export function markdownContext(
+  pages: Page[],
+  projectId: string | null,
+  typeOf: (typeKey: string) => BlockType,
+): MarkdownContext {
+  const byTitle = new Map<string, string>();
+  const byId = new Map<string, Page>();
+  for (const p of pages) {
+    if (projectId && p.projectId !== projectId) continue;
+    byTitle.set(p.title.toLowerCase(), p.id);
+    byId.set(p.id, p);
+  }
+  return { byTitle, byId, typeOf };
+}
+
+/** Strip markdown furniture down to a one-line preview for a board card. */
+export function plainSnippet(body: string, max = 96): string {
+  return body.replace(/[#*>[\]`|]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+}

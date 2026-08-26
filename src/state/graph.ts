@@ -1,23 +1,39 @@
-import type { Edge, Field, Page } from './types';
+import type { Camera, Edge, Field, Page } from './types';
 
 export const ZOOM_MIN = 0.28;
 export const ZOOM_MAX = 2.2;
 
 const WIKI = /\[\[([^\]]+)\]\]/g;
 
+/** Page ids by lower-cased title, scoped to one project so links never cross projects. */
+export function titleIndex(pages: Page[], projectId: string): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const p of pages) {
+    if (p.projectId === projectId) map.set(p.title.toLowerCase(), p.id);
+  }
+  return map;
+}
+
 /**
  * Recompute 'wiki' edges for every page from its body text, preserving
- * 'manual' and 'field' edges. Titles match case-insensitively.
+ * 'manual' and 'field' edges. Titles match case-insensitively, within a project.
  *
  * Call this after any change to a page's body or title.
  */
 export function deriveWikiEdges(pages: Page[], existing: Edge[]): Edge[] {
-  const byTitle = new Map(pages.map((p) => [p.title.toLowerCase(), p.id]));
+  const byProject = new Map<string, Map<string, string>>();
+  for (const p of pages) {
+    let m = byProject.get(p.projectId);
+    if (!m) byProject.set(p.projectId, (m = new Map()));
+    m.set(p.title.toLowerCase(), p.id);
+  }
   const kept = existing.filter((e) => e.kind !== 'wiki');
   const seen = new Set<string>();
   const wiki: Edge[] = [];
 
   for (const page of pages) {
+    const byTitle = byProject.get(page.projectId);
+    if (!byTitle) continue;
     WIKI.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = WIKI.exec(page.body))) {
@@ -45,9 +61,17 @@ export function deriveFieldEdges(page: Page, fields: Field[], existing: Edge[]):
   ];
 }
 
+/**
+ * A page carries its own layout when it is blank or has been forked off its type.
+ * Those pages are edited with the element builder rather than the type's schema.
+ */
+export function isCustomPage(page: Page | undefined): boolean {
+  return !!page && (page.type === 'blank' || Array.isArray(page.custom));
+}
+
 /** The fields a page actually renders: its own layout if it has one, else its type's. */
 export function effectiveFields(page: Page, typeFields: Field[]): Field[] {
-  return page.custom ?? typeFields;
+  return isCustomPage(page) ? page.custom ?? [] : typeFields;
 }
 
 /** Screen point -> world point. Deltas during a drag must be divided by cam.z. */
@@ -79,6 +103,21 @@ export function edgePath(a: Page, b: Page): string {
   }
   const dx = Math.max(48, Math.abs(x2 - x1) / 2);
   return `M${x1} ${y1} C${x1 + dx} ${y1},${x2 - dx} ${y2},${x2} ${y2}`;
+}
+
+/** Camera that frames every page in `pages`, or the default view when there are none. */
+export function fitCamera(pages: Page[], width: number, height: number): Camera {
+  if (!pages.length) return { x: 260, y: 180, z: 1 };
+  const minX = Math.min(...pages.map((p) => p.x)) - 60;
+  const minY = Math.min(...pages.map((p) => p.y)) - 60;
+  const maxX = Math.max(...pages.map((p) => p.x + p.w)) + 60;
+  const maxY = Math.max(...pages.map((p) => p.y + p.h)) + 60;
+  const z = Math.min(1.4, width / (maxX - minX), height / (maxY - minY));
+  return {
+    x: -minX * z + (width - (maxX - minX) * z) / 2,
+    y: -minY * z + (height - (maxY - minY) * z) / 2,
+    z,
+  };
 }
 
 /** Roll a dice expression like 2d6+3. Caps at 20 dice. */
