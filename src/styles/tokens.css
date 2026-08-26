@@ -1,0 +1,76 @@
+/* Cartographer design tokens — values are final, see design/SPEC.md */
+:root {
+  --canvas: #0b0d11;
+  --panel: #0e1116;
+  --chrome: #101419;
+  --popover: #12161c;
+  --card: #141922;
+  --card-selected: #181d26;
+  --input: #161b23;
+  --code-bg: #0a0c10;
+
+  --border: rgba(255, 255, 255, 0.09);
+  --border-soft: rgba(255, 255, 255, 0.06);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --border-hover: rgba(255, 255, 255, 0.22);
+
+  --accent: #e0a44a;
+  --accent-hover: #f0b862;
+  --accent-tint: rgba(224, 164, 74, 0.13);
+  --accent-ink: #14181f;
+  --link: #59b8c4;
+  --link-hover: #8fd8e0;
+
+  --text: #e7e9ee;
+  --text-strong: #f2f4f8;
+  --text-prose: #d3d8e0;
+  --text-mono: #c8cdd6;
+  --muted: #8a919e;
+  --dim: #6d7684;
+  --faint: #5c6472;
+  --ghost: #414856;
+  --hairline-ink: #4d5563;
+
+  --danger: #e0684f;
+  --danger-text: #c9604f;
+  --ok: #66c39a;
+  --off-board: #8a6c3a;
+
+  --font-ui: 'Space Grotesk', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+
+  --r-xs: 3px; --r-sm: 4px; --r-md: 6px; --r-lg: 7px; --r-xl: 9px; --r-2xl: 12px;
+
+  --shadow-card: 0 6px 18px rgba(0, 0, 0, 0.35);
+  --shadow-card-selected: 0 14px 34px rgba(0, 0, 0, 0.5);
+  --shadow-popover: 0 18px 50px rgba(0, 0, 0, 0.6);
+  --shadow-modal: 0 30px 90px rgba(0, 0, 0, 0.6);
+
+  --h-topbar: 46px;
+  --w-rail: 238px;
+  --w-inspector: 288px;
+  --h-section: 30px;
+  --card-w: 244px;
+  --card-h: 116px;
+  --grid-unit: 24px;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { color: var(--link-hover); }
+input, textarea, select, button { font-family: inherit; color: inherit; }
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-thumb { background: #2a313c; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes cgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes cgPop { from { opacity: 0; transform: scale(0.985); } to { opacity: 1; transform: none; } }
