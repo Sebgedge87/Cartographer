@@ -5,3 +5,7 @@ dist-ssr
 *.local
 .vite
 src-tauri/target
+
+# local secrets
+.env
+.env.local

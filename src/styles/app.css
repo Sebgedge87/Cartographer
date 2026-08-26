@@ -601,3 +601,52 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   font: 400 10px var(--font-mono); letter-spacing: .14em; color: var(--faint);
 }
 .md__empty { font: 400 12px var(--font-mono); letter-spacing: .08em; color: var(--ghost); }
+
+/* ---------- sync ---------- */
+
+.sync {
+  display: inline-flex; align-items: center; gap: 6px; flex: none;
+  padding: 5px 9px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: transparent;
+  font: 500 9.5px var(--font-mono); letter-spacing: .1em; color: var(--dim);
+  cursor: pointer;
+}
+.sync:hover { border-color: var(--border-hover); }
+.sync__dot { width: 6px; height: 6px; border-radius: 50%; background: var(--faint); flex: none; }
+.sync--synced { color: var(--ok); }
+.sync--synced .sync__dot { background: var(--ok); }
+.sync--syncing, .sync--connecting { color: var(--accent); }
+.sync--syncing .sync__dot, .sync--connecting .sync__dot {
+  background: var(--accent); animation: cgPulse 1s ease-in-out infinite;
+}
+.sync--error { color: var(--danger-text); border-color: rgba(224, 104, 79, .35); }
+.sync--error .sync__dot { background: var(--danger); }
+
+@keyframes cgPulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+
+.signin {
+  max-width: 380px; margin: 0 auto; padding: 14vh 24px 0;
+  animation: cgIn .35s ease both;
+}
+.signin__title {
+  margin: 10px 0 8px; font: 600 30px/1.1 var(--font-ui);
+  letter-spacing: -.03em; color: var(--text-strong);
+}
+.signin__desc { margin: 0 0 22px; font: 400 13.5px/1.6 var(--font-ui); color: var(--muted); }
+.signin__form { display: flex; flex-direction: column; gap: 12px; }
+.signin__label {
+  display: flex; flex-direction: column; gap: 5px;
+  font: 700 9px var(--font-mono); letter-spacing: .18em; color: var(--dim);
+}
+.signin__label .field { padding: 9px 10px; font-size: 13px; }
+.signin__error {
+  padding: 9px 11px; border-radius: var(--r-sm);
+  background: rgba(224, 104, 79, .1); border: 1px solid rgba(224, 104, 79, .35);
+  font: 400 11.5px/1.5 var(--font-ui); color: var(--danger-text);
+}
+.signin__foot { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; align-items: flex-start; }
+.linkish {
+  border: none; background: none; padding: 0; cursor: pointer;
+  font: 400 11.5px var(--font-ui); color: var(--link);
+}
+.linkish:hover { color: var(--link-hover); text-decoration: underline; }

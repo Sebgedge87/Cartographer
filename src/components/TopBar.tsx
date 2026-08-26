@@ -3,6 +3,7 @@ import type { ViewMode } from '../state/types';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { exportCurrentProject } from '../state/actions';
+import { SyncBadge } from './SyncBadge';
 
 const MODES: { key: ViewMode; label: string }[] = [
   { key: 'board', label: 'BOARD' },
@@ -82,6 +83,7 @@ export function TopBar() {
       </div>
       <button className="btn btn--sm" onClick={() => set({ cmd: { q: '', i: 0 } })}>⌘K</button>
       <button className="btn btn--sm" onClick={exportCurrentProject}>EXPORT</button>
+      <SyncBadge />
     </div>
   );
 }

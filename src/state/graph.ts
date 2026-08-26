@@ -48,6 +48,24 @@ export function deriveWikiEdges(pages: Page[], existing: Edge[]): Edge[] {
   return [...kept, ...wiki];
 }
 
+/**
+ * Rebuild the whole edge list from authored 'manual' edges plus everything derivable.
+ *
+ * Only manual edges are ever stored remotely — wiki and field edges are a pure
+ * function of page bodies and ref values, so syncing them would mean writing rows
+ * on every keystroke and re-deriving them on read anyway.
+ */
+export function deriveAllEdges(
+  pages: Page[],
+  fieldsOf: (page: Page) => Field[],
+  existing: Edge[],
+): Edge[] {
+  const manual = existing.filter((e) => e.kind === 'manual');
+  let edges = deriveWikiEdges(pages, manual);
+  for (const page of pages) edges = deriveFieldEdges(page, fieldsOf(page), edges);
+  return edges;
+}
+
 /** Recompute 'field' edges for one page from its 'ref' field values. */
 export function deriveFieldEdges(page: Page, fields: Field[], existing: Edge[]): Edge[] {
   const kept = existing.filter((e) => !(e.kind === 'field' && e.from === page.id));

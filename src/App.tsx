@@ -13,6 +13,8 @@ import { PageEditor } from './components/PageEditor';
 import { NewPageMenu } from './components/NewPageMenu';
 import { CommandPalette } from './components/CommandPalette';
 import { Toast } from './components/Toast';
+import { SignIn } from './components/SignIn';
+import { useSync } from './state/syncStore';
 
 function isTyping(target: EventTarget | null): boolean {
   const tag = (target as HTMLElement | null)?.tagName?.toLowerCase();
@@ -61,7 +63,14 @@ export function App() {
   const view = useUI((s) => s.view);
   const mode = useUI((s) => s.mode);
   const showInspector = useUI((s) => s.showInspector);
+  const syncStatus = useSync((s) => s.status);
+  const offlineChosen = useSync((s) => s.offlineChosen);
+  const setSync = useSync((s) => s.set);
   useGlobalKeys();
+
+  if (syncStatus === 'signed-out' && !offlineChosen) {
+    return <SignIn onSkip={() => setSync({ offlineChosen: true })} />;
+  }
 
   return (
     <>

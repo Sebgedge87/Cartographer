@@ -11,6 +11,10 @@ Implemented and running. Everything in `design/SPEC.md` is built: home tiles, th
 board, the pages table, the schema editor, the inspector and the page editor, plus
 JSON import/export, the command palette and undo/redo.
 
+Optional **sync** keeps one person's projects on every machine they use — see
+*Syncing across machines* below. Without it the app runs local-only, which is a
+fully supported mode, not a degraded one.
+
 Deliberately still open (they are marked `SLOT` in the schema view's Extensions
 section): the template library, print/layout export, and the Tauri desktop wrapper.
 
@@ -19,6 +23,7 @@ section): the template library, print/layout export, and the Tauri desktop wrapp
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # typecheck + production build
+npm test         # merge / conflict-resolution tests
 ```
 
 ## Reference
@@ -37,16 +42,24 @@ src/
     seed.ts             starter block types and first-run demo content
     docStore.ts         documents + undo history (zustand + zundo), autosave
     uiStore.ts          ephemeral UI state — never touched by undo or autosave
+    syncStore.ts        sync status for the UI
     actions.ts          operations that span both stores
+    sync/
+      rows.ts           document types <-> database rows
+      merge.ts          last-write-wins merge (pure, and tested)
+      engine.ts         diff, push, pull, realtime
+      auth.ts           session watching, sign in / up / out
   lib/
     markdown.ts         markdown-it + wikilink / @stat / dice rules
     text.ts             textarea primitives and caret-trigger detection
     io.ts               project file build / parse / download
-    persist.ts          IndexedDB document storage (localStorage fallback)
+    persist.ts          IndexedDB local storage (localStorage fallback)
+    supabase.ts         client, created only when credentials are configured
   components/           home, top bar, rail, board, table, schema, inspector, editor,
                         new-page menu, command palette, toast
   styles/               tokens.css (design tokens) + app.css (components)
 design/                 SPEC.md, cartographer-standalone.html
+supabase/               schema.sql — run once in the Supabase SQL editor
 ```
 
 ## How it fits together
@@ -69,9 +82,52 @@ Renaming "Vitality" to "Hull" in one project never touches another.
 `[[wikilink]]`, `@Page.field` and dice expressions — matched in a core pass over the
 text tokens, so they can never fire inside a code span or a link href.
 
-**Persistence.** The whole document is written to IndexedDB (debounced), with a
+**Persistence.** The document is written to IndexedDB (debounced), with a
 localStorage fallback. `cartographer/v1` JSON is the interchange format, so a project
-exported from the browser is exactly what a desktop build would write to disk.
+exported from the browser is exactly what a desktop build would write to disk. When
+sync is configured, that local store becomes a fast cache in front of Postgres
+rather than the only copy.
+
+## Syncing across machines
+
+Sync is off until you configure it. Setup is one service and two values.
+
+1. Create a project at [supabase.com](https://supabase.com) (the free tier is enough).
+2. Open the SQL editor and run **`supabase/schema.sql`** once. It creates the four
+   tables, the row-level-security policies and the realtime publication, and it is
+   safe to re-run.
+3. In *Project Settings → Data API*, copy the **Project URL** and the **anon /
+   publishable key**.
+4. `cp .env.example .env.local` and paste them in. Restart `npm run dev`.
+
+You will now be asked to sign in — email and password, no other provider to
+configure. Sign up once on the first machine and sign in with the same account
+everywhere else. The status chip in the top bar shows `SYNCED`; click it to force a
+round trip, double-click to sign out.
+
+**How it behaves**
+
+- The local store is still what the UI reads and writes, so dragging a card and
+  typing a body never wait on the network. Changes are diffed per row and pushed on
+  a debounce — a drag writes one page row when it settles, not one per frame.
+- Conflicts resolve **last-write-wins per row**. Two machines editing different
+  pages both survive; the same page at the same moment does not. That is the right
+  trade for one person on several machines and the wrong one for a team — see
+  *Limits*.
+- Only `manual` edges are stored. Wiki and field edges are derived from page bodies
+  and ref values, so syncing them would mean writing rows on every keystroke.
+- Signing out is not required to keep working. If the server is unreachable, or you
+  choose *Work offline on this device*, the app runs local-only and reconciles when
+  you sign in again.
+
+**Security.** Every table has row-level security keyed to `auth.uid()`, so the anon
+key in the client grants access to nothing but your own rows. That is what makes it
+safe to ship the key in a static build; the policies in `supabase/schema.sql` are
+not optional decoration.
+
+**Limits.** Two people editing the same page body at the same time will lose one of
+the edits — there is no character-level merge. Making that safe needs a CRDT and a
+different persistence layer.
 
 ## Stack
 Vite · React · TypeScript · Zustand (+ zundo for undo) · markdown-it.

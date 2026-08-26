@@ -18,6 +18,7 @@ const FALLBACK_TYPE: BlockType = { label: 'Note', code: 'NT', color: '#8a919e', 
 
 interface DocActions {
   hydrate: (doc: Doc) => void;
+  applyRemote: (doc: Doc) => void;
 
   addProject: () => string;
   renameProject: (id: string, name: string) => void;
@@ -79,6 +80,21 @@ export const useDoc = create<DocStore>()(
       ...EMPTY,
 
       hydrate: (doc) => set(doc),
+
+      /**
+       * Write a synced document in. Paused history: a change another machine made
+       * is not something the user can meaningfully undo here, and recording it
+       * would let one press throw away the merge.
+       */
+      applyRemote: (doc) => {
+        const history = useDoc.temporal.getState();
+        history.pause();
+        try {
+          set(doc);
+        } finally {
+          history.resume();
+        }
+      },
 
       /* ---------- projects ---------- */
       addProject: () => {

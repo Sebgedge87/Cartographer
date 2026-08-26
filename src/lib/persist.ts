@@ -9,7 +9,9 @@
 
 const DB_NAME = 'cartographer';
 const STORE = 'kv';
-const KEY = 'doc.v1';
+const DOC_KEY = 'doc.v1';
+/** Sync bookkeeping — which rows the server has seen, and when each changed here. */
+export const SYNC_KEY = 'sync.v1';
 const LS_FALLBACK = 'cartographer.v1';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
@@ -29,34 +31,61 @@ function openDb(): Promise<IDBDatabase> {
   return dbPromise;
 }
 
-async function idbGet<T>(): Promise<T | null> {
+async function idbGet<T>(key: string): Promise<T | null> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readonly');
-    const req = tx.objectStore(STORE).get(KEY);
+    const req = tx.objectStore(STORE).get(key);
     req.onsuccess = () => resolve((req.result as T | undefined) ?? null);
     req.onerror = () => reject(req.error);
   });
 }
 
-async function idbSet(value: unknown): Promise<void> {
+async function idbSet(key: string, value: unknown): Promise<void> {
   const db = await openDb();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE, 'readwrite');
-    tx.objectStore(STORE).put(value, KEY);
+    tx.objectStore(STORE).put(value, key);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
 
-/** Read the stored document, falling back to localStorage, then to null. */
-export async function loadDoc<T>(): Promise<T | null> {
+/** Read any local key, falling back to localStorage, then to null. */
+export async function loadKey<T>(key: string): Promise<T | null> {
   try {
-    const fromIdb = await idbGet<T>();
+    const fromIdb = await idbGet<T>(key);
     if (fromIdb) return fromIdb;
   } catch {
     /* fall through to localStorage */
   }
+  try {
+    const raw = localStorage.getItem(`cartographer.${key}`);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Write any local key. Never throws — a failed save must not take the editor down. */
+export async function saveKey(key: string, value: unknown): Promise<void> {
+  try {
+    await idbSet(key, value);
+    return;
+  } catch {
+    /* fall through to localStorage */
+  }
+  try {
+    localStorage.setItem(`cartographer.${key}`, JSON.stringify(value));
+  } catch {
+    /* storage full or blocked; the export button is the user's escape hatch */
+  }
+}
+
+/** Read the stored document, falling back to the older localStorage key. */
+export async function loadDoc<T>(): Promise<T | null> {
+  const fromKey = await loadKey<T>(DOC_KEY);
+  if (fromKey) return fromKey;
   try {
     const raw = localStorage.getItem(LS_FALLBACK);
     return raw ? (JSON.parse(raw) as T) : null;
@@ -67,17 +96,7 @@ export async function loadDoc<T>(): Promise<T | null> {
 
 /** Write the document. Never throws — a failed save must not take the editor down. */
 export async function saveDoc(value: unknown): Promise<void> {
-  try {
-    await idbSet(value);
-    return;
-  } catch {
-    /* fall through to localStorage */
-  }
-  try {
-    localStorage.setItem(LS_FALLBACK, JSON.stringify(value));
-  } catch {
-    /* storage full or blocked; the export button is the user's escape hatch */
-  }
+  await saveKey(DOC_KEY, value);
 }
 
 /** Trailing-edge debounce, so a drag writes once when it settles rather than per frame. */
