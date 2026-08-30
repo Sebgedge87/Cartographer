@@ -105,22 +105,84 @@ export function zoomAt(cam: { x: number; y: number; z: number }, px: number, py:
 }
 
 /**
- * Edge path between two cards: right edge -> left edge, or bottom -> top when the
- * target sits to the left. Control offset max(48, |dx| / 2).
+ * A stable 0..1 value from a string. Same edge, same wobble, every render — so the
+ * board looks hand-drawn rather than animated by accident.
  */
-export function edgePath(a: Page, b: Page): string {
-  let x1 = a.x + a.w;
-  let y1 = a.y + a.h / 2;
-  let x2 = b.x;
-  let y2 = b.y + b.h / 2;
-  if (x2 < x1) {
-    x1 = a.x + a.w / 2;
-    y1 = a.y + a.h;
-    x2 = b.x + b.w / 2;
-    y2 = b.y;
+function hash01(seed: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
   }
-  const dx = Math.max(48, Math.abs(x2 - x1) / 2);
-  return `M${x1} ${y1} C${x1 + dx} ${y1},${x2 - dx} ${y2},${x2} ${y2}`;
+  return ((h >>> 0) % 1000) / 1000;
+}
+
+/** Where a ray from a card's centre leaves its rectangle, nudged just clear of the border. */
+function perimeterPoint(
+  cx: number, cy: number, hw: number, hh: number, dx: number, dy: number, pad = 3,
+): { x: number; y: number } {
+  if (dx === 0 && dy === 0) return { x: cx + hw, y: cy };
+  // Scale the direction until it touches whichever edge it reaches first.
+  const scale = Math.min(
+    dx === 0 ? Infinity : hw / Math.abs(dx),
+    dy === 0 ? Infinity : hh / Math.abs(dy),
+  );
+  const len = Math.hypot(dx, dy) || 1;
+  return { x: cx + dx * scale + (dx / len) * pad, y: cy + dy * scale + (dy / len) * pad };
+}
+
+/**
+ * Edge path between two cards.
+ *
+ * Lines leave each card from the side that actually faces the other, then bow
+ * across the gap rather than turning square corners. The bow is perpendicular to
+ * the chord, scaled to distance and varied per edge from a hash of its id, and the
+ * two control points differ slightly so no two arcs are congruent — a rigid,
+ * identical S-curve on every link is what makes a board read as a flowchart.
+ *
+ * This deliberately departs from SPEC.md's right-edge -> left-edge routing.
+ */
+export function edgePath(a: Page, b: Page, seed = ''): string {
+  const ax = a.x + a.w / 2;
+  const ay = a.y + a.h / 2;
+  const bx = b.x + b.w / 2;
+  const by = b.y + b.h / 2;
+
+  const start = perimeterPoint(ax, ay, a.w / 2, a.h / 2, bx - ax, by - ay);
+  const end = perimeterPoint(bx, by, b.w / 2, b.h / 2, ax - bx, ay - by);
+
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 1) return `M${start.x} ${start.y} L${end.x} ${end.y}`;
+
+  // Perpendicular to the chord, which is the direction the curve bellies out in.
+  const px = -dy / len;
+  const py = dx / len;
+
+  const r = hash01(seed || `${a.id}:${b.id}`);
+  const direction = r < 0.5 ? 1 : -1;
+  // Curvature ramps in with distance: neighbouring cards get a gentle lean, long
+  // spans get a real arc so they still read as drawn rather than ruled. Without the
+  // ramp a short link between two stacked cards balloons into a lens shape.
+  const ramp = 0.45 + 0.55 * Math.min(1, len / 500);
+  const bow = Math.min(len * (0.11 + r * 0.07) * ramp, 132) * direction;
+
+  // Asymmetric control points: the belly sits slightly past the midpoint.
+  const c1x = start.x + dx * 0.32 + px * bow;
+  const c1y = start.y + dy * 0.32 + py * bow;
+  const c2x = start.x + dx * 0.68 + px * bow * 0.82;
+  const c2y = start.y + dy * 0.68 + py * bow * 0.82;
+
+  const n = (v: number) => Math.round(v * 10) / 10;
+  return `M${n(start.x)} ${n(start.y)} C${n(c1x)} ${n(c1y)},${n(c2x)} ${n(c2y)},${n(end.x)} ${n(end.y)}`;
+}
+
+/** Where an in-progress link should leave its source card, given the cursor. */
+export function ghostStart(a: Page, toX: number, toY: number): { x: number; y: number } {
+  const cx = a.x + a.w / 2;
+  const cy = a.y + a.h / 2;
+  return perimeterPoint(cx, cy, a.w / 2, a.h / 2, toX - cx, toY - cy);
 }
 
 /** Camera that frames every page in `pages`, or the default view when there are none. */

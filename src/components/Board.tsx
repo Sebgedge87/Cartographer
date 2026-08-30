@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { blockType, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { edgePath, fitCamera } from '../state/graph';
+import { edgePath, fitCamera, ghostStart } from '../state/graph';
 import { boardRect, createPage, registerBoard } from '../state/actions';
 import { PageCard } from './PageCard';
 
@@ -104,7 +104,7 @@ export function Board() {
           const lit = sel === e.from || sel === e.to;
           return {
             id: e.id,
-            d: edgePath(a, b),
+            d: edgePath(a, b, e.id),
             color: lit ? 'var(--accent)' : e.kind === 'field' ? '#59b8c4' : '#4a5568',
             width: lit ? 2 : 1.4,
             dash: e.kind === 'manual' ? '6 5' : undefined,
@@ -245,7 +245,10 @@ export function Board() {
             ))}
             {ghostSource && ghost && (
               <path
-                d={`M${ghostSource.x + ghostSource.w} ${ghostSource.y + ghostSource.h / 2} L${ghost.x} ${ghost.y}`}
+                d={(() => {
+                  const from = ghostStart(ghostSource, ghost.x, ghost.y);
+                  return `M${from.x} ${from.y} L${ghost.x} ${ghost.y}`;
+                })()}
                 fill="none"
                 stroke="var(--accent)"
                 strokeWidth={1.6}

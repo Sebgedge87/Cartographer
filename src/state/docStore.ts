@@ -4,7 +4,7 @@ import type {
   Area, BlockType, Doc, Edge, Field, FieldKind, Page, Project, ProjectFile, ProjectSchema,
 } from './types';
 import { deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
-import { normaliseSchema, seed, starterSchema } from './seed';
+import { emptyDoc, normaliseSchema, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
 
 export const CARD_W = 244;
@@ -368,7 +368,7 @@ export { isCustomPage };
 
 let hydrated = false;
 
-/** Load the stored document (or seed on first run) and keep writing it back. */
+/** Load the stored document, or start empty, and keep writing it back. */
 export async function bootDoc(): Promise<void> {
   if (hydrated) return;
   hydrated = true;
@@ -382,7 +382,7 @@ export async function bootDoc(): Promise<void> {
         edges: stored.edges ?? [],
         schemas: stored.schemas ?? {},
       }
-    : seed();
+    : emptyDoc();
 
   // Every project must have a schema, and every schema must have 'blank'.
   const schemas: Record<string, ProjectSchema> = {};

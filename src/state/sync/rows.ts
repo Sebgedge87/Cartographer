@@ -1,5 +1,5 @@
 import type { Area, BlockType, Doc, Edge, Field, Page, Project, ProjectSchema } from '../types';
-import { normaliseSchema, starterSchema } from '../seed';
+import { normaliseSchema, starterSchema } from '../defaults';
 
 /** The four synced tables. Edges only ever carry authored 'manual' rows. */
 export const TABLES = ['projects', 'areas', 'pages', 'edges'] as const;

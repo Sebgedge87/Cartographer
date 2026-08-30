@@ -11,6 +11,10 @@ Implemented and running. Everything in `design/SPEC.md` is built: home tiles, th
 board, the pages table, the schema editor, the inspector and the page editor, plus
 JSON import/export, the command palette and undo/redo.
 
+A first run starts **empty** — no sample content. The home screen offers a blank
+project and the JSON importer, and the first project you make brings its own block
+types from `starterSchema()`, which you then rename to suit your game.
+
 Optional **sync** keeps one person's projects on every machine they use — see
 *Syncing across machines* below. Without it the app runs local-only, which is a
 fully supported mode, not a degraded one.
@@ -39,7 +43,7 @@ src/
   state/
     types.ts            document model — also the on-disk format (cartographer/v1)
     graph.ts            link derivation, camera maths, edge paths, dice
-    seed.ts             starter block types and first-run demo content
+    defaults.ts         starter block types and the empty first-run document
     docStore.ts         documents + undo history (zustand + zundo), autosave
     uiStore.ts          ephemeral UI state — never touched by undo or autosave
     syncStore.ts        sync status for the UI
@@ -77,6 +81,13 @@ distinction is what stops deleted wikilinks from resurrecting.
 **Schemas are per project.** `schemas[projectId]` owns that project's block types and
 their order; a new project clones the starter set, an imported one keeps its own.
 Renaming "Vitality" to "Hull" in one project never touches another.
+
+**Link rendering.** Edges leave each card from the side that actually faces the
+other, then bow across the gap. The arc is perpendicular to the chord, ramps in with
+distance so neighbouring cards get a gentle lean while long spans get a real curve,
+and varies per edge from a hash of its id — so no two are congruent and the board
+reads as drawn rather than ruled. This is a deliberate departure from `SPEC.md`,
+which specifies rigid right-edge to left-edge routing.
 
 **Markdown.** markdown-it with raw HTML disabled, plus three custom inline rules —
 `[[wikilink]]`, `@Page.field` and dice expressions — matched in a core pass over the

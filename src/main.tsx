@@ -8,8 +8,8 @@ import './styles/app.css';
 
 const root = createRoot(document.getElementById('root')!);
 
-// Documents load from IndexedDB (seeded on first run) before the first paint, so the
-// board is never briefly empty.
+// Documents load from IndexedDB before the first paint, so the board never flashes
+// empty on the way in.
 void bootDoc().then(() => {
   // Local document first, then the network: the board renders from what is already
   // on this machine and reconciles once a session is known.
