@@ -1,4 +1,4 @@
-import { blockType, schemaFor, useDoc } from '../state/docStore';
+import { blockType, creatableTypeKeys, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { createPage } from '../state/actions';
 
@@ -32,9 +32,7 @@ export function NewPageMenu() {
           </span>
         </button>
 
-        {schema.typeOrder
-          .filter((key) => key !== 'blank' && schema.types[key])
-          .map((key) => {
+        {creatableTypeKeys(schema).map((key) => {
             const type = blockType(schema, key);
             const sub = type.fields.length
               ? type.fields.slice(0, 4).map((f) => f.label).join(' · ')
@@ -53,7 +51,7 @@ export function NewPageMenu() {
                 </span>
               </button>
             );
-          })}
+        })}
       </div>
     </>
   );

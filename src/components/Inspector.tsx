@@ -1,4 +1,4 @@
-import { blockType, pageFields, schemaFor, useDoc } from '../state/docStore';
+import { blockType, pageFields, schemaFor, typeOptions, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { FieldGrid } from './FieldGrid';
 
@@ -54,11 +54,9 @@ export function Inspector() {
             value={page.type}
             onChange={(e) => doc.patchPage(page.id, { type: e.target.value })}
           >
-            {schema.typeOrder
-              .filter((k) => schema.types[k])
-              .map((k) => (
-                <option key={k} value={k}>{blockType(schema, k).label}</option>
-              ))}
+            {typeOptions(schema, page.type).map((o) => (
+              <option key={o.key} value={o.key}>{o.label}</option>
+            ))}
           </select>
         </div>
         <input

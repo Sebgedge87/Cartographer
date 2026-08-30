@@ -1,5 +1,5 @@
 import type { FieldKind } from '../state/types';
-import { blockType, schemaFor, useDoc } from '../state/docStore';
+import { blockType, schemaFor, typeOptions, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 
 const FIELD_KINDS: { value: FieldKind; label: string }[] = [
@@ -34,7 +34,9 @@ export function SchemaEditor() {
         <section className="schema__section">
           <div className="schema__head">
             <span className="label">Block types</span>
-            <span className="schema__note">Scoped to this project — labels never leak between projects</span>
+            <span className="schema__note">
+              Yours to shape — rename, reorder, hide the ones you never use, delete the rest
+            </span>
             <div className="spacer" />
             <button
               className="btn btn--sm"
@@ -54,7 +56,11 @@ export function SchemaEditor() {
                 const type = blockType(schema, key);
                 const used = doc.pages.filter((p) => p.projectId === projectId && p.type === key).length;
                 return (
-                  <div key={key} className="type-card" style={{ ['--tint' as string]: type.color }}>
+                  <div
+                    key={key}
+                    className={'type-card' + (type.hidden ? ' type-card--hidden' : '')}
+                    style={{ ['--tint' as string]: type.color }}
+                  >
                     <div className="type-card__head">
                       <span className="chip chip--lg" style={{ ['--chip' as string]: type.color }}>{type.code}</span>
                       <input
@@ -63,6 +69,38 @@ export function SchemaEditor() {
                         onChange={(e) => doc.renameType(projectId, key, e.target.value)}
                       />
                       <span className="type-card__used">{used} USED</span>
+                    </div>
+
+                    <div className="type-card__tools">
+                      <button
+                        className={'btn btn--sm' + (type.hidden ? '' : ' btn--on')}
+                        title={
+                          type.hidden
+                            ? 'Hidden — not offered when making a page'
+                            : 'Offered in the new-page menu, quick buttons and / commands'
+                        }
+                        onClick={() => doc.setTypeHidden(projectId, key, !type.hidden)}
+                      >
+                        {type.hidden ? 'HIDDEN' : 'SHOWN'}
+                      </button>
+                      <span className="spacer" />
+                      <button className="icon-btn" title="Move earlier" onClick={() => doc.moveType(projectId, key, -1)}>▴</button>
+                      <button className="icon-btn" title="Move later" onClick={() => doc.moveType(projectId, key, 1)}>▾</button>
+                      <button
+                        className="icon-btn"
+                        disabled={used > 0}
+                        title={
+                          used > 0
+                            ? `${used} page${used === 1 ? '' : 's'} still use this — retype them first, or hide it instead`
+                            : 'Delete this block type'
+                        }
+                        onClick={() => {
+                          if (!doc.deleteType(projectId, key)) return;
+                          showToast(`Deleted “${type.label}”`);
+                        }}
+                      >
+                        ×
+                      </button>
                     </div>
                     <div className="type-card__body">
                       {type.fields.map((field, index) => (
@@ -126,11 +164,9 @@ export function SchemaEditor() {
                   value={area.defaultType}
                   onChange={(e) => doc.setAreaDefaultType(area.id, e.target.value)}
                 >
-                  {schema.typeOrder
-                    .filter((k) => schema.types[k])
-                    .map((k) => (
-                      <option key={k} value={k}>{blockType(schema, k).label}</option>
-                    ))}
+                  {typeOptions(schema, area.defaultType).map((o) => (
+                    <option key={o.key} value={o.key}>{o.label}</option>
+                  ))}
                 </select>
                 <span className="area-line__count">
                   {doc.pages.filter((p) => p.areaId === area.id).length} PAGES

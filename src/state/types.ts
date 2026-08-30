@@ -18,6 +18,12 @@ export interface BlockType {
   /** Hex; chips derive fills from this with 22 / 55 / 1f / 14 alpha suffixes. */
   color: string;
   fields: Field[];
+  /**
+   * Kept in the project but not offered when making a page: no new-page menu entry,
+   * no quick button, no slash command. Pages already using it keep working, so
+   * hiding is the safe way to clear away a type you do not want without losing data.
+   */
+  hidden?: boolean;
 }
 
 export interface ProjectSchema {

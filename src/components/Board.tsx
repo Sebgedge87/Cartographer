@@ -1,11 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
-import { blockType, pageFields, schemaFor, useDoc } from '../state/docStore';
+import { blockType, creatableTypeKeys, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { edgePath, fitCamera, ghostStart } from '../state/graph';
 import { boardRect, createPage, registerBoard } from '../state/actions';
 import { PageCard } from './PageCard';
-
-const QUICK_TYPES = ['creature', 'npc', 'weapon', 'item', 'rule'];
 
 /** Grid underlay: the pattern scrolls with the camera by offsetting its background. */
 function gridStyle(kind: string, x: number, y: number, z: number): React.CSSProperties {
@@ -293,7 +291,9 @@ export function Board() {
         >
           + NEW ▾
         </button>
-        {QUICK_TYPES.filter((k) => schema.types[k]).map((k) => (
+        {/* The first few types the project actually offers, in its own order — not a
+            fixed list, so renaming, hiding or reordering in the schema shows up here. */}
+        {creatableTypeKeys(schema).slice(0, 5).map((k) => (
           <button
             key={k}
             className="overlay-btn"

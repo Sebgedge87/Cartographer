@@ -48,6 +48,10 @@ interface DocActions {
 
   addType: (projectId: string) => void;
   renameType: (projectId: string, key: string, label: string) => void;
+  setTypeHidden: (projectId: string, key: string, hidden: boolean) => void;
+  moveType: (projectId: string, key: string, dir: -1 | 1) => void;
+  /** Refuses while any page still uses the type; returns false if nothing was deleted. */
+  deleteType: (projectId: string, key: string) => boolean;
   addTypeField: (projectId: string, key: string, field?: Field) => void;
   patchTypeField: (projectId: string, key: string, index: number, patch: Partial<Field>) => void;
   deleteTypeField: (projectId: string, key: string, index: number) => void;
@@ -292,6 +296,44 @@ export const useDoc = create<DocStore>()(
           }),
         ),
 
+      setTypeHidden: (projectId, key, hidden) =>
+        set((s) =>
+          withSchema(s, projectId, (schema) => {
+            const t = schema.types[key];
+            if (!t) return schema;
+            return { ...schema, types: { ...schema.types, [key]: { ...t, hidden } } };
+          }),
+        ),
+
+      /** Reorder within the visible list; 'blank' is pinned last and never moves. */
+      moveType: (projectId, key, dir) =>
+        set((s) =>
+          withSchema(s, projectId, (schema) => {
+            const order = schema.typeOrder.filter((k) => k !== 'blank');
+            const i = order.indexOf(key);
+            const j = i + dir;
+            if (i < 0 || j < 0 || j >= order.length) return schema;
+            const next = order.slice();
+            next[i] = order[j]!;
+            next[j] = key;
+            return { ...schema, typeOrder: [...next, 'blank'] };
+          }),
+        ),
+
+      deleteType: (projectId, key) => {
+        if (key === 'blank') return false;
+        const inUse = get().pages.some((p) => p.projectId === projectId && p.type === key);
+        if (inUse) return false;
+        set((s) =>
+          withSchema(s, projectId, (schema) => {
+            const types = { ...schema.types };
+            delete types[key];
+            return { types, typeOrder: schema.typeOrder.filter((k) => k !== key) };
+          }),
+        );
+        return true;
+      },
+
       addTypeField: (projectId, key, field) =>
         set((s) =>
           withSchema(s, projectId, (schema) => {
@@ -354,6 +396,24 @@ export function schemaFor(doc: Doc, projectId: string | null): ProjectSchema {
 
 export function blockType(schema: ProjectSchema, key: string): BlockType {
   return schema.types[key] ?? schema.types.note ?? FALLBACK_TYPE;
+}
+
+/**
+ * Type keys offered when creating a page: in the project's own order, minus
+ * 'blank' (which the new-page menu lists separately) and minus anything hidden.
+ */
+export function creatableTypeKeys(schema: ProjectSchema): string[] {
+  return schema.typeOrder.filter((k) => k !== 'blank' && schema.types[k] && !schema.types[k]!.hidden);
+}
+
+/**
+ * Options for a type <select>. Hidden types stay out of the list, except the one
+ * already selected — dropping that would silently retype the page.
+ */
+export function typeOptions(schema: ProjectSchema, current?: string): { key: string; label: string }[] {
+  return schema.typeOrder
+    .filter((k) => schema.types[k] && (!schema.types[k]!.hidden || k === current))
+    .map((k) => ({ key: k, label: schema.types[k]!.label }));
 }
 
 /** The fields a page renders, resolved against its project's schema. */

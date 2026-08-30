@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { Field, FieldKind } from '../state/types';
-import { blockType, isCustomPage, pageFields, schemaFor, useDoc } from '../state/docStore';
+import { blockType, creatableTypeKeys, isCustomPage, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { createPage, rollAndToast } from '../state/actions';
 import { markdownContext, renderMarkdown } from '../lib/markdown';
@@ -97,9 +97,7 @@ export function PageEditor() {
 
     // One command per block type: create the page in this area and link it, without
     // ever closing the editor.
-    const fromTypes: Option[] = schema.typeOrder
-      .filter((key) => schema.types[key])
-      .map((key) => {
+    const fromTypes: Option[] = creatableTypeKeys(schema).map((key) => {
         const type = blockType(schema, key);
         return {
           code: type.code,
@@ -123,7 +121,7 @@ export function PageEditor() {
             showToast(`Created ${type.label.toLowerCase()} “${title}” and linked it`);
           },
         };
-      });
+    });
 
     return [...builtins, ...fromTypes];
   }, [apply, doc, menu?.len, page, schema, showToast]);

@@ -650,3 +650,15 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   font: 400 11.5px var(--font-ui); color: var(--link);
 }
 .linkish:hover { color: var(--link-hover); text-decoration: underline; }
+
+/* ---------- block type management ---------- */
+
+.type-card__tools {
+  display: flex; align-items: center; gap: 4px;
+  padding: 7px 12px; border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+.type-card--hidden { opacity: .58; }
+.type-card--hidden .type-card__head { filter: saturate(.4); }
+.btn--on { border-color: rgba(102, 195, 154, .4); color: var(--ok); }
+.icon-btn:disabled { opacity: .3; cursor: not-allowed; }
+.icon-btn:disabled:hover { background: transparent; color: var(--faint); }

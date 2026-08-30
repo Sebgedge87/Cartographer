@@ -82,6 +82,20 @@ distinction is what stops deleted wikilinks from resurrecting.
 their order; a new project clones the starter set, an imported one keeps its own.
 Renaming "Vitality" to "Hull" in one project never touches another.
 
+The list is yours to shape, in the SCHEMA view. Add types, rename them, reorder
+them, and either **hide** or **delete** the ones you do not want:
+
+- **Hide** keeps the type and every page using it, but stops offering it when you
+  make a page — no new-page menu entry, no quick button on the board, no `/command`.
+  It is the safe everyday way to clear the starter types you will never use.
+- **Delete** removes it outright, and is refused while any page still uses it. The
+  button says how many, so nothing disappears from under a page you have written.
+
+Everywhere a type is offered reads the same list, so hiding or reordering shows up
+in the new-page menu, the board's quick buttons and the editor's `/` commands at
+once. A type <select> additionally keeps whichever type is already selected, even
+when hidden, so opening a page can never silently retype it.
+
 **Link rendering.** Edges leave each card from the side that actually faces the
 other, then bow across the gap. The arc is perpendicular to the chord, ramps in with
 distance so neighbouring cards get a gentle lean while long spans get a real curve,
