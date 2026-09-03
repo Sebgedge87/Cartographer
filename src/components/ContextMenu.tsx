@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { promptNew, suggestPageName } from '../state/actions';
+import { exportCurrentProject, promptNew, suggestPageName } from '../state/actions';
 
 interface Item {
   label: string;
@@ -60,6 +60,17 @@ export function ContextMenu() {
 
   let title = '';
   let items: Item[] = [];
+
+  if (kind === 'project') {
+    const project = doc.projects.find((p) => p.id === id);
+    if (!project) return null;
+    title = project.name;
+    items = [
+      { label: 'Rename', run: act(() => set({ renamingProject: true })) },
+      { label: 'Export as JSON', run: act(exportCurrentProject) },
+      { label: 'New area', run: act(() => promptNew({ kind: 'area', initial: 'New area' })) },
+    ];
+  }
 
   if (kind === 'area') {
     const area = doc.areas.find((a) => a.id === id);

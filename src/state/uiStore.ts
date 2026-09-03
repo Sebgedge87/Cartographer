@@ -17,7 +17,7 @@ export interface EditorMenu {
 
 /** What was right-clicked. `id` is the area/board/page; for canvas it is the board. */
 export interface ContextTarget {
-  kind: 'area' | 'board' | 'page' | 'canvas';
+  kind: 'project' | 'area' | 'board' | 'page' | 'canvas';
   id: string;
   /** World point under the cursor, so "new page here" lands where you clicked. */
   world?: { x: number; y: number };

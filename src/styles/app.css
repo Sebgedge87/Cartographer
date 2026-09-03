@@ -860,3 +860,40 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .prompt__hint { margin: 0 0 15px; font: 400 12.5px/1.5 var(--font-ui); color: var(--muted); }
 .prompt__input { padding: 9px 11px; font-size: 14px; }
 .prompt__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+
+/* ---------- project switcher ---------- */
+
+.switcher { position: relative; flex: 0 1 auto; min-width: 0; }
+.switcher__button {
+  display: flex; align-items: center; gap: 7px; max-width: 100%;
+  padding: 5px 9px; border-radius: var(--r-md);
+  border: 1px solid transparent; background: transparent;
+  font: 600 15px var(--font-ui); letter-spacing: -.01em;
+  color: var(--text-strong); cursor: pointer;
+}
+.switcher__button:hover, .switcher__button--open {
+  border-color: var(--border); background: rgba(255, 255, 255, .04);
+}
+.switcher__caret { flex: none; font-size: 9px; color: var(--faint); }
+
+.switcher__panel {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  top: calc(100% + 7px); z-index: 60;
+  min-width: 250px; max-width: 330px; padding: 4px;
+  background: var(--popover); border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl); box-shadow: var(--shadow-popover);
+  animation: cgPop .12s ease both;
+}
+.switcher__rule { height: 1px; margin: 4px 6px; background: var(--border); }
+.switcher__item {
+  display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+  padding: 7px 9px; border: none; background: transparent; border-radius: var(--r-sm);
+  font: 400 13px var(--font-ui); color: var(--text); cursor: pointer;
+}
+.switcher__item:hover { background: rgba(255, 255, 255, .07); }
+.switcher__item--home { color: var(--accent); }
+.switcher__dot { width: 7px; height: 7px; flex: none; border-radius: 2px; }
+.switcher__meta {
+  margin-left: auto; flex: none; padding-left: 10px;
+  font: 400 10px var(--font-mono); color: var(--ghost);
+}
