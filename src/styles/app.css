@@ -666,17 +666,20 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .icon-btn:disabled { opacity: .3; cursor: not-allowed; }
 .icon-btn:disabled:hover { background: transparent; color: var(--faint); }
 
-/* ---------- settings menu ---------- */
+/* ---------- settings fly-out ---------- */
+/* Anchored to the bottom of the rail and flying out to the right, over the board. */
 
-.settings { position: relative; flex: none; }
+.settings { position: relative; width: 100%; margin-top: 6px; }
+
 .settings__button {
-  display: inline-flex; align-items: center; gap: 7px;
+  display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%;
   padding: 6px 10px; border-radius: var(--r-sm);
   border: 1px solid var(--border); background: transparent;
   font: 500 10px var(--font-mono); letter-spacing: .12em; color: var(--muted);
   cursor: pointer;
 }
 .settings__button:hover, .settings__button--open { border-color: var(--border-hover); color: var(--text); }
+.settings__button--open { background: rgba(255, 255, 255, .04); }
 
 .settings__dot { width: 6px; height: 6px; border-radius: 50%; flex: none; background: var(--faint); }
 .settings__dot--synced { background: var(--ok); }
@@ -684,12 +687,17 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .settings__dot--error { background: var(--danger); }
 
 .settings__panel {
-  position: absolute; right: 0; top: calc(100% + 7px); z-index: 60;
+  position: absolute; left: calc(100% + 9px); bottom: 0; z-index: 60;
   width: 288px; padding: 4px 0;
   background: var(--popover); border: 1px solid var(--border-strong);
   border-radius: var(--r-xl); box-shadow: var(--shadow-popover);
-  animation: cgPop .12s ease both;
+  animation: cgFly .16s cubic-bezier(.2, .8, .3, 1) both;
 }
+@keyframes cgFly {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+
 .settings__group { padding: 9px 12px 11px; border-bottom: 1px solid var(--border); }
 .settings__group--last { border-bottom: none; }
 .settings__label {
@@ -720,4 +728,20 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   font: 400 10.5px var(--font-mono); color: var(--faint);
   overflow: hidden; text-overflow: ellipsis;
 }
+
+.topbar__gutter { width: 180px; flex: none; }
+
+/* ---------- block type management ---------- */
+
+.type-card__tools {
+  display: flex; align-items: center; gap: 4px;
+  padding: 7px 12px; border-bottom: 1px solid rgba(255, 255, 255, .05);
+}
+.type-card--hidden { opacity: .58; }
+.type-card--hidden .type-card__head { filter: saturate(.4); }
+.btn--on { border-color: rgba(102, 195, 154, .4); color: var(--ok); }
+.icon-btn:disabled { opacity: .3; cursor: not-allowed; }
+.icon-btn:disabled:hover { background: transparent; color: var(--faint); }
+
+
 

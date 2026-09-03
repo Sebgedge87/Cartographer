@@ -1,12 +1,10 @@
 import { useRef } from 'react';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { SettingsMenu } from './SettingsMenu';
 
 /**
- * A title and two controls. Navigating between board, pages and schema lives in the
- * rail; export, sync and appearance live in the settings menu; ⌘K still opens the
- * palette from the keyboard without needing a button for it.
+ * The filter and the project name, and nothing else. Settings, views, export and
+ * sync all live in the fly-out at the bottom of the rail.
  */
 export function TopBar() {
   const projectId = useUI((s) => s.projectId);
@@ -55,8 +53,8 @@ export function TopBar() {
       )}
 
       <div className="spacer" />
-
-      <SettingsMenu />
+      {/* Balances the filter on the left so the title stays optically centred. */}
+      <div className="topbar__gutter" />
     </div>
   );
 }

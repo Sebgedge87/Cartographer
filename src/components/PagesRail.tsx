@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { createArea } from '../state/actions';
+import { SettingsMenu } from './SettingsMenu';
 
 export function PagesRail() {
   const doc = useDoc();
@@ -128,7 +129,7 @@ export function PagesRail() {
         <button className="btn btn--sm btn--dashed" style={{ width: '100%' }} onClick={createArea}>
           + AREA
         </button>
-
+        <SettingsMenu />
         <div className="rail__hint">DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK</div>
       </div>
     </div>
