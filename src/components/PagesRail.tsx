@@ -69,8 +69,14 @@ export function PagesRail() {
 
   return (
     <div className="rail">
-      <div className="rail__head">
-        <span className="label">Pages</span>
+      <div className="rail__search">
+        <span className="search__glyph">⌕</span>
+        <input
+          className="field"
+          placeholder="Search"
+          value={search}
+          onChange={(e) => set({ search: e.target.value })}
+        />
         <span className="rail__count">{total}</span>
       </div>
 
