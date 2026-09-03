@@ -721,7 +721,3 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   overflow: hidden; text-overflow: ellipsis;
 }
 
-/* ---------- rail view switch ---------- */
-
-.rail__views { margin-top: 8px; width: 100%; }
-.rail__views .segment { flex: 1 1 0; padding: 5px 4px; text-align: center; }

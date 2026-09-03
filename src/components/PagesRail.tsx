@@ -1,20 +1,12 @@
 import { useMemo } from 'react';
-import type { ViewMode } from '../state/types';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { createArea } from '../state/actions';
-
-const VIEWS: { key: ViewMode; label: string }[] = [
-  { key: 'board', label: 'BOARD' },
-  { key: 'table', label: 'PAGES' },
-  { key: 'schema', label: 'SCHEMA' },
-];
 
 export function PagesRail() {
   const doc = useDoc();
   const projectId = useUI((s) => s.projectId);
   const areaId = useUI((s) => s.areaId);
-  const mode = useUI((s) => s.mode);
   const sel = useUI((s) => s.sel);
   const search = useUI((s) => s.search);
   const collapsed = useUI((s) => s.collapsed);
@@ -136,21 +128,6 @@ export function PagesRail() {
         <button className="btn btn--sm btn--dashed" style={{ width: '100%' }} onClick={createArea}>
           + AREA
         </button>
-
-        {/* Views live with the rest of the navigation rather than in the top bar,
-            which is now just a title. Also reachable from the command palette. */}
-        <div className="segments rail__views">
-          {VIEWS.map((v) => (
-            <button
-              key={v.key}
-              className="segment"
-              aria-pressed={mode === v.key}
-              onClick={() => set({ mode: v.key })}
-            >
-              {v.label}
-            </button>
-          ))}
-        </div>
 
         <div className="rail__hint">DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK</div>
       </div>

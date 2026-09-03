@@ -42,7 +42,6 @@ interface UIState {
 
   menu: EditorMenu | null;
   newMenu: NewMenu | null;
-  cmd: { q: string; i: number } | null;
   toast: string | null;
 
   search: string;
@@ -88,7 +87,6 @@ export const useUI = create<UIStore>()((set) => ({
   ghost: null,
   menu: null,
   newMenu: null,
-  cmd: null,
   toast: null,
   search: '',
   collapsed: {},

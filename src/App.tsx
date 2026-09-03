@@ -11,7 +11,6 @@ import { SchemaEditor } from './components/SchemaEditor';
 import { Inspector } from './components/Inspector';
 import { PageEditor } from './components/PageEditor';
 import { NewPageMenu } from './components/NewPageMenu';
-import { CommandPalette } from './components/CommandPalette';
 import { Toast } from './components/Toast';
 import { SignIn } from './components/SignIn';
 import { useSync } from './state/syncStore';
@@ -28,11 +27,6 @@ function useGlobalKeys() {
       const ui = useUI.getState();
       const mod = e.metaKey || e.ctrlKey;
 
-      if (mod && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        ui.set({ cmd: { q: '', i: 0 } });
-        return;
-      }
       if (mod && e.key.toLowerCase() === 'z') {
         if (isTyping(e.target)) return;
         e.preventDefault();
@@ -43,7 +37,6 @@ function useGlobalKeys() {
       }
       if (e.key === 'Escape') {
         if (ui.newMenu) return ui.set({ newMenu: null });
-        if (ui.cmd) return ui.set({ cmd: null });
         if (ui.menu) return ui.set({ menu: null });
         if (ui.editing) return ui.closeEditor();
         return;
@@ -92,7 +85,6 @@ export function App() {
           <NewPageMenu />
         </div>
       )}
-      <CommandPalette />
       <Toast />
     </>
   );

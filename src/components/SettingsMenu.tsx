@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import type { ViewMode } from '../state/types';
 import { useUI, type Density, type GridStyle } from '../state/uiStore';
 import { useSync } from '../state/syncStore';
 import { exportCurrentProject } from '../state/actions';
@@ -16,6 +17,12 @@ const DENSITIES: { value: Density; label: string }[] = [
   { value: 'comfortable', label: 'ROOMY' },
 ];
 
+const VIEWS: { value: ViewMode; label: string }[] = [
+  { value: 'board', label: 'BOARD' },
+  { value: 'table', label: 'PAGES' },
+  { value: 'schema', label: 'SCHEMA' },
+];
+
 const SYNC_LABEL: Record<string, string> = {
   off: 'Local only — no sync configured',
   'signed-out': 'Local only — not signed in',
@@ -31,6 +38,7 @@ const SYNC_LABEL: Record<string, string> = {
  */
 export function SettingsMenu() {
   const [open, setOpen] = useState(false);
+  const mode = useUI((s) => s.mode);
   const grid = useUI((s) => s.grid);
   const density = useUI((s) => s.density);
   const showInspector = useUI((s) => s.showInspector);
@@ -44,11 +52,20 @@ export function SettingsMenu() {
 
   const wrap = useRef<HTMLDivElement>(null);
 
+  // Close on Escape or on a click outside. A full-screen catcher would sit over the
+  // button that opened the panel, leaving it unable to close itself.
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    const onDown = (e: PointerEvent) => {
+      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
+    };
     window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    document.addEventListener('pointerdown', onDown);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('pointerdown', onDown);
+    };
   }, [open]);
 
   const close = () => setOpen(false);
@@ -66,9 +83,27 @@ export function SettingsMenu() {
       </button>
 
       {open && (
-        <>
-          <div className="catcher" onClick={close} />
-          <div className="settings__panel">
+        <div className="settings__panel">
+
+            <div className="settings__group">
+              <div className="settings__label">View</div>
+              <div className="settings__row">
+                <span>Showing</span>
+                <div className="segments">
+                  {VIEWS.map((v) => (
+                    <button
+                      key={v.value}
+                      className="segment"
+                      aria-pressed={mode === v.value}
+                      // Switching view is navigation, not a setting — get out of the way.
+                      onClick={() => { close(); set({ mode: v.value }); }}
+                    >
+                      {v.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
 
             <div className="settings__group">
               <div className="settings__label">Board</div>
@@ -164,8 +199,7 @@ export function SettingsMenu() {
               )}
             </div>
 
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
