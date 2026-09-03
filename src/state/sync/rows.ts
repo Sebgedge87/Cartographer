@@ -1,8 +1,8 @@
-import type { Area, BlockType, Doc, Edge, Field, Page, Project, ProjectSchema } from '../types';
+import type { Area, BlockType, Board, Doc, Edge, Field, Page, Project, ProjectSchema } from '../types';
 import { normaliseSchema, starterSchema } from '../defaults';
 
 /** The four synced tables. Edges only ever carry authored 'manual' rows. */
-export const TABLES = ['projects', 'areas', 'pages', 'edges'] as const;
+export const TABLES = ['projects', 'areas', 'boards', 'pages', 'edges'] as const;
 export type Table = (typeof TABLES)[number];
 
 export interface ProjectRow {
@@ -12,8 +12,11 @@ export interface ProjectRow {
 export interface AreaRow {
   id: string; project_id: string; name: string; default_type: string; updated: number;
 }
+export interface BoardRow {
+  id: string; project_id: string; area_id: string; name: string; updated: number;
+}
 export interface PageRow {
-  id: string; project_id: string; area_id: string; type: string; title: string;
+  id: string; project_id: string; board_id: string; type: string; title: string;
   x: number; y: number; w: number; h: number;
   fields: Record<string, string>; custom: Field[] | null; cols: number;
   body: string; updated: number;
@@ -37,9 +40,13 @@ export function areaRow(a: Area, updated: number): AreaRow {
   return { id: a.id, project_id: a.projectId, name: a.name, default_type: a.defaultType, updated };
 }
 
+export function boardRow(b: Board, updated: number): BoardRow {
+  return { id: b.id, project_id: b.projectId, area_id: b.areaId, name: b.name, updated };
+}
+
 export function pageRow(p: Page, updated: number): PageRow {
   return {
-    id: p.id, project_id: p.projectId, area_id: p.areaId, type: p.type, title: p.title,
+    id: p.id, project_id: p.projectId, board_id: p.boardId, type: p.type, title: p.title,
     x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.w), h: Math.round(p.h),
     fields: p.fields, custom: p.custom, cols: p.cols, body: p.body, updated,
   };
@@ -64,10 +71,14 @@ export function toArea(r: AreaRow): Area {
   return { id: r.id, projectId: r.project_id, name: r.name, defaultType: r.default_type };
 }
 
+export function toBoard(r: BoardRow): Board {
+  return { id: r.id, projectId: r.project_id, areaId: r.area_id, name: r.name };
+}
+
 export function toPage(r: PageRow): Page {
   const cols = Math.max(0, Math.min(4, r.cols ?? 0)) as Page['cols'];
   return {
-    id: r.id, projectId: r.project_id, areaId: r.area_id, type: r.type, title: r.title,
+    id: r.id, projectId: r.project_id, boardId: r.board_id, type: r.type, title: r.title,
     x: r.x, y: r.y, w: r.w, h: r.h,
     fields: r.fields ?? {}, custom: r.custom ?? null, cols,
     body: r.body ?? '', updated: r.updated,
@@ -80,13 +91,14 @@ export function toEdge(r: EdgeRow): Edge {
 
 /** Assemble a Doc from the four row sets. Derived edges are rebuilt by the caller. */
 export function docFromRows(
-  projects: ProjectRow[], areas: AreaRow[], pages: PageRow[], edges: EdgeRow[],
+  projects: ProjectRow[], areas: AreaRow[], boards: BoardRow[], pages: PageRow[], edges: EdgeRow[],
 ): Doc {
   const schemas: Record<string, ProjectSchema> = {};
   for (const r of projects) schemas[r.id] = toSchema(r);
   return {
     projects: projects.map(toProject),
     areas: areas.map(toArea),
+    boards: boards.map(toBoard),
     pages: pages.map(toPage),
     edges: edges.map(toEdge),
     schemas,

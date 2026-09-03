@@ -9,7 +9,7 @@ const schema = {
 };
 
 const page = (id: string, title: string, extra: Partial<Page> = {}): Page => ({
-  id, projectId: 'p1', areaId: 'a1', type: 'note', title,
+  id, projectId: 'p1', boardId: 'bd1', type: 'note', title,
   x: 0, y: 0, w: 244, h: 116, fields: {}, custom: null, cols: 0,
   body: '', updated: 0, ...extra,
 });
@@ -17,17 +17,19 @@ const page = (id: string, title: string, extra: Partial<Page> = {}): Page => ({
 const doc = (pages: Page[], edges: Edge[] = []): Doc => ({
   projects: [{ id: 'p1', name: 'Veil', system: '', accent: '#e0a44a' }],
   areas: [{ id: 'a1', projectId: 'p1', name: 'Lore', defaultType: 'note' }],
+  boards: [{ id: 'bd1', projectId: 'p1', areaId: 'a1', name: 'First board' }],
   pages, edges, schemas: { p1: schema },
 });
 
 const meta = (syncedPages: string[] = [], touched: Record<string, number> = {}): MergeMeta => ({
-  syncedIds: { projects: ['p1'], areas: ['a1'], pages: syncedPages, edges: [] },
-  touchedAt: { projects: {}, areas: {}, pages: touched, edges: {} },
+  syncedIds: { projects: ['p1'], areas: ['a1'], boards: ['bd1'], pages: syncedPages, edges: [] },
+  touchedAt: { projects: {}, areas: {}, boards: {}, pages: touched, edges: {} },
 });
 
 const stamps = (pages: Record<string, number> = {}): RemoteStamps => ({
   projects: new Map([['p1', 0]]),
   areas: new Map([['a1', 0]]),
+  boards: new Map([['bd1', 0]]),
   pages: new Map(Object.entries(pages)),
   edges: new Map(),
 });
@@ -61,8 +63,16 @@ test('a row the server never had is simply unpushed, and survives', () => {
   assert.deepEqual(titles(out), ['BRAND NEW']);
 });
 
-test('a page whose area is gone is dropped rather than orphaned', () => {
-  const out = mergeDoc(doc([page('g3', 'ORPHAN', { areaId: 'gone' })]), doc([]), stamps(), meta([]));
+test('a page whose board is gone is dropped rather than orphaned', () => {
+  const out = mergeDoc(doc([page('g3', 'ORPHAN', { boardId: 'gone' })]), doc([]), stamps(), meta([]));
+  assert.deepEqual(titles(out), []);
+});
+
+test('a board whose area is gone takes its pages with it', () => {
+  const local = doc([page('g4', 'ON A LOST BOARD', { boardId: 'bd9' })]);
+  local.boards = [...local.boards, { id: 'bd9', projectId: 'p1', areaId: 'gone', name: 'Stray' }];
+  const out = mergeDoc(local, doc([]), stamps(), meta([]));
+  assert.deepEqual(out.boards.map((b) => b.id), ['bd1']);
   assert.deepEqual(titles(out), []);
 });
 

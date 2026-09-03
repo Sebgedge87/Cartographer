@@ -41,22 +41,38 @@ export interface Project {
   accent: string;
 }
 
-/** A tab in the left "Pages" rail, and one board. */
+/**
+ * A category in the rail — "NPCs", "Rules", "Locations". Holds boards, and sets the
+ * block type new pages default to anywhere inside it. An area has no canvas of its
+ * own; opening one shows the boards it contains.
+ */
 export interface Area {
   id: string;
   projectId: string;
   name: string;
-  /** Block type new pages in this area get by default. */
+  /** Block type new pages default to on any board in this area. */
   defaultType: string;
 }
 
-export interface Page {
+/**
+ * One subject, and one canvas — "Cassiel Vane" inside the "NPCs" area. Boards hold
+ * the pages. A board cannot exist outside an area.
+ */
+export interface Board {
   id: string;
   projectId: string;
   areaId: string;
+  name: string;
+}
+
+/** One document. A page cannot exist off a board. */
+export interface Page {
+  id: string;
+  projectId: string;
+  boardId: string;
   type: string;
   title: string;
-  /** World coordinates on the area's board. */
+  /** World coordinates on its board's canvas. */
   x: number;
   y: number;
   w: number;
@@ -92,6 +108,7 @@ export interface Edge {
 export interface Doc {
   projects: Project[];
   areas: Area[];
+  boards: Board[];
   pages: Page[];
   edges: Edge[];
   /** Schemas are per project — labels and types never leak between projects. */
@@ -103,13 +120,15 @@ export interface ProjectFile {
   format: 'cartographer/v1';
   project: Project;
   areas: Area[];
+  boards: Board[];
   pages: Page[];
   types: Record<string, BlockType>;
   typeOrder: string[];
   links: Edge[];
 }
 
-export type ViewMode = 'board' | 'table' | 'schema';
+/** 'area' lists the boards in the selected area; 'board' is the page canvas. */
+export type ViewMode = 'area' | 'board' | 'table' | 'schema';
 
 export interface Camera {
   x: number;

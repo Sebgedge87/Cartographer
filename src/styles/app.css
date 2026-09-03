@@ -745,3 +745,77 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 
 
 
+
+/* ---------- board rows in the rail ---------- */
+
+.board-row {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  padding: 3px 8px 3px 16px; border: none; background: transparent;
+  cursor: pointer; text-align: left; color: #b6bdc9;
+  border-left: 2px solid transparent;
+}
+.board-row--comfortable { padding: 6px 8px 6px 16px; }
+.board-row:hover { background: rgba(255, 255, 255, .03); }
+.board-row--active {
+  border-left-color: var(--accent);
+  background: rgba(255, 255, 255, .035);
+  color: var(--text-strong);
+}
+.board-row__name { font: 500 11.5px var(--font-ui); }
+
+/* ---------- area view ---------- */
+
+.area-view { flex: 1 1 auto; overflow: auto; background: var(--canvas); }
+.area-view__inner { max-width: 1040px; padding: 26px 28px 60px; }
+
+.area-view__head {
+  display: flex; align-items: flex-end; gap: 24px;
+  padding-bottom: 20px; margin-bottom: 22px; border-bottom: 1px solid var(--border);
+}
+.area-view__kicker {
+  font: 500 9px var(--font-mono); letter-spacing: .3em; color: var(--dim);
+}
+.area-view__title {
+  margin: 8px 0 7px; font: 600 28px/1.1 var(--font-ui);
+  letter-spacing: -.025em; color: var(--text-strong);
+}
+.area-view__desc { margin: 0; max-width: 52ch; font: 400 13px/1.55 var(--font-ui); color: var(--muted); }
+.area-view__default { display: flex; flex-direction: column; gap: 6px; flex: none; }
+.area-view__default select { width: 150px; }
+
+.area-view__grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px;
+}
+
+.board-tile {
+  position: relative; overflow: hidden; text-align: left;
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 116px; padding: 15px 16px 13px;
+  background: linear-gradient(180deg, #14181f, #101419);
+  border: 1px solid var(--border); border-top: 2px solid var(--tint);
+  border-radius: var(--r-xl); cursor: pointer; color: inherit;
+  animation: cgIn .28s ease both;
+  transition: border-color .12s ease, transform .12s ease;
+}
+.board-tile:hover { border-color: var(--border-hover); transform: translateY(-2px); }
+.board-tile__grid {
+  position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+.board-tile__name {
+  position: relative; font: 600 16px/1.2 var(--font-ui); color: var(--text-strong);
+}
+.board-tile__stats {
+  position: relative; margin-top: auto; display: flex; gap: 12px;
+  padding-top: 9px; border-top: 1px solid var(--border);
+  font: 500 9.5px var(--font-mono); letter-spacing: .06em; color: var(--dim);
+}
+.board-tile--new {
+  align-items: center; justify-content: center;
+  background: transparent; border: 1px dashed var(--border); border-top: 1px dashed var(--border);
+  font: 500 11px var(--font-mono); letter-spacing: .1em; color: var(--dim);
+}
+.board-tile--new:hover { border-color: var(--accent); color: var(--accent); transform: none; }

@@ -169,7 +169,7 @@ export function SchemaEditor() {
                   ))}
                 </select>
                 <span className="area-line__count">
-                  {doc.pages.filter((p) => p.areaId === area.id).length} PAGES
+                  {doc.boards.filter((b) => b.areaId === area.id).length} BOARDS
                 </span>
                 <button
                   className="icon-btn"

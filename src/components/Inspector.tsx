@@ -32,7 +32,7 @@ export function Inspector() {
         key={key}
         className="link-row"
         style={{ ['--tint' as string]: otherType.color }}
-        onClick={() => set({ sel: other.id, areaId: other.areaId })}
+        onClick={() => set({ sel: other.id, boardId: other.boardId, mode: 'board' })}
       >
         <span className="link-row__code">{otherType.code}</span>
         <span className="link-row__title truncate">{other.title}</span>

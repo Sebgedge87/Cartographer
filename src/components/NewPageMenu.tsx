@@ -10,19 +10,19 @@ export function NewPageMenu() {
 
   if (!menu) return null;
   const schema = schemaFor(doc, projectId);
-  const area = doc.areas.find((a) => a.id === menu.areaId);
+  const board = doc.boards.find((b) => b.id === menu.boardId);
   const close = () => set({ newMenu: null });
 
   const pick = (type: string) => {
     close();
-    createPage({ type, areaId: menu.areaId });
+    createPage({ type, boardId: menu.boardId });
   };
 
   return (
     <>
       <div className="catcher" onClick={close} />
       <div className="new-menu" style={{ left: Math.max(8, menu.left), top: menu.top }}>
-        <div className="popover__head">NEW PAGE / IN {(area?.name ?? '').toUpperCase()}</div>
+        <div className="popover__head">NEW PAGE / ON {(board?.name ?? '').toUpperCase()}</div>
 
         <button className="opt" onMouseDown={(e) => e.preventDefault()} onClick={() => pick('blank')}>
           <span className="opt__code" style={{ ['--tint' as string]: 'var(--accent)' }}>BL</span>

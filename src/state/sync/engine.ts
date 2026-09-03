@@ -5,8 +5,8 @@ import { mergeDoc, type MergeMeta } from './merge';
 import { supabase } from '../../lib/supabase';
 import { SYNC_KEY, debounce, loadKey, saveKey } from '../../lib/persist';
 import {
-  TABLES, type AreaRow, type EdgeRow, type PageRow, type ProjectRow, type Table,
-  areaRow, docFromRows, edgeRow, pageRow, projectRow,
+  TABLES, type AreaRow, type BoardRow, type EdgeRow, type PageRow, type ProjectRow, type Table,
+  areaRow, boardRow, docFromRows, edgeRow, pageRow, projectRow,
 } from './rows';
 
 /**
@@ -27,8 +27,8 @@ import {
 type SyncMeta = MergeMeta;
 
 const emptyMeta = (): SyncMeta => ({
-  syncedIds: { projects: [], areas: [], pages: [], edges: [] },
-  touchedAt: { projects: {}, areas: {}, pages: {}, edges: {} },
+  syncedIds: { projects: [], areas: [], boards: [], pages: [], edges: [] },
+  touchedAt: { projects: {}, areas: {}, boards: {}, pages: {}, edges: {} },
 });
 
 let meta: SyncMeta = emptyMeta();
@@ -42,7 +42,9 @@ let applying = false;
 let quietUntil = 0;
 
 function blankBaseline(): Record<Table, Map<string, string>> {
-  return { projects: new Map(), areas: new Map(), pages: new Map(), edges: new Map() };
+  return {
+    projects: new Map(), areas: new Map(), boards: new Map(), pages: new Map(), edges: new Map(),
+  };
 }
 
 /* ---------- building rows out of the current document ---------- */
@@ -56,6 +58,7 @@ function currentRows(doc: Doc) {
   return {
     projects: doc.projects.map((p) => projectRow(p, doc.schemas[p.id], stamp('projects', p.id))),
     areas: doc.areas.map((a) => areaRow(a, stamp('areas', a.id))),
+    boards: doc.boards.map((b) => boardRow(b, stamp('boards', b.id))),
     pages: doc.pages.map((p) => pageRow(p, stamp('pages', p.id))),
     edges: doc.edges
       .filter((e) => e.kind === 'manual')
@@ -134,28 +137,37 @@ async function pull(): Promise<void> {
   const db = supabase();
   useSync.getState().set({ status: 'syncing' });
 
-  const [projects, areas, pages, edges] = await Promise.all([
+  const [projects, areas, boards, pages, edges] = await Promise.all([
     db.from('projects').select('*'),
     db.from('areas').select('*'),
+    db.from('boards').select('*'),
     db.from('pages').select('*'),
     db.from('edges').select('*'),
   ]);
-  const failed = [projects, areas, pages, edges].find((r) => r.error);
+  const failed = [projects, areas, boards, pages, edges].find((r) => r.error);
   if (failed?.error) throw failed.error;
 
-  const remoteRows = {
+  const remoteRows: Record<Table, { id: string; updated: number }[]> = {
     projects: (projects.data ?? []) as ProjectRow[],
     areas: (areas.data ?? []) as AreaRow[],
+    boards: (boards.data ?? []) as BoardRow[],
     pages: (pages.data ?? []) as PageRow[],
     edges: (edges.data ?? []) as EdgeRow[],
   };
-  const remote = docFromRows(remoteRows.projects, remoteRows.areas, remoteRows.pages, remoteRows.edges);
+  const remote = docFromRows(
+    remoteRows.projects as ProjectRow[],
+    remoteRows.areas as AreaRow[],
+    remoteRows.boards as BoardRow[],
+    remoteRows.pages as PageRow[],
+    remoteRows.edges as EdgeRow[],
+  );
   const stamps = (rows: { id: string; updated: number }[]) =>
     new Map(rows.map((r) => [r.id, r.updated ?? 0]));
 
   const merged: Doc = mergeDoc(useDoc.getState(), remote, {
     projects: stamps(remoteRows.projects),
     areas: stamps(remoteRows.areas),
+    boards: stamps(remoteRows.boards),
     pages: stamps(remoteRows.pages),
     edges: stamps(remoteRows.edges),
   }, meta);

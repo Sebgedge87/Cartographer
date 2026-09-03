@@ -6,6 +6,7 @@ import { Home } from './components/Home';
 import { TopBar } from './components/TopBar';
 import { PagesRail } from './components/PagesRail';
 import { Board } from './components/Board';
+import { AreaView } from './components/AreaView';
 import { PagesTable } from './components/PagesTable';
 import { SchemaEditor } from './components/SchemaEditor';
 import { Inspector } from './components/Inspector';
@@ -75,11 +76,12 @@ export function App() {
           <div className="shell__body">
             <PagesRail />
             <div className="shell__main">
+              {mode === 'area' && <AreaView />}
               {mode === 'board' && <Board />}
               {mode === 'table' && <PagesTable />}
               {mode === 'schema' && <SchemaEditor />}
             </div>
-            {showInspector && mode !== 'schema' && <Inspector />}
+            {showInspector && mode !== 'schema' && mode !== 'area' && <Inspector />}
           </div>
           <PageEditor />
           <NewPageMenu />

@@ -49,5 +49,5 @@ export function normaliseSchema(schema: ProjectSchema): ProjectSchema {
  * `starterSchema()`.
  */
 export function emptyDoc(): Doc {
-  return { projects: [], areas: [], pages: [], edges: [], schemas: {} };
+  return { projects: [], areas: [], boards: [], pages: [], edges: [], schemas: {} };
 }

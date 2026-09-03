@@ -112,7 +112,7 @@ export function PageEditor() {
             );
             createPage({
               type: key,
-              areaId: page.areaId,
+              boardId: page.boardId,
               at: { x: page.x + 300, y: page.y + 170 },
               title,
               keepEditor: true,
@@ -141,7 +141,7 @@ export function PageEditor() {
           return {
             code: type.code,
             label: p.title,
-            hint: doc.areas.find((a) => a.id === p.areaId)?.name ?? '',
+            hint: doc.boards.find((b) => b.id === p.boardId)?.name ?? '',
             color: type.color,
             run: () => apply(textarea.current ? replaceAtCaret(textarea.current, menu.len, `[[${p.title}]]`) : null),
           };
@@ -182,7 +182,7 @@ export function PageEditor() {
         e.preventDefault();
         const title = menu.q.trim();
         createPage({
-          areaId: page.areaId,
+          boardId: page.boardId,
           at: { x: page.x + 300, y: page.y + 150 },
           title,
           keepEditor: true,
@@ -242,13 +242,13 @@ export function PageEditor() {
       const pid = hit.getAttribute('data-page');
       if (pid) {
         const target = doc.pages.find((p) => p.id === pid);
-        if (target) openPage(target.id, target.areaId);
+        if (target) openPage(target.id, target.boardId);
         return;
       }
       const title = hit.getAttribute('data-new');
       if (title && page) {
         createPage({
-          areaId: page.areaId,
+          boardId: page.boardId,
           at: { x: page.x + 300, y: page.y + 150 },
           title,
           keepEditor: true,
@@ -306,7 +306,7 @@ export function PageEditor() {
             onChange={(e) => doc.patchPage(page.id, { title: e.target.value })}
           />
           <span className="editor__area">
-            {doc.areas.find((a) => a.id === page.areaId)?.name ?? ''}
+            {doc.boards.find((b) => b.id === page.boardId)?.name ?? ''}
           </span>
           <button className="editor__close" onClick={closeEditor}>×</button>
         </div>
@@ -489,7 +489,7 @@ export function PageEditor() {
                         key={e.id}
                         className="backlink"
                         style={{ ['--tint' as string]: t.color }}
-                        onClick={() => openPage(from.id, from.areaId)}
+                        onClick={() => openPage(from.id, from.boardId)}
                       >
                         <b>{t.code}</b>
                         {from.title}

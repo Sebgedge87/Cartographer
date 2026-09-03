@@ -4,6 +4,9 @@
 -- It is idempotent: running it again is safe.
 --
 -- Design notes:
+--   * The hierarchy is project -> area -> board -> page, enforced by NOT NULL
+--     foreign keys: a board cannot exist outside an area, nor a page off a board,
+--     and deleting a parent cascades to everything under it.
 --   * Ids are the client's own strings (p1, a3, nabc12…), not uuids. The client
 --     generates them offline, so the database must accept them as given.
 --   * A project's schema (block types and their order) lives on the project row.
@@ -41,11 +44,21 @@ create table if not exists public.areas (
   updated_at   timestamptz not null default now()
 );
 
-create table if not exists public.pages (
+create table if not exists public.boards (
   id         text primary key,
   user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
   project_id text not null references public.projects (id) on delete cascade,
   area_id    text not null references public.areas (id) on delete cascade,
+  name       text not null default 'New board',
+  updated    bigint not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.pages (
+  id         text primary key,
+  user_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  project_id text not null references public.projects (id) on delete cascade,
+  board_id   text not null references public.boards (id) on delete cascade,
   type       text not null default 'note',
   title      text not null default 'Untitled',
   x          integer not null default 0,
@@ -73,10 +86,12 @@ create table if not exists public.edges (
   updated_at timestamptz not null default now()
 );
 
-create index if not exists areas_project_idx on public.areas (user_id, project_id);
-create index if not exists pages_project_idx on public.pages (user_id, project_id);
-create index if not exists pages_area_idx    on public.pages (user_id, area_id);
-create index if not exists edges_project_idx on public.edges (user_id, project_id);
+create index if not exists areas_project_idx  on public.areas  (user_id, project_id);
+create index if not exists boards_project_idx on public.boards (user_id, project_id);
+create index if not exists boards_area_idx    on public.boards (user_id, area_id);
+create index if not exists pages_project_idx  on public.pages  (user_id, project_id);
+create index if not exists pages_board_idx    on public.pages  (user_id, board_id);
+create index if not exists edges_project_idx  on public.edges  (user_id, project_id);
 
 /* ---------- grants ---------- */
 -- Supabase grants these by default on new public tables, but saying so explicitly
@@ -85,7 +100,7 @@ create index if not exists edges_project_idx on public.edges (user_id, project_i
 
 grant usage on schema public to authenticated;
 grant select, insert, update, delete
-  on public.projects, public.areas, public.pages, public.edges
+  on public.projects, public.areas, public.boards, public.pages, public.edges
   to authenticated;
 
 /* ---------- row level security ---------- */
@@ -94,13 +109,14 @@ grant select, insert, update, delete
 
 alter table public.projects enable row level security;
 alter table public.areas    enable row level security;
+alter table public.boards   enable row level security;
 alter table public.pages    enable row level security;
 alter table public.edges    enable row level security;
 
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'areas', 'pages', 'edges'] loop
+  foreach t in array array['projects', 'areas', 'boards', 'pages', 'edges'] loop
     execute format('drop policy if exists owner_all on public.%I', t);
     execute format(
       'create policy owner_all on public.%I
@@ -124,7 +140,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'areas', 'pages', 'edges'] loop
+  foreach t in array array['projects', 'areas', 'boards', 'pages', 'edges'] loop
     execute format('drop trigger if exists touch_updated_at on public.%I', t);
     execute format(
       'create trigger touch_updated_at before insert or update on public.%I
@@ -138,7 +154,7 @@ end $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'areas', 'pages', 'edges'] loop
+  foreach t in array array['projects', 'areas', 'boards', 'pages', 'edges'] loop
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 
-const COLUMNS = ['#', 'TITLE', 'AREA', 'TYPE', 'OUT', 'IN', 'UPDATED'];
+const COLUMNS = ['#', 'TITLE', 'BOARD', 'TYPE', 'OUT', 'IN', 'UPDATED'];
 
 export function PagesTable() {
   const doc = useDoc();
@@ -27,7 +27,7 @@ export function PagesTable() {
       .map((page) => ({
         page,
         type: blockType(schema, page.type),
-        area: doc.areas.find((a) => a.id === page.areaId)?.name ?? '—',
+        board: doc.boards.find((b) => b.id === page.boardId)?.name ?? '—',
         out: outCount.get(page.id) ?? 0,
         in: inCount.get(page.id) ?? 0,
         updated: new Date(page.updated).toISOString().slice(0, 10),
@@ -49,11 +49,11 @@ export function PagesTable() {
             key={row.page.id}
             className={'table__row' + (row.page.id === sel ? ' table__row--selected' : '')}
             onClick={() => set({ sel: row.page.id })}
-            onDoubleClick={() => openPage(row.page.id, row.page.areaId)}
+            onDoubleClick={() => openPage(row.page.id, row.page.boardId)}
           >
             <div className="table__num">{i + 1}</div>
             <div className="table__title truncate">{row.page.title}</div>
-            <div className="table__area truncate">{row.area}</div>
+            <div className="table__area truncate">{row.board}</div>
             <div>
               <span className="chip" style={{ ['--chip' as string]: row.type.color }}>{row.type.code}</span>
             </div>

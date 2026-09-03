@@ -18,6 +18,7 @@ const DENSITIES: { value: Density; label: string }[] = [
 ];
 
 const VIEWS: { value: ViewMode; label: string }[] = [
+  { value: 'area', label: 'AREA' },
   { value: 'board', label: 'BOARD' },
   { value: 'table', label: 'PAGES' },
   { value: 'schema', label: 'SCHEMA' },

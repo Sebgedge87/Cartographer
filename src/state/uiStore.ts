@@ -16,7 +16,7 @@ export interface EditorMenu {
 }
 
 export interface NewMenu {
-  areaId: string;
+  boardId: string;
   left: number;
   top: number;
 }
@@ -27,6 +27,8 @@ interface UIState {
   view: 'home' | 'project';
   projectId: string | null;
   areaId: string | null;
+  /** The board whose canvas is open. Null while looking at an area. */
+  boardId: string | null;
   mode: ViewMode;
 
   sel: string | null;
@@ -49,6 +51,7 @@ interface UIState {
   fieldsOpen: boolean;
   newField: string;
   renamingArea: string | null;
+  renamingBoard: string | null;
   renamingProject: boolean;
 
   grid: GridStyle;
@@ -58,10 +61,12 @@ interface UIState {
 
 interface UIActions {
   set: <K extends keyof UIState>(patch: Pick<UIState, K> | Partial<UIState>) => void;
-  openProject: (projectId: string, areaId: string | null) => void;
+  openProject: (projectId: string, areaId: string | null, boardId: string | null) => void;
+  openArea: (areaId: string) => void;
+  openBoard: (boardId: string, areaId: string) => void;
   goHome: () => void;
   select: (pageId: string | null) => void;
-  openPage: (pageId: string, areaId: string) => void;
+  openPage: (pageId: string, boardId: string) => void;
   closeEditor: () => void;
   panBy: (dx: number, dy: number) => void;
   zoomAt: (px: number, py: number, factor: number) => void;
@@ -78,6 +83,7 @@ export const useUI = create<UIStore>()((set) => ({
   view: 'home',
   projectId: null,
   areaId: null,
+  boardId: null,
   mode: 'board',
   sel: null,
   editing: null,
@@ -93,6 +99,7 @@ export const useUI = create<UIStore>()((set) => ({
   fieldsOpen: true,
   newField: '',
   renamingArea: null,
+  renamingBoard: null,
   renamingProject: false,
   grid: 'blueprint',
   density: 'dense',
@@ -100,14 +107,25 @@ export const useUI = create<UIStore>()((set) => ({
 
   set: (patch) => set(patch as Partial<UIState>),
 
-  openProject: (projectId, areaId) =>
-    set({ view: 'project', projectId, areaId, mode: 'board', sel: null, editing: null, cam: DEFAULT_CAM, search: '' }),
+  openProject: (projectId, areaId, boardId) =>
+    set({
+      view: 'project', projectId, areaId, boardId,
+      mode: boardId ? 'board' : 'area',
+      sel: null, editing: null, cam: DEFAULT_CAM, search: '',
+    }),
+
+  /** Opening an area shows the boards it holds; there is no canvas at this level. */
+  openArea: (areaId) => set({ areaId, boardId: null, mode: 'area', sel: null }),
+
+  openBoard: (boardId, areaId) =>
+    set({ boardId, areaId, mode: 'board', sel: null, cam: DEFAULT_CAM }),
 
   goHome: () => set({ view: 'home', editing: null, sel: null, menu: null, search: '' }),
 
   select: (sel) => set({ sel }),
 
-  openPage: (pageId, areaId) => set({ editing: pageId, sel: pageId, areaId, fieldsOpen: true, menu: null }),
+  openPage: (pageId, boardId) =>
+    set({ editing: pageId, sel: pageId, boardId, mode: 'board', fieldsOpen: true, menu: null }),
 
   closeEditor: () => set({ editing: null, menu: null }),
 

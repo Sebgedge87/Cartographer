@@ -1,4 +1,4 @@
-import type { Area, Doc, Edge, Page, Project, ProjectSchema } from '../types';
+import type { Area, Board, Doc, Edge, Page, Project, ProjectSchema } from '../types';
 import { deriveAllEdges } from '../graph';
 import type { Table } from './rows';
 
@@ -45,6 +45,7 @@ export function mergeTable<T extends { id: string }>(
 export interface RemoteStamps {
   projects: Stamps;
   areas: Stamps;
+  boards: Stamps;
   pages: Stamps;
   edges: Stamps;
 }
@@ -56,6 +57,7 @@ export interface RemoteStamps {
 export function mergeDoc(local: Doc, remote: Doc, stamps: RemoteStamps, meta: MergeMeta): Doc {
   const projects = mergeTable<Project>('projects', local.projects, remote.projects, stamps.projects, meta);
   const areas = mergeTable<Area>('areas', local.areas, remote.areas, stamps.areas, meta);
+  const boards = mergeTable<Board>('boards', local.boards, remote.boards, stamps.boards, meta);
   const pages = mergeTable<Page>('pages', local.pages, remote.pages, stamps.pages, meta);
   const manual = mergeTable<Edge>(
     'edges',
@@ -75,13 +77,18 @@ export function mergeDoc(local: Doc, remote: Doc, stamps: RemoteStamps, meta: Me
 
   const keptAreas = areas.filter((a) => projectIds.has(a.projectId));
   const areaIds = new Set(keptAreas.map((a) => a.id));
-  const keptPages = pages.filter((p) => projectIds.has(p.projectId) && areaIds.has(p.areaId));
+  // A board outside an area, or a page off a board, cannot be reached — drop rather
+  // than orphan, at each level of the hierarchy in turn.
+  const keptBoards = boards.filter((b) => projectIds.has(b.projectId) && areaIds.has(b.areaId));
+  const boardIds = new Set(keptBoards.map((b) => b.id));
+  const keptPages = pages.filter((p) => projectIds.has(p.projectId) && boardIds.has(p.boardId));
   const pageIds = new Set(keptPages.map((p) => p.id));
   const keptManual = manual.filter((e) => pageIds.has(e.from) && pageIds.has(e.to));
 
   return {
     projects,
     areas: keptAreas,
+    boards: keptBoards,
     pages: keptPages,
     schemas,
     edges: deriveAllEdges(

@@ -31,7 +31,7 @@ function gridStyle(kind: string, x: number, y: number, z: number): React.CSSProp
 export function Board() {
   const doc = useDoc();
   const projectId = useUI((s) => s.projectId);
-  const areaId = useUI((s) => s.areaId);
+  const boardId = useUI((s) => s.boardId);
   const sel = useUI((s) => s.sel);
   const cam = useUI((s) => s.cam);
   const grid = useUI((s) => s.grid);
@@ -69,8 +69,8 @@ export function Board() {
     return () => node.removeEventListener('wheel', onWheel);
   }, [zoomAt]);
 
-  const areaPages = useMemo(() => doc.pages.filter((p) => p.areaId === areaId), [doc.pages, areaId]);
-  const inArea = useMemo(() => new Map(areaPages.map((p) => [p.id, p])), [areaPages]);
+  const boardPages = useMemo(() => doc.pages.filter((p) => p.boardId === boardId), [doc.pages, boardId]);
+  const onBoard = useMemo(() => new Map(boardPages.map((p) => [p.id, p])), [boardPages]);
 
   const counts = useMemo(() => {
     const map = new Map<string, { out: number; in: number; off: number }>();
@@ -80,25 +80,25 @@ export function Board() {
       return c;
     };
     for (const e of doc.edges) {
-      if (inArea.has(e.from)) {
+      if (onBoard.has(e.from)) {
         get(e.from).out++;
-        if (!inArea.has(e.to)) get(e.from).off++;
+        if (!onBoard.has(e.to)) get(e.from).off++;
       }
-      if (inArea.has(e.to)) {
+      if (onBoard.has(e.to)) {
         get(e.to).in++;
-        if (!inArea.has(e.from)) get(e.to).off++;
+        if (!onBoard.has(e.from)) get(e.to).off++;
       }
     }
     return map;
-  }, [doc.edges, inArea]);
+  }, [doc.edges, onBoard]);
 
   const drawnEdges = useMemo(
     () =>
       doc.edges
-        .filter((e) => inArea.has(e.from) && inArea.has(e.to))
+        .filter((e) => onBoard.has(e.from) && onBoard.has(e.to))
         .map((e) => {
-          const a = inArea.get(e.from)!;
-          const b = inArea.get(e.to)!;
+          const a = onBoard.get(e.from)!;
+          const b = onBoard.get(e.to)!;
           const lit = sel === e.from || sel === e.to;
           return {
             id: e.id,
@@ -109,7 +109,7 @@ export function Board() {
             opacity: lit ? 1 : 0.75,
           };
         }),
-    [doc.edges, inArea, sel],
+    [doc.edges, onBoard, sel],
   );
 
   /* ---------- pointer model: port → card → pan ---------- */
@@ -195,7 +195,7 @@ export function Board() {
         (e.target as HTMLElement).closest('[data-pid]')?.getAttribute('data-pid');
       if (card) {
         const page = useDoc.getState().pages.find((p) => p.id === card);
-        if (page) openPage(page.id, page.areaId);
+        if (page) openPage(page.id, page.boardId);
         return;
       }
       const r = boardRect();
@@ -209,7 +209,7 @@ export function Board() {
     [cam, openPage],
   );
 
-  const ghostSource = link ? inArea.get(link) : undefined;
+  const ghostSource = link ? onBoard.get(link) : undefined;
 
   return (
     <div
@@ -256,7 +256,7 @@ export function Board() {
           </g>
         </svg>
 
-        {areaPages.map((page) => {
+        {boardPages.map((page) => {
           const c = counts.get(page.id);
           return (
             <PageCard
@@ -268,13 +268,13 @@ export function Board() {
               outCount={c?.out ?? 0}
               inCount={c?.in ?? 0}
               offBoard={c?.off ?? 0}
-              onEdit={() => openPage(page.id, page.areaId)}
+              onEdit={() => openPage(page.id, page.boardId)}
             />
           );
         })}
       </div>
 
-      {areaPages.length === 0 && (
+      {boardPages.length === 0 && (
         <div className="board__empty">
           <b>EMPTY BOARD</b>
           <span>Double-click anywhere to add a page</span>
@@ -286,7 +286,7 @@ export function Board() {
           className="overlay-btn overlay-btn--accent"
           onClick={(e) => {
             const r = e.currentTarget.getBoundingClientRect();
-            if (areaId) set({ newMenu: { areaId, left: Math.round(r.left), top: Math.round(r.bottom + 6) } });
+            if (boardId) set({ newMenu: { boardId, left: Math.round(r.left), top: Math.round(r.bottom + 6) } });
           }}
         >
           + NEW ▾
@@ -314,7 +314,7 @@ export function Board() {
           className="overlay-btn"
           onClick={() => {
             const r = boardRect();
-            setCam(fitCamera(areaPages, r.width, r.height));
+            setCam(fitCamera(boardPages, r.width, r.height));
           }}
         >
           FIT

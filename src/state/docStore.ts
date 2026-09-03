@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { temporal } from 'zundo';
 import type {
-  Area, BlockType, Doc, Edge, Field, FieldKind, Page, Project, ProjectFile, ProjectSchema,
+  Area, BlockType, Board, Doc, Edge, Field, FieldKind, Page, Project, ProjectFile, ProjectSchema,
 } from './types';
 import { deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
 import { emptyDoc, normaliseSchema, starterSchema } from './defaults';
@@ -29,9 +29,13 @@ interface DocActions {
   setAreaDefaultType: (id: string, type: string) => void;
   deleteArea: (id: string) => void;
 
+  addBoard: (projectId: string, areaId: string, name?: string) => string;
+  renameBoard: (id: string, name: string) => void;
+  deleteBoard: (id: string) => void;
+
   addPage: (opts: {
     projectId: string;
-    areaId: string;
+    boardId: string;
     type?: string;
     at: { x: number; y: number };
     title?: string;
@@ -61,7 +65,7 @@ interface DocActions {
 
 export type DocStore = Doc & DocActions;
 
-const EMPTY: Doc = { projects: [], areas: [], pages: [], edges: [], schemas: {} };
+const EMPTY: Doc = { projects: [], areas: [], boards: [], pages: [], edges: [], schemas: {} };
 
 /** Recompute the 'field' edges owned by one page from its current ref values. */
 function reFieldEdges(page: Page, fields: Field[], edges: Edge[]): Edge[] {
@@ -104,9 +108,13 @@ export const useDoc = create<DocStore>()(
       addProject: () => {
         const id = uid('p');
         const areaId = uid('a');
+        const boardId = uid('b');
         set((s) => ({
           projects: [...s.projects, { id, name: 'New project', system: 'Untitled', accent: '#8fa5c9' }],
           areas: [...s.areas, { id: areaId, projectId: id, name: 'Notes', defaultType: 'note' }],
+          // A page needs a board and a board needs an area, so a new project comes
+          // with one of each rather than an empty shell you cannot add to.
+          boards: [...s.boards, { id: boardId, projectId: id, areaId, name: 'First board' }],
           schemas: { ...s.schemas, [id]: starterSchema() },
         }));
         return id;
@@ -125,13 +133,17 @@ export const useDoc = create<DocStore>()(
         });
         set((s) => {
           const pages = [...s.pages, ...(file.pages ?? [])];
-          return {
+          // A file exported before boards existed carries pages hung off areas, so
+          // it goes through the same migration as a stored document.
+          const merged = migrate({
             projects: [...s.projects, project],
             areas: [...s.areas, ...(file.areas ?? [])],
+            boards: [...s.boards, ...(file.boards ?? [])],
             pages,
             edges: deriveWikiEdges(pages, [...s.edges, ...(file.links ?? []).filter((e) => e.kind !== 'wiki')]),
             schemas: { ...s.schemas, [project.id]: schema },
-          };
+          });
+          return merged;
         });
         return project;
       },
@@ -140,7 +152,8 @@ export const useDoc = create<DocStore>()(
       addArea: (projectId) => {
         const id = uid('a');
         const area: Area = { id, projectId, name: 'New area', defaultType: 'note' };
-        set((s) => ({ areas: [...s.areas, area] }));
+        const board: Board = { id: uid('b'), projectId, areaId: id, name: 'First board' };
+        set((s) => ({ areas: [...s.areas, area], boards: [...s.boards, board] }));
         return id;
       },
 
@@ -150,27 +163,54 @@ export const useDoc = create<DocStore>()(
       setAreaDefaultType: (id, defaultType) =>
         set((s) => ({ areas: s.areas.map((a) => (a.id === id ? { ...a, defaultType } : a)) })),
 
-      /** Deleting an area deletes its pages and every edge that touched them. */
+      /** Deleting an area deletes its boards, their pages, and every edge touching them. */
       deleteArea: (id) =>
         set((s) => {
-          const doomed = new Set(s.pages.filter((p) => p.areaId === id).map((p) => p.id));
+          const boardIds = new Set(s.boards.filter((b) => b.areaId === id).map((b) => b.id));
+          const doomed = new Set(s.pages.filter((p) => boardIds.has(p.boardId)).map((p) => p.id));
           return {
             areas: s.areas.filter((a) => a.id !== id),
-            pages: s.pages.filter((p) => p.areaId !== id),
+            boards: s.boards.filter((b) => b.areaId !== id),
+            pages: s.pages.filter((p) => !boardIds.has(p.boardId)),
+            edges: s.edges.filter((e) => !doomed.has(e.from) && !doomed.has(e.to)),
+          };
+        }),
+
+      /* ---------- boards ---------- */
+
+      addBoard: (projectId, areaId, name) => {
+        const id = uid('b');
+        set((s) => ({
+          boards: [...s.boards, { id, projectId, areaId, name: name ?? 'New board' }],
+        }));
+        return id;
+      },
+
+      renameBoard: (id, name) =>
+        set((s) => ({ boards: s.boards.map((b) => (b.id === id ? { ...b, name } : b)) })),
+
+      /** Deleting a board deletes its pages and every edge that touched them. */
+      deleteBoard: (id) =>
+        set((s) => {
+          const doomed = new Set(s.pages.filter((p) => p.boardId === id).map((p) => p.id));
+          return {
+            boards: s.boards.filter((b) => b.id !== id),
+            pages: s.pages.filter((p) => p.boardId !== id),
             edges: s.edges.filter((e) => !doomed.has(e.from) && !doomed.has(e.to)),
           };
         }),
 
       /* ---------- pages ---------- */
-      addPage: ({ projectId, areaId, type, at, title }) => {
+      addPage: ({ projectId, boardId, type, at, title }) => {
         const s = get();
-        const area = s.areas.find((a) => a.id === areaId);
+        const board = s.boards.find((b) => b.id === boardId);
+        const area = s.areas.find((a) => a.id === board?.areaId);
         const typeKey = type ?? area?.defaultType ?? 'note';
         const schema = s.schemas[projectId] ?? starterSchema();
         const blockType = schema.types[typeKey] ?? FALLBACK_TYPE;
         const id = uid('n');
         const page: Page = {
-          id, projectId, areaId, type: typeKey,
+          id, projectId, boardId, type: typeKey,
           title: title ?? (typeKey === 'blank' ? 'Untitled page' : `Untitled ${blockType.label}`),
           x: at.x, y: at.y, w: CARD_W, h: CARD_H,
           fields: {}, custom: typeKey === 'blank' ? [] : null, cols: 0,
@@ -379,7 +419,8 @@ export const useDoc = create<DocStore>()(
     {
       limit: 60,
       // Undo/redo only ever moves documents; ephemeral UI lives in its own store.
-      partialize: ({ projects, areas, pages, edges, schemas }) => ({ projects, areas, pages, edges, schemas }),
+      partialize: ({ projects, areas, boards, pages, edges, schemas }) =>
+        ({ projects, areas, boards, pages, edges, schemas }),
       // Leading-edge, so a burst of keystrokes or a drag records the state from
       // *before* the burst — one undo steps over the whole edit, not one character.
       handleSet: (record) => throttleLeading(record, 500),
@@ -426,6 +467,55 @@ export { isCustomPage };
 
 /* ---------- boot + autosave ---------- */
 
+/** A page from before boards existed: it referenced its area directly. */
+type LegacyPage = Page & { areaId?: string };
+
+/**
+ * Bring a stored document up to the area -> board -> page hierarchy.
+ *
+ * Documents written before boards existed hung pages straight off an area. Each
+ * such area becomes an area containing one board of the same name, and its pages
+ * move onto that board — so an existing project opens looking exactly as it did,
+ * one level deeper.
+ */
+export function migrate(doc: Doc): Doc {
+  if (!doc.pages.some((p) => !p.boardId)) return doc;
+
+  const boards = [...doc.boards];
+  const boardForArea = new Map<string, string>();
+  for (const b of boards) {
+    if (!boardForArea.has(b.areaId)) boardForArea.set(b.areaId, b.id);
+  }
+
+  for (const area of doc.areas) {
+    if (boardForArea.has(area.id)) continue;
+    const id = `b:${area.id}`;
+    boards.push({ id, projectId: area.projectId, areaId: area.id, name: area.name });
+    boardForArea.set(area.id, id);
+  }
+
+  const pages = doc.pages.map((page) => {
+    if (page.boardId) return page;
+    const legacy = page as LegacyPage;
+    const boardId = legacy.areaId ? boardForArea.get(legacy.areaId) : undefined;
+    const { areaId: _dropped, ...rest } = legacy;
+    return { ...rest, boardId: boardId ?? boards[0]?.id ?? '' } as Page;
+  });
+
+  // Anything that still has no board would be unreachable, so drop it rather than
+  // leave orphans the UI can never show.
+  const boardIds = new Set(boards.map((b) => b.id));
+  const kept = pages.filter((p) => boardIds.has(p.boardId));
+  const keptIds = new Set(kept.map((p) => p.id));
+
+  return {
+    ...doc,
+    boards,
+    pages: kept,
+    edges: doc.edges.filter((e) => keptIds.has(e.from) && keptIds.has(e.to)),
+  };
+}
+
 let hydrated = false;
 
 /** Load the stored document, or start empty, and keep writing it back. */
@@ -435,13 +525,14 @@ export async function bootDoc(): Promise<void> {
 
   const stored = await loadDoc<Partial<Doc>>();
   const doc: Doc = stored?.pages
-    ? {
+    ? migrate({
         projects: stored.projects ?? [],
         areas: stored.areas ?? [],
+        boards: stored.boards ?? [],
         pages: stored.pages,
         edges: stored.edges ?? [],
         schemas: stored.schemas ?? {},
-      }
+      })
     : emptyDoc();
 
   // Every project must have a schema, and every schema must have 'blank'.
@@ -453,7 +544,7 @@ export async function bootDoc(): Promise<void> {
   useDoc.temporal.getState().clear();
 
   const write = debounce((d: Doc) => void saveDoc(d), 400);
-  useDoc.subscribe(({ projects, areas, pages, edges, schemas: sc }) =>
-    write({ projects, areas, pages, edges, schemas: sc }),
+  useDoc.subscribe(({ projects, areas, boards, pages, edges, schemas: sc }) =>
+    write({ projects, areas, boards, pages, edges, schemas: sc }),
   );
 }

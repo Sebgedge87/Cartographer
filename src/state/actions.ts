@@ -18,14 +18,14 @@ export function boardRect(): { left: number; top: number; width: number; height:
 }
 
 /** Centre of the viewport in world coordinates, nudged clear of anything already there. */
-function freeSpot(areaId: string): { x: number; y: number } {
+function freeSpot(boardId: string): { x: number; y: number } {
   const { cam } = useUI.getState();
   const { width, height } = boardRect();
   const spot = {
     x: Math.round((width / 2 - cam.x) / cam.z - 122),
     y: Math.round((height / 2 - cam.y) / cam.z - 58),
   };
-  const pages = useDoc.getState().pages.filter((p) => p.areaId === areaId);
+  const pages = useDoc.getState().pages.filter((p) => p.boardId === boardId);
   for (let guard = 0; guard < 40; guard++) {
     const clash = pages.some((p) => Math.abs(p.x - spot.x) < 40 && Math.abs(p.y - spot.y) < 40);
     if (!clash) break;
@@ -37,7 +37,7 @@ function freeSpot(areaId: string): { x: number; y: number } {
 
 export interface CreatePageOptions {
   type?: string;
-  areaId?: string;
+  boardId?: string;
   at?: { x: number; y: number };
   title?: string;
   /** Keep the page editor where it is — used when a slash command spawns a linked page. */
@@ -47,8 +47,8 @@ export interface CreatePageOptions {
 /** Create a page and select it, opening the editor unless we are mid-edit. */
 export function createPage(opts: CreatePageOptions = {}): string | null {
   const ui = useUI.getState();
-  const areaId = opts.areaId ?? ui.areaId;
-  if (!ui.projectId || !areaId) return null;
+  const boardId = opts.boardId ?? ui.boardId;
+  if (!ui.projectId || !boardId) return null;
 
   const doc = useDoc.getState();
   const title = opts.title
@@ -57,14 +57,14 @@ export function createPage(opts: CreatePageOptions = {}): string | null {
 
   const id = doc.addPage({
     projectId: ui.projectId,
-    areaId,
+    boardId,
     ...(opts.type ? { type: opts.type } : {}),
-    at: opts.at ?? freeSpot(areaId),
+    at: opts.at ?? freeSpot(boardId),
     ...(title ? { title } : {}),
   });
 
-  if (opts.keepEditor) ui.set({ sel: id, areaId });
-  else ui.set({ sel: id, areaId, editing: id, fieldsOpen: true, mode: 'board' });
+  if (opts.keepEditor) ui.set({ sel: id, boardId });
+  else ui.set({ sel: id, boardId, editing: id, fieldsOpen: true, mode: 'board' });
   return id;
 }
 
@@ -95,10 +95,12 @@ export async function importProjectFile(file: File): Promise<void> {
   showToast(`Imported “${project.name}” with its own labels`);
 }
 
-/** Open a project on its first area. */
+/** Open a project on the first board of its first area. */
 export function openProject(projectId: string): void {
-  const first = useDoc.getState().areas.find((a) => a.projectId === projectId);
-  useUI.getState().openProject(projectId, first?.id ?? null);
+  const doc = useDoc.getState();
+  const area = doc.areas.find((a) => a.projectId === projectId);
+  const board = area ? doc.boards.find((b) => b.areaId === area.id) : undefined;
+  useUI.getState().openProject(projectId, area?.id ?? null, board?.id ?? null);
 }
 
 export function createProject(): void {
@@ -110,8 +112,19 @@ export function createArea(): void {
   const ui = useUI.getState();
   if (!ui.projectId) return;
   const id = useDoc.getState().addArea(ui.projectId);
-  ui.set({ areaId: id, mode: 'board', sel: null });
+  const board = useDoc.getState().boards.find((b) => b.areaId === id);
+  ui.set({ areaId: id, boardId: board?.id ?? null, mode: 'area', sel: null });
   ui.showToast('Area added — rename it in the rail');
+}
+
+/** Add a board to an area and open its canvas. */
+export function createBoard(areaId?: string): void {
+  const ui = useUI.getState();
+  const target = areaId ?? ui.areaId;
+  if (!ui.projectId || !target) return;
+  const id = useDoc.getState().addBoard(ui.projectId, target);
+  ui.openBoard(id, target);
+  ui.showToast('Board added — rename it in the rail');
 }
 
 /** The block type lookup for the project currently open. */
