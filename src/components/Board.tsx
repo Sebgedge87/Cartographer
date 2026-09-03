@@ -185,6 +185,36 @@ export function Board() {
     [set, showToast],
   );
 
+  const onContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!boardId) return;
+      e.preventDefault();
+      // Pointer capture retargets this event to the board, so hit-test the point.
+      const under = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
+      const card = under?.closest('[data-pid]')?.getAttribute('data-pid');
+      if (card) {
+        set({ sel: card, context: { x: e.clientX, y: e.clientY, target: { kind: 'page', id: card } } });
+        return;
+      }
+      const r = boardRect();
+      set({
+        context: {
+          x: e.clientX,
+          y: e.clientY,
+          target: {
+            kind: 'canvas',
+            id: boardId,
+            world: {
+              x: Math.round((e.clientX - r.left - cam.x) / cam.z - 122),
+              y: Math.round((e.clientY - r.top - cam.y) / cam.z - 58),
+            },
+          },
+        },
+      });
+    },
+    [boardId, cam, set],
+  );
+
   const onDoubleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       // The pointer capture taken on pointer-down retargets this event to the board,
@@ -220,6 +250,7 @@ export function Board() {
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerUp}
       onDoubleClick={onDoubleClick}
+      onContextMenu={onContextMenu}
     >
       <div className="board__grid" style={gridStyle(grid, cam.x, cam.y, cam.z)} />
 

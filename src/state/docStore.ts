@@ -44,6 +44,8 @@ interface DocActions {
   movePage: (id: string, dx: number, dy: number) => void;
   setPageField: (pageId: string, field: Field, value: string) => void;
   deletePage: (id: string) => void;
+  /** Copy a page onto the same board, offset so it does not land under the original. */
+  duplicatePage: (id: string) => string | null;
 
   setCustom: (pageId: string, fn: (fields: Field[]) => Field[]) => void;
   addElement: (pageId: string, kind: FieldKind) => void;
@@ -249,6 +251,38 @@ export const useDoc = create<DocStore>()(
           const fields = effectiveFields(page, (schema.types[page.type] ?? FALLBACK_TYPE).fields);
           return { pages, edges: reFieldEdges(page, fields, s.edges) };
         }),
+
+      duplicatePage: (id) => {
+        const source = get().pages.find((p) => p.id === id);
+        if (!source) return null;
+
+        // Step the copy clear of anything already on the board. A fixed offset put
+        // it almost on top of the original, hiding the thing you just copied.
+        const siblings = get().pages.filter((p) => p.boardId === source.boardId);
+        const spot = { x: source.x + 32, y: source.y + 32 };
+        for (let guard = 0; guard < 40; guard++) {
+          const clash = siblings.some((p) => Math.abs(p.x - spot.x) < 40 && Math.abs(p.y - spot.y) < 40);
+          if (!clash) break;
+          spot.x += 34;
+          spot.y += 34;
+        }
+
+        const copy: Page = {
+          ...source,
+          id: uid('n'),
+          title: `${source.title} copy`,
+          x: spot.x,
+          y: spot.y,
+          fields: { ...source.fields },
+          custom: source.custom ? source.custom.map((f) => ({ ...f })) : null,
+          updated: Date.now(),
+        };
+        set((s) => {
+          const pages = [...s.pages, copy];
+          return { pages, edges: deriveWikiEdges(pages, s.edges) };
+        });
+        return copy.id;
+      },
 
       deletePage: (id) =>
         set((s) => ({

@@ -27,6 +27,12 @@ export function PagesRail() {
   const openPage = useUI((s) => s.openPage);
   const toggleArea = useUI((s) => s.toggleArea);
 
+  const onContext = (kind: 'area' | 'board' | 'page', id: string) => (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    set({ context: { x: e.clientX, y: e.clientY, target: { kind, id } } });
+  };
+
   const schema = schemaFor(doc, projectId);
   const query = search.trim().toLowerCase();
   const dense = density === 'dense';
@@ -82,6 +88,7 @@ export function PagesRail() {
                 style={{ ['--tint' as string]: color }}
                 onClick={() => openArea(area.id)}
                 onDoubleClick={() => set({ renamingArea: area.id })}
+                onContextMenu={onContext('area', area.id)}
               >
                 <button
                   className="area-row__caret"
@@ -125,6 +132,7 @@ export function PagesRail() {
                       }
                       onClick={() => openBoard(board.id, area.id)}
                       onDoubleClick={() => set({ renamingBoard: board.id })}
+                      onContextMenu={onContext('board', board.id)}
                     >
                       <button
                         className="area-row__caret"
@@ -170,6 +178,7 @@ export function PagesRail() {
                         style={{ ['--tint' as string]: type.color }}
                         onClick={() => set({ sel: page.id, boardId: page.boardId, areaId: area.id, mode: 'board' })}
                         onDoubleClick={() => openPage(page.id, page.boardId)}
+                        onContextMenu={onContext('page', page.id)}
                       >
                         <span className="page-row__code">{type.code}</span>
                         <span className="page-row__title truncate">{page.title}</span>

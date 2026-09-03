@@ -15,6 +15,20 @@ export interface EditorMenu {
   i: number;
 }
 
+/** What was right-clicked. `id` is the area/board/page; for canvas it is the board. */
+export interface ContextTarget {
+  kind: 'area' | 'board' | 'page' | 'canvas';
+  id: string;
+  /** World point under the cursor, so "new page here" lands where you clicked. */
+  world?: { x: number; y: number };
+}
+
+export interface ContextMenu {
+  x: number;
+  y: number;
+  target: ContextTarget;
+}
+
 export interface NewMenu {
   boardId: string;
   left: number;
@@ -44,6 +58,7 @@ interface UIState {
 
   menu: EditorMenu | null;
   newMenu: NewMenu | null;
+  context: ContextMenu | null;
   toast: string | null;
 
   search: string;
@@ -93,6 +108,7 @@ export const useUI = create<UIStore>()((set) => ({
   ghost: null,
   menu: null,
   newMenu: null,
+  context: null,
   toast: null,
   search: '',
   collapsed: {},

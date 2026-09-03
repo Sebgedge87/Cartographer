@@ -13,6 +13,7 @@ import { Inspector } from './components/Inspector';
 import { PageEditor } from './components/PageEditor';
 import { NewPageMenu } from './components/NewPageMenu';
 import { Toast } from './components/Toast';
+import { ContextMenu } from './components/ContextMenu';
 import { SignIn } from './components/SignIn';
 import { useSync } from './state/syncStore';
 
@@ -37,6 +38,7 @@ function useGlobalKeys() {
         return;
       }
       if (e.key === 'Escape') {
+        if (ui.context) return ui.set({ context: null });
         if (ui.newMenu) return ui.set({ newMenu: null });
         if (ui.menu) return ui.set({ menu: null });
         if (ui.editing) return ui.closeEditor();
@@ -87,6 +89,7 @@ export function App() {
           <NewPageMenu />
         </div>
       )}
+      <ContextMenu />
       <Toast />
     </>
   );
