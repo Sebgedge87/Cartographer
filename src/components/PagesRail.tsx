@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { createArea, createBoard } from '../state/actions';
+import { promptNew } from '../state/actions';
 import { SettingsMenu } from './SettingsMenu';
 
 /**
@@ -115,7 +115,10 @@ export function PagesRail() {
                 <button
                   className="area-row__add"
                   title="New board in this area"
-                  onClick={(e) => { e.stopPropagation(); createBoard(area.id); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    promptNew({ kind: 'board', initial: 'New board', areaId: area.id });
+                  }}
                 >
                   +
                 </button>
@@ -194,7 +197,11 @@ export function PagesRail() {
       </div>
 
       <div className="rail__foot">
-        <button className="btn btn--sm btn--dashed" style={{ width: '100%' }} onClick={createArea}>
+        <button
+          className="btn btn--sm btn--dashed"
+          style={{ width: '100%' }}
+          onClick={() => promptNew({ kind: 'area', initial: 'New area' })}
+        >
           + AREA
         </button>
         <SettingsMenu />

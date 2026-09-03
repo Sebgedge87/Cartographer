@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useDoc } from './state/docStore';
 import { useUI } from './state/uiStore';
-import { createPage } from './state/actions';
+import { promptNew, suggestPageName } from './state/actions';
 import { Home } from './components/Home';
 import { TopBar } from './components/TopBar';
 import { PagesRail } from './components/PagesRail';
@@ -14,6 +14,7 @@ import { PageEditor } from './components/PageEditor';
 import { NewPageMenu } from './components/NewPageMenu';
 import { Toast } from './components/Toast';
 import { ContextMenu } from './components/ContextMenu';
+import { NamePrompt } from './components/NamePrompt';
 import { SignIn } from './components/SignIn';
 import { useSync } from './state/syncStore';
 
@@ -38,6 +39,7 @@ function useGlobalKeys() {
         return;
       }
       if (e.key === 'Escape') {
+        if (ui.prompt) return ui.set({ prompt: null });
         if (ui.context) return ui.set({ context: null });
         if (ui.newMenu) return ui.set({ newMenu: null });
         if (ui.menu) return ui.set({ menu: null });
@@ -45,9 +47,9 @@ function useGlobalKeys() {
         return;
       }
       if (isTyping(e.target)) return;
-      if (ui.view === 'project' && !ui.editing && (e.key === 'n' || e.key === 'N')) {
+      if (ui.view === 'project' && !ui.editing && !ui.prompt && ui.boardId && (e.key === 'n' || e.key === 'N')) {
         e.preventDefault();
-        createPage();
+        promptNew({ kind: 'page', initial: suggestPageName(), boardId: ui.boardId });
       }
     };
     window.addEventListener('keydown', onKey);
@@ -90,6 +92,7 @@ export function App() {
         </div>
       )}
       <ContextMenu />
+      <NamePrompt />
       <Toast />
     </>
   );

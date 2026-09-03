@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { createBoard, createPage } from '../state/actions';
+import { promptNew, suggestPageName } from '../state/actions';
 
 interface Item {
   label: string;
@@ -67,7 +67,7 @@ export function ContextMenu() {
     const boards = doc.boards.filter((b) => b.areaId === id).length;
     title = area.name;
     items = [
-      { label: 'New board', run: act(() => createBoard(id)) },
+      { label: 'New board', run: act(() => promptNew({ kind: 'board', initial: 'New board', areaId: id })) },
       { label: 'Rename', run: act(() => set({ renamingArea: id })) },
       {
         label: 'Delete area',
@@ -90,7 +90,10 @@ export function ContextMenu() {
     title = board.name;
     items = [
       { label: 'Open board', run: act(() => openBoard(id, board.areaId)) },
-      { label: 'New page', run: act(() => createPage({ boardId: id })) },
+      {
+        label: 'New page',
+        run: act(() => promptNew({ kind: 'page', initial: suggestPageName(), boardId: id })),
+      },
       { label: 'Rename', run: act(() => set({ renamingBoard: id })) },
       {
         label: 'Delete board',
@@ -136,8 +139,15 @@ export function ContextMenu() {
     const board = doc.boards.find((b) => b.id === id);
     title = board?.name ?? 'Board';
     items = [
-      { label: 'New page here', run: act(() => createPage({ boardId: id, ...(world ? { at: world } : {}) })) },
-      { label: 'New board', run: act(() => board && createBoard(board.areaId)) },
+      {
+        label: 'New page here',
+        run: act(() =>
+          promptNew({ kind: 'page', initial: suggestPageName(), boardId: id, ...(world ? { at: world } : {}) })),
+      },
+      {
+        label: 'New board',
+        run: act(() => board && promptNew({ kind: 'board', initial: 'New board', areaId: board.areaId })),
+      },
     ];
   }
 

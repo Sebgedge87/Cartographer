@@ -29,6 +29,19 @@ export interface ContextMenu {
   target: ContextTarget;
 }
 
+/** An in-flight "name this thing" modal. Everything needed to make it on submit. */
+export interface NamePrompt {
+  kind: 'area' | 'board' | 'page';
+  initial: string;
+  /** Where it goes. Areas need neither; boards need an area; pages need a board. */
+  areaId?: string;
+  boardId?: string;
+  /** Block type for a page. */
+  type?: string;
+  /** World point for a page created at a specific spot on the canvas. */
+  at?: { x: number; y: number };
+}
+
 export interface NewMenu {
   boardId: string;
   left: number;
@@ -59,6 +72,7 @@ interface UIState {
   menu: EditorMenu | null;
   newMenu: NewMenu | null;
   context: ContextMenu | null;
+  prompt: NamePrompt | null;
   toast: string | null;
 
   search: string;
@@ -109,6 +123,7 @@ export const useUI = create<UIStore>()((set) => ({
   menu: null,
   newMenu: null,
   context: null,
+  prompt: null,
   toast: null,
   search: '',
   collapsed: {},

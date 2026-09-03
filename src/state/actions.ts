@@ -1,5 +1,5 @@
 import { schemaFor, useDoc } from './docStore';
-import { useUI } from './uiStore';
+import { useUI, type NamePrompt } from './uiStore';
 import { rollDice } from './graph';
 import { buildProjectFile, downloadProject, parseProjectFile } from '../lib/io';
 import { uniqueTitle } from '../lib/text';
@@ -108,23 +108,50 @@ export function createProject(): void {
   openProject(id);
 }
 
-export function createArea(): void {
+export function createArea(name?: string): void {
   const ui = useUI.getState();
   if (!ui.projectId) return;
-  const id = useDoc.getState().addArea(ui.projectId);
+  const id = useDoc.getState().addArea(ui.projectId, name);
   const board = useDoc.getState().boards.find((b) => b.areaId === id);
   ui.set({ areaId: id, boardId: board?.id ?? null, mode: 'area', sel: null });
-  ui.showToast('Area added — rename it in the rail');
 }
 
 /** Add a board to an area and open its canvas. */
-export function createBoard(areaId?: string): void {
+export function createBoard(areaId?: string, name?: string): void {
   const ui = useUI.getState();
   const target = areaId ?? ui.areaId;
   if (!ui.projectId || !target) return;
-  const id = useDoc.getState().addBoard(ui.projectId, target);
+  const id = useDoc.getState().addBoard(ui.projectId, target, name);
   ui.openBoard(id, target);
-  ui.showToast('Board added — rename it in the rail');
+}
+
+/**
+ * Ask for a name before creating. Only for the paths where a person is starting
+ * something new — the slash command, wikilink autocomplete and unresolved-link
+ * flows already know the title and go straight to createPage.
+ */
+export function promptNew(prompt: NamePrompt): void {
+  useUI.getState().set({ prompt, context: null, newMenu: null });
+}
+
+/**
+ * Suggest a starting name for a new page. With no type given, resolve the one the
+ * page will actually get — the current board's area default — so the suggestion
+ * matches what gets created.
+ */
+export function suggestPageName(type?: string): string {
+  const ui = useUI.getState();
+  const doc = useDoc.getState();
+
+  let key = type;
+  if (!key) {
+    const board = doc.boards.find((b) => b.id === ui.boardId);
+    key = doc.areas.find((a) => a.id === board?.areaId)?.defaultType;
+  }
+  if (!key || key === 'blank') return 'New page';
+
+  const schema = schemaFor(doc, ui.projectId);
+  return `New ${(schema.types[key]?.label ?? 'page').toLowerCase()}`;
 }
 
 /** The block type lookup for the project currently open. */

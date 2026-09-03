@@ -1,6 +1,6 @@
 import { blockType, creatableTypeKeys, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { createPage } from '../state/actions';
+import { promptNew, suggestPageName } from '../state/actions';
 
 export function NewPageMenu() {
   const doc = useDoc();
@@ -15,7 +15,7 @@ export function NewPageMenu() {
 
   const pick = (type: string) => {
     close();
-    createPage({ type, boardId: menu.boardId });
+    promptNew({ kind: 'page', initial: suggestPageName(type), boardId: menu.boardId, type });
   };
 
   return (

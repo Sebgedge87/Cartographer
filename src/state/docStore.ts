@@ -24,7 +24,7 @@ interface DocActions {
   renameProject: (id: string, name: string) => void;
   importProject: (file: ProjectFile) => Project;
 
-  addArea: (projectId: string) => string;
+  addArea: (projectId: string, name?: string) => string;
   renameArea: (id: string, name: string) => void;
   setAreaDefaultType: (id: string, type: string) => void;
   deleteArea: (id: string) => void;
@@ -151,9 +151,9 @@ export const useDoc = create<DocStore>()(
       },
 
       /* ---------- areas ---------- */
-      addArea: (projectId) => {
+      addArea: (projectId, name) => {
         const id = uid('a');
-        const area: Area = { id, projectId, name: 'New area', defaultType: 'note' };
+        const area: Area = { id, projectId, name: name ?? 'New area', defaultType: 'note' };
         const board: Board = { id: uid('b'), projectId, areaId: id, name: 'First board' };
         set((s) => ({ areas: [...s.areas, area], boards: [...s.boards, board] }));
         return id;

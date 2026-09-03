@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { blockType, creatableTypeKeys, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { edgePath, fitCamera, ghostStart } from '../state/graph';
-import { boardRect, createPage, registerBoard } from '../state/actions';
+import { boardRect, promptNew, registerBoard, suggestPageName } from '../state/actions';
 import { PageCard } from './PageCard';
 
 /** Grid underlay: the pattern scrolls with the camera by offsetting its background. */
@@ -228,15 +228,19 @@ export function Board() {
         if (page) openPage(page.id, page.boardId);
         return;
       }
+      if (!boardId) return;
       const r = boardRect();
-      createPage({
+      promptNew({
+        kind: 'page',
+        initial: suggestPageName(),
+        boardId,
         at: {
           x: Math.round((e.clientX - r.left - cam.x) / cam.z - 122),
           y: Math.round((e.clientY - r.top - cam.y) / cam.z - 58),
         },
       });
     },
-    [cam, openPage],
+    [boardId, cam, openPage],
   );
 
   const ghostSource = link ? onBoard.get(link) : undefined;
@@ -330,7 +334,8 @@ export function Board() {
             className="overlay-btn"
             style={{ color: blockType(schema, k).color }}
             title={`New ${blockType(schema, k).label.toLowerCase()}`}
-            onClick={() => createPage({ type: k })}
+            onClick={() =>
+              boardId && promptNew({ kind: 'page', initial: suggestPageName(k), boardId, type: k })}
           >
             {blockType(schema, k).code}
           </button>

@@ -844,3 +844,19 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .context__item--danger:hover { background: rgba(224, 104, 79, .12); }
 .context__item:disabled { color: var(--ghost); cursor: not-allowed; }
 .context__item:disabled:hover { background: transparent; }
+
+/* ---------- name prompt ---------- */
+
+.prompt {
+  width: min(400px, 92vw); padding: 20px 22px 18px;
+  background: var(--panel); border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: var(--r-2xl); box-shadow: var(--shadow-modal);
+  animation: cgPop .14s ease both;
+}
+.prompt__title {
+  margin: 0 0 6px; font: 600 19px var(--font-ui);
+  letter-spacing: -.02em; color: var(--text-strong);
+}
+.prompt__hint { margin: 0 0 15px; font: 400 12.5px/1.5 var(--font-ui); color: var(--muted); }
+.prompt__input { padding: 9px 11px; font-size: 14px; }
+.prompt__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }

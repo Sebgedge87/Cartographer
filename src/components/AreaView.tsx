@@ -1,6 +1,6 @@
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { createBoard } from '../state/actions';
+import { promptNew } from '../state/actions';
 
 /**
  * What you see when an area is selected: the boards it holds. An area has no canvas
@@ -73,7 +73,7 @@ export function AreaView() {
             );
           })}
 
-          <button className="board-tile board-tile--new" onClick={() => createBoard(area.id)}>
+          <button className="board-tile board-tile--new" onClick={() => promptNew({ kind: 'board', initial: 'New board', areaId: area.id })}>
             + NEW BOARD
           </button>
         </div>
