@@ -897,3 +897,48 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   margin-left: auto; flex: none; padding-left: 10px;
   font: 400 10px var(--font-mono); color: var(--ghost);
 }
+
+/* ---------- fields fly-out ---------- */
+
+.stats__head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 8px 14px; }
+.stats__toggle {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  border: none; background: transparent; padding: 0; cursor: pointer; text-align: left;
+}
+
+.fields-menu { position: relative; flex: none; }
+.fields-menu__panel {
+  position: absolute; right: 0; top: calc(100% + 7px); z-index: 30;
+  width: 296px;
+  background: var(--popover); border: 1px solid var(--border-strong);
+  border-radius: var(--r-xl); box-shadow: var(--shadow-popover);
+  animation: cgPop .12s ease both;
+}
+.fields-menu__group { padding: 13px 14px 14px; border-bottom: 1px solid var(--border); }
+.fields-menu__group--last { border-bottom: none; }
+.fields-menu__label {
+  font: 600 12.5px var(--font-ui); color: var(--text-strong); margin-bottom: 5px;
+}
+.fields-menu__desc {
+  margin: 0 0 10px; font: 400 11.5px/1.5 var(--font-ui); color: var(--muted);
+}
+.fields-menu__desc:last-child { margin: 8px 0 0; }
+.fields-menu__desc code {
+  font: 400 11px var(--font-mono); color: var(--accent);
+}
+.fields-menu__row { display: flex; gap: 6px; }
+.fields-menu__row .field { flex: 1 1 auto; min-width: 0; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ---------- markdown gaps ---------- */
+
+.md h5 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+.md h6 { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.md s, .md del { color: var(--faint); }
+.md .cg-quote--warning { border-left-color: var(--accent); background: rgba(224, 164, 74, .07); }
+.md .cg-quote--warning .cg-quote-tag { color: var(--accent); }
+.md li.cg-task { list-style: none; margin-left: -18px; }
+.md .cg-check {
+  width: 13px; height: 13px; margin-right: 7px; vertical-align: -1px;
+  accent-color: var(--accent); cursor: pointer;
+}

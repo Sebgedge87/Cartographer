@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
+import { useDismiss } from '../lib/useDismiss';
 import type { ViewMode } from '../state/types';
 import { useUI, type Density, type GridStyle } from '../state/uiStore';
 import { useSync } from '../state/syncStore';
@@ -55,21 +56,9 @@ export function SettingsMenu() {
 
   // Close on Escape or on a click outside. A full-screen catcher would sit over the
   // button that opened the panel, leaving it unable to close itself.
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
-    const onDown = (e: PointerEvent) => {
-      if (!wrap.current?.contains(e.target as Node)) setOpen(false);
-    };
-    window.addEventListener('keydown', onKey);
-    document.addEventListener('pointerdown', onDown);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      document.removeEventListener('pointerdown', onDown);
-    };
-  }, [open]);
 
-  const close = () => setOpen(false);
+  const close = useCallback(() => setOpen(false), []);
+  useDismiss(open, wrap, close);
 
   return (
     <div className="settings" ref={wrap}>

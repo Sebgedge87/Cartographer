@@ -3,12 +3,13 @@ import type { Field, FieldKind } from '../state/types';
 import { blockType, creatableTypeKeys, isCustomPage, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { createPage, rollAndToast } from '../state/actions';
-import { markdownContext, renderMarkdown } from '../lib/markdown';
+import { markdownContext, renderMarkdown, toggleTaskLine } from '../lib/markdown';
 import {
   caretTrigger, insertBlock, prefixLine, replaceAtCaret, restoreCaret, uniqueTitle, wrapSelection,
 } from '../lib/text';
 import type { TextEdit } from '../lib/text';
 import { FieldGrid } from './FieldGrid';
+import { FieldsMenu } from './FieldsMenu';
 
 interface Option {
   code: string;
@@ -33,7 +34,6 @@ export function PageEditor() {
   const projectId = useUI((s) => s.projectId);
   const menu = useUI((s) => s.menu);
   const fieldsOpen = useUI((s) => s.fieldsOpen);
-  const newField = useUI((s) => s.newField);
   const set = useUI((s) => s.set);
   const openPage = useUI((s) => s.openPage);
   const closeEditor = useUI((s) => s.closeEditor);
@@ -90,7 +90,20 @@ export function PageEditor() {
       { code: '{}', label: 'Code block', hint: 'fence', run: at('```\n\n```', 4) },
       { code: 'TB', label: 'Table', hint: 'grid', run: at('| Roll | Result |\n| --- | --- |\n|  |  |\n', 2) },
       { code: 'IM', label: 'Image', hint: 'embed', run: at('![caption](image-url)', 2) },
+      { code: 'H4', label: 'Heading 4', hint: '####', run: at('#### ') },
+      { code: '~~', label: 'Strikethrough', hint: 'strike', run: at('~~~~', 2) },
+      { code: '☑', label: 'Checklist', hint: 'task', run: at('- [ ] ') },
+      { code: '—', label: 'Divider', hint: 'hr', run: at('\n---\n') },
+      { code: '↗', label: 'External link', hint: 'url', run: at('[](https://)', 1) },
+      { code: 'NB', label: 'Note callout', hint: 'aside', run: at('> [!note] ') },
+      { code: '!!', label: 'Warning callout', hint: 'aside', run: at('> [!warning] ') },
       { code: 'd', label: 'Dice expression', hint: 'roll', run: at('2d6+3') },
+      {
+        code: '📅',
+        label: "Today's date",
+        hint: 'date',
+        run: at(new Date().toISOString().slice(0, 10)),
+      },
       { code: '[[', label: 'Link to page', hint: 'wikilink', run: at('[[') },
       { code: '@', label: 'Live stat reference', hint: '@Page.field', run: at('@') },
     ];
@@ -232,6 +245,14 @@ export function PageEditor() {
 
   const onPreviewClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
+      // A checkbox edits the body rather than navigating, so it goes first.
+      const box = (e.target as HTMLElement).closest('[data-task]');
+      if (box && page) {
+        const line = Number(box.getAttribute('data-task'));
+        const next = toggleTaskLine(page.body, line);
+        if (next !== page.body) doc.patchPage(page.id, { body: next });
+        return;
+      }
       const hit = (e.target as HTMLElement).closest('[data-dice],[data-page],[data-new]');
       if (!hit) return;
       const dice = hit.getAttribute('data-dice');
@@ -256,7 +277,7 @@ export function PageEditor() {
         showToast(`Created page “${title}”`);
       }
     },
-    [doc.pages, openPage, page, showToast],
+    [doc, openPage, page, showToast],
   );
 
   useEffect(() => {
@@ -324,14 +345,18 @@ export function PageEditor() {
 
         {/* 3. stat block / elements */}
         <div className="stats">
-          <button className="stats__head" onClick={() => set({ fieldsOpen: !fieldsOpen })}>
-            <span className="stats__caret">{fieldsOpen ? '▾' : '▸'}</span>
-            <span className="label">{custom ? 'Elements' : 'Stat block'}</span>
-            <span className="area-row__count">{fields.length}</span>
+          <div className="stats__head">
+            <button className="stats__toggle" onClick={() => set({ fieldsOpen: !fieldsOpen })}>
+              <span className="stats__caret">{fieldsOpen ? '▾' : '▸'}</span>
+              <span className="label">{custom ? 'Elements' : 'Stat block'}</span>
+              <span className="area-row__count">{fields.length}</span>
+            </button>
+            <span className="spacer" />
             <span className="stats__note">
               {custom ? 'CUSTOM LAYOUT' : `SCHEMA: ${type.label.toUpperCase()}`}
             </span>
-          </button>
+            <FieldsMenu page={page} type={type} custom={custom} />
+          </div>
 
           {fieldsOpen && (
             <>
@@ -357,16 +382,6 @@ export function PageEditor() {
                       {n === 0 ? 'AUTO' : n}
                     </button>
                   ))}
-                  <button
-                    className="btn btn--sm"
-                    title="Promote this layout to a project block type"
-                    onClick={() => {
-                      const made = doc.promoteType(page.id);
-                      if (made) showToast(`“${made.label}” is now a block type — it has a /command too`);
-                    }}
-                  >
-                    SAVE AS BLOCK TYPE
-                  </button>
                 </div>
               )}
 
@@ -378,37 +393,6 @@ export function PageEditor() {
                 <FieldGrid page={page} fields={fields} editable={custom} cols={page.cols} />
               </div>
 
-              {!custom && (
-                <div className="stats__new">
-                  <input
-                    className="field"
-                    placeholder={`+ NEW ON SCHEMA — adds to every ${type.label.toLowerCase()}`}
-                    value={newField}
-                    onChange={(e) => set({ newField: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key !== 'Enter' || !newField.trim() || !projectId) return;
-                      const label = newField.trim();
-                      doc.addTypeField(projectId, page.type, {
-                        key: label.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-                        label,
-                        kind: 'text',
-                      });
-                      set({ newField: '' });
-                      showToast(`Added “${label}” to every ${type.label}`);
-                    }}
-                  />
-                  <button
-                    className="btn btn--sm"
-                    title="Give this page its own layout, leaving the type alone"
-                    onClick={() => {
-                      doc.setCustom(page.id, (list) => list);
-                      showToast('This page now has its own layout');
-                    }}
-                  >
-                    CUSTOMISE THIS PAGE
-                  </button>
-                </div>
-              )}
             </>
           )}
         </div>

@@ -78,7 +78,6 @@ interface UIState {
   search: string;
   collapsed: Record<string, boolean>;
   fieldsOpen: boolean;
-  newField: string;
   renamingArea: string | null;
   renamingBoard: string | null;
   renamingProject: boolean;
@@ -128,7 +127,6 @@ export const useUI = create<UIStore>()((set) => ({
   search: '',
   collapsed: {},
   fieldsOpen: true,
-  newField: '',
   renamingArea: null,
   renamingBoard: null,
   renamingProject: false,

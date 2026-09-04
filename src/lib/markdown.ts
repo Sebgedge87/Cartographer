@@ -80,6 +80,32 @@ md.core.ruler.push('cartographer_inline', (state) => {
   return true;
 });
 
+/**
+ * `- [ ] thing` / `- [x] thing` become real checkboxes. The source line index rides
+ * on the token so a click in the preview can toggle that exact line of the body.
+ */
+md.core.ruler.push('cartographer_tasks', (state) => {
+  const tokens = state.tokens;
+  for (let i = 0; i < tokens.length; i++) {
+    if (tokens[i]?.type !== 'list_item_open') continue;
+    const inline = tokens[i + 2];
+    if (!inline || inline.type !== 'inline') continue;
+
+    const m = /^\[([ xX])\]\s+/.exec(inline.content);
+    if (!m) continue;
+
+    inline.content = inline.content.slice(m[0].length);
+    const first = inline.children?.[0];
+    if (first && first.type === 'text') first.content = first.content.replace(/^\[[ xX]\]\s+/, '');
+
+    const box = new state.Token('cg_task', '', 0);
+    box.meta = { checked: m[1] !== ' ', line: inline.map?.[0] ?? -1 };
+    inline.children = [box, ...(inline.children ?? [])];
+    tokens[i]!.attrJoin('class', 'cg-task');
+  }
+  return true;
+});
+
 /** `> [!gm] …` / `> [!note] …` become tagged callouts rather than plain quotes. */
 md.core.ruler.push('cartographer_callout', (state) => {
   const tokens = state.tokens;
@@ -141,9 +167,18 @@ md.renderer.rules.cg_dice = (tokens, idx) => {
   return `<span class="cg-dice" data-dice="${esc(expr)}" title="Click to roll">${esc(expr)}</span>`;
 };
 
+md.renderer.rules.cg_task = (tokens, idx) => {
+  const meta = tokens[idx]?.meta ?? {};
+  const checked = meta.checked ? ' checked' : '';
+  return `<input type="checkbox" class="cg-check" data-task="${Number(meta.line)}"${checked} />`;
+};
+
 md.renderer.rules.blockquote_open = (tokens, idx) => {
   const tag = tokens[idx]?.attrGet('data-callout');
-  const cls = tag === 'GM' ? 'cg-quote cg-quote--gm' : 'cg-quote';
+  const cls =
+    tag === 'GM' ? 'cg-quote cg-quote--gm'
+      : tag === 'WARNING' ? 'cg-quote cg-quote--warning'
+      : 'cg-quote';
   return `<div class="${cls}">` + (tag ? `<div class="cg-quote-tag">${esc(tag)}</div>` : '');
 };
 md.renderer.rules.blockquote_close = () => '</div>';
@@ -199,4 +234,18 @@ export function markdownContext(
 /** Strip markdown furniture down to a one-line preview for a board card. */
 export function plainSnippet(body: string, max = 96): string {
   return body.replace(/[#*>[\]`|]/g, '').replace(/\s+/g, ' ').trim().slice(0, max);
+}
+
+/**
+ * Flip `- [ ]` and `- [x]` on one line of a body. The preview reports which line was
+ * clicked, so the source stays the single copy of the truth.
+ */
+export function toggleTaskLine(body: string, line: number): string {
+  const lines = body.split('\n');
+  const target = lines[line];
+  if (target === undefined) return body;
+  lines[line] = /^(\s*[-*+]\s+)\[ \]/.test(target)
+    ? target.replace(/^(\s*[-*+]\s+)\[ \]/, '$1[x]')
+    : target.replace(/^(\s*[-*+]\s+)\[[xX]\]/, '$1[ ]');
+  return lines[line] === target ? body : lines.join('\n');
 }
