@@ -477,13 +477,16 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 /* ---------- popovers ---------- */
 
 .popover {
-  position: absolute; left: 14px; right: 14px; bottom: 34px; z-index: 5;
-  max-height: 284px; overflow: auto;
+  /* left/top are set from the caret's measured position in PageEditor. */
+  position: absolute; z-index: 5;
+  width: 340px; max-width: calc(100% - 28px); max-height: 284px; overflow: auto;
+  overscroll-behavior: contain;
   background: var(--popover); border: 1px solid var(--border-strong);
   border-radius: var(--r-xl); box-shadow: var(--shadow-popover);
   animation: cgPop .12s ease both;
 }
 .popover__head {
+  position: sticky; top: 0; background: var(--popover);
   padding: 8px 12px 6px; font: 700 8.5px var(--font-mono); letter-spacing: .2em; color: var(--faint);
 }
 .opt {

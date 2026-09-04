@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { Field, FieldKind } from '../state/types';
 import { blockType, creatableTypeKeys, isCustomPage, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { createPage, rollAndToast } from '../state/actions';
+import { caretPoint } from '../lib/caret';
 import { markdownContext, renderMarkdown, toggleTaskLine } from '../lib/markdown';
 import {
   caretTrigger, insertBlock, prefixLine, replaceAtCaret, restoreCaret, uniqueTitle, wrapSelection,
@@ -40,6 +41,9 @@ export function PageEditor() {
   const showToast = useUI((s) => s.showToast);
 
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const popover = useRef<HTMLDivElement>(null);
+  /** Where the popover hangs: the start of the trigger, in pane coordinates. */
+  const [anchor, setAnchor] = useState<{ left: number; top: number; line: number } | null>(null);
   /** Trigger the user dismissed with Esc, so syncMenu does not immediately reopen it. */
   const dismissed = useRef<string | null>(null);
   const page = doc.pages.find((p) => p.id === editing);
@@ -190,7 +194,7 @@ export function PageEditor() {
           (p) =>
             p.projectId === page.projectId && p.id !== page.id && p.title.toLowerCase().includes(query),
         )
-        .slice(0, 9)
+        .slice(0, 20)
         .map((p) => {
           const type = blockType(schema, p.type);
           return {
@@ -202,9 +206,10 @@ export function PageEditor() {
           };
         });
     }
+    // No cap: the list scrolls, and a truncated one hides commands you cannot
+    // reach unless you already know their name.
     return slashOptions
-      .filter((c) => !query || c.label.toLowerCase().includes(query) || (c.hint ?? '').includes(query))
-      .slice(0, 10);
+      .filter((c) => !query || c.label.toLowerCase().includes(query) || (c.hint ?? '').includes(query));
   }, [apply, doc, menu, page, schema, slashOptions]);
 
   /* ---------- keyboard ---------- */
@@ -331,6 +336,49 @@ export function PageEditor() {
     if (page) textarea.current?.focus();
   }, [page?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const highlighted = menu ? Math.min(menu.i, Math.max(0, options.length - 1)) : 0;
+
+  // The menu follows the caret, so it has to be re-measured after every keystroke
+  // that keeps it open. Anchor to the start of the trigger rather than the caret:
+  // the menu then holds still while you narrow the query instead of creeping right.
+  useLayoutEffect(() => {
+    const ta = textarea.current;
+    if (!menu || !ta) {
+      setAnchor(null);
+      return;
+    }
+    const p = caretPoint(ta, Math.max(0, ta.selectionStart - menu.len));
+    setAnchor({ left: ta.offsetLeft + p.left, top: ta.offsetTop + p.top, line: p.line });
+  }, [menu?.kind, menu?.q, menu?.len, page?.body]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep it inside the pane: pull it back from the right edge, and flip it above the
+  // caret's line when there is no room under it.
+  useLayoutEffect(() => {
+    const el = popover.current;
+    const pane = textarea.current?.parentElement;
+    if (!el || !pane || !anchor) return;
+    const maxLeft = pane.clientWidth - el.offsetWidth - 14;
+    el.style.left = `${Math.max(14, Math.min(anchor.left, maxLeft))}px`;
+    const below = anchor.top + anchor.line;
+    // 34px is the status strip along the foot of the pane.
+    el.style.top = below + el.offsetHeight > pane.clientHeight - 34
+      ? `${Math.max(14, anchor.top - el.offsetHeight - 4)}px`
+      : `${below}px`;
+  }, [anchor, options.length]);
+
+  // Arrow keys move the highlight, but focus never leaves the textarea, so nothing
+  // scrolls the list on its own.
+  useEffect(() => {
+    const list = popover.current;
+    const item = list?.querySelector<HTMLElement>('.opt--active');
+    if (!list || !item) return;
+    const head = list.querySelector<HTMLElement>('.popover__head');
+    const top = item.offsetTop - (head?.offsetHeight ?? 0);
+    const bottom = item.offsetTop + item.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top;
+    else if (bottom > list.scrollTop + list.clientHeight) list.scrollTop = bottom - list.clientHeight;
+  }, [highlighted, menu?.kind, options.length]);
+
   if (!page) return null;
 
   const type = blockType(schema, page.type);
@@ -359,8 +407,6 @@ export function PageEditor() {
     { label: '@', title: 'Live stat reference', run: () => apply(ta() ? insertBlock(ta()!, '@') : null) },
     { label: '2d6', title: 'Dice', run: () => apply(ta() ? insertBlock(ta()!, '2d6+3') : null) },
   ];
-
-  const highlighted = menu ? Math.min(menu.i, Math.max(0, options.length - 1)) : 0;
 
   return (
     <div className="scrim" onPointerDown={(e) => e.target === e.currentTarget && closeEditor()}>
@@ -468,7 +514,7 @@ export function PageEditor() {
             </div>
 
             {menu && (
-              <div className="popover">
+              <div className="popover" ref={popover}>
                 <div className="popover__head">{menu.kind === 'wiki' ? 'LINK TO PAGE' : 'COMMANDS'}</div>
                 {options.length === 0 && (
                   <div className="palette__empty">
