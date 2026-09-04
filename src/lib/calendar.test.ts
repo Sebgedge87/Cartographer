@@ -4,7 +4,7 @@ import type { WorldCalendar } from '../state/types';
 import {
   clampDate, compareDates, daysBetween, daysInMonth, daysInYear, describeSpan, formatDate,
   fromDayNumber, isLeapYear, moonIllumination, moonPhase, parseDate, serialiseDate,
-  toDayNumber, weekdayName,
+  occursOn, toDayNumber, weekdayName,
 } from './calendar';
 
 /** A small, awkward calendar: three months of unequal length, a four-day week. */
@@ -136,4 +136,32 @@ test('a span is described in the largest unit that still means something', () =>
   assert.equal(describeSpan(cal, 1), 'in 1 day');
   assert.equal(describeSpan(cal, -8), '1 month ago', 'a 22-day year of 3 months makes a month ~7 days');
   assert.equal(describeSpan(cal, 44), 'in 2 years');
+});
+
+test('a repeating date survives the round trip and reads by its day', () => {
+  const feast = { year: 900, month: 2, day: 3, repeats: true };
+  assert.equal(serialiseDate(feast), '900-2-3~y');
+  assert.deepEqual(parseDate('900-2-3~y'), feast);
+  assert.equal(parseDate('900-2-3')?.repeats, undefined, 'a plain date does not repeat');
+  assert.equal(formatDate(cal, feast), '3 Beta, every year');
+});
+
+test('a one-off occurs once; a repeating date occurs every year from its first', () => {
+  const once = { year: 900, month: 2, day: 3 };
+  assert.equal(occursOn(cal, once, { year: 900, month: 2, day: 3 }), true);
+  assert.equal(occursOn(cal, once, { year: 901, month: 2, day: 3 }), false);
+
+  const feast = { ...once, repeats: true };
+  assert.equal(occursOn(cal, feast, { year: 900, month: 2, day: 3 }), true);
+  assert.equal(occursOn(cal, feast, { year: 1400, month: 2, day: 3 }), true);
+  assert.equal(occursOn(cal, feast, { year: 899, month: 2, day: 3 }), false, 'not before it began');
+  assert.equal(occursOn(cal, feast, { year: 901, month: 2, day: 4 }), false, 'wrong day');
+});
+
+test('a repeating date on the leap day skips the years that have none', () => {
+  // Month 2 is five days long, six in a leap year, and year 4 is a leap year here.
+  const leapFeast = { year: 4, month: 2, day: 6, repeats: true };
+  assert.equal(occursOn(cal, leapFeast, { year: 4, month: 2, day: 6 }), true);
+  assert.equal(occursOn(cal, leapFeast, { year: 8, month: 2, day: 6 }), true);
+  assert.equal(occursOn(cal, leapFeast, { year: 5, month: 2, day: 6 }), false, 'year 5 has no sixth');
 });

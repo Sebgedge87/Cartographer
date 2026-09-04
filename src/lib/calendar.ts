@@ -140,18 +140,32 @@ export function moonIllumination(cal: WorldCalendar, moon: Moon, date: WorldDate
 
 /* ---------- text ---------- */
 
-/** `year-month-day`, which is how a date is stored in a page field. */
+/** `year-month-day`, plus `~y` when it comes round every year. */
 export function serialiseDate(date: WorldDate): string {
-  return `${date.year}-${date.month}-${date.day}`;
+  return `${date.year}-${date.month}-${date.day}${date.repeats ? '~y' : ''}`;
 }
 
 /** Parse a stored date. Returns null for anything that is not one. */
 export function parseDate(value: string): WorldDate | null {
-  const m = /^(-?\d+)-(\d+)-(\d+)$/.exec(value.trim());
+  const m = /^(-?\d+)-(\d+)-(\d+)(~y)?$/.exec(value.trim());
   if (!m) return null;
   const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
   if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return null;
-  return { year, month, day };
+  return m[4] ? { year, month, day, repeats: true } : { year, month, day };
+}
+
+/**
+ * Does this date land on that day of that year?
+ *
+ * A one-off has to match outright. A repeating one matches the same month and day
+ * in any year from its first onwards — a feast does not exist before it was founded.
+ * The leap day is the awkward case: a date on it simply does not occur in a common
+ * year, which is true of the real thing too.
+ */
+export function occursOn(cal: WorldCalendar, date: WorldDate, target: WorldDate): boolean {
+  if (date.month !== target.month || date.day !== target.day) return false;
+  if (!date.repeats) return date.year === target.year;
+  return target.year >= date.year && date.day <= daysInMonth(cal, target.year, date.month);
 }
 
 /** Pull a date back inside the calendar — a day past the month's end, a bad month. */
@@ -159,13 +173,15 @@ export function clampDate(cal: WorldCalendar, date: WorldDate): WorldDate {
   const year = Math.max(1, Math.round(date.year));
   const month = Math.min(Math.max(1, Math.round(date.month)), Math.max(1, cal.months.length));
   const day = Math.min(Math.max(1, Math.round(date.day)), Math.max(1, daysInMonth(cal, year, month)));
-  return { year, month, day };
+  return date.repeats ? { year, month, day, repeats: true } : { year, month, day };
 }
 
 /** How a date reads: "12 Ashfall, 1147 AR". */
 export function formatDate(cal: WorldCalendar, date: WorldDate): string {
   const month = cal.months[date.month - 1]?.name ?? `Month ${date.month}`;
   const era = cal.era ? ` ${cal.era}` : '';
+  // A repeating date reads by its day, not its year — the year is where it started.
+  if (date.repeats) return `${date.day} ${month}, every year`;
   return `${date.day} ${month}, ${date.year}${era}`;
 }
 

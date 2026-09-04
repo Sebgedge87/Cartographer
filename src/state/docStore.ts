@@ -5,9 +5,10 @@ import type {
   WorldCalendar,
 } from './types';
 import { deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
-import { codeFor, emptyDoc, normaliseSchema, starterCalendar, starterSchema } from './defaults';
+import { codeFor, emptyDoc, normaliseSchema, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
 import { LIMITS, sweepAssets } from '../lib/assets';
+import { serialiseDate } from '../lib/calendar';
 
 export const CARD_W = 244;
 export const CARD_H = 116;
@@ -141,10 +142,12 @@ export const useDoc = create<DocStore>()(
         const project: Project = file.project ?? {
           id: uid('p'), name: 'Imported', system: 'Imported', accent: '#8fa5c9',
         };
+        // The calendar is passed through as-is, missing and all: normaliseSchema
+        // fills it in, and uses its absence to tell that the file predates dates.
         const schema = normaliseSchema({
           types: file.types ?? starterSchema().types,
           typeOrder: file.typeOrder ?? starterSchema().typeOrder,
-          calendar: file.calendar ?? starterCalendar(),
+          calendar: file.calendar as ProjectSchema['calendar'],
         });
         set((s) => {
           const pages = [...s.pages, ...(file.pages ?? [])];
@@ -224,11 +227,18 @@ export const useDoc = create<DocStore>()(
         const schema = s.schemas[projectId] ?? starterSchema();
         const blockType = schema.types[typeKey] ?? FALLBACK_TYPE;
         const id = uid('n');
+        // A type with a date field starts on the present. An Event with no date is
+        // on no timeline and no calendar, which is not an event so much as a note.
+        const calendar = (s.schemas[projectId] ?? starterSchema()).calendar;
+        const fields: Record<string, string> = {};
+        for (const field of blockType.fields) {
+          if (field.kind === 'date') fields[field.key] = serialiseDate(calendar.today);
+        }
         const page: Page = {
           id, projectId, boardId, type: typeKey,
           title: title ?? (typeKey === 'blank' ? 'Untitled page' : `Untitled ${blockType.label}`),
           x: at.x, y: at.y, w: CARD_W, h: CARD_H,
-          fields: {}, custom: typeKey === 'blank' ? [] : null, cols: 0,
+          fields, custom: typeKey === 'blank' ? [] : null, cols: 0,
           body: '', images: [], header: null, updated: Date.now(),
         };
         set((st) => {

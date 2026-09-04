@@ -1257,3 +1257,68 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   padding: 2px 0 6px; max-width: 34ch;
   font: 400 10.5px/1.5 var(--font-ui); color: var(--faint);
 }
+
+.date-field__repeat {
+  margin-left: auto; flex: none; padding: 1px 6px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: transparent;
+  font: 500 8.5px var(--font-mono); letter-spacing: .1em; color: var(--faint); cursor: pointer;
+}
+.date-field__repeat:hover { border-color: var(--border-hover); color: var(--text); }
+.date-field__repeat--on {
+  border-color: var(--accent); color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+/* ---------- calendar grid ---------- */
+
+.calview { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.calview__head {
+  flex: none; display: flex; align-items: center; gap: 9px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.calview__title { font: 400 14px var(--font-ui); color: var(--muted); }
+.calview__title b { font-weight: 600; color: var(--text-strong); }
+.calview__era { margin-left: 5px; font: 700 8.5px var(--font-mono); color: var(--faint); }
+.calview__scroll { flex: 1 1 auto; overflow: auto; padding: 14px 16px 40px; }
+.calview__define { flex: 1 1 auto; overflow: auto; padding: 16px; }
+
+.calgrid {
+  display: grid;
+  grid-template-columns: repeat(var(--week), minmax(0, 1fr));
+  gap: 1px; background: var(--border);
+  border: 1px solid var(--border); border-radius: var(--r-lg); overflow: hidden;
+}
+.calgrid__weekday {
+  padding: 7px 8px; background: var(--chrome);
+  font: 700 8.5px var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
+  color: var(--faint); text-align: center;
+}
+/* The days before the first of the month: part of the grid, not part of the month. */
+.calgrid__pad { background: var(--wash-1); min-height: 82px; }
+
+.calday {
+  min-height: 82px; padding: 5px 5px 6px; background: var(--panel);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.calday--today { background: color-mix(in srgb, var(--accent) 9%, var(--panel)); }
+.calday__head { display: flex; align-items: center; gap: 4px; }
+.calday__n { font: 500 11px var(--font-mono); color: var(--muted); }
+.calday--today .calday__n { color: var(--accent-text); font-weight: 700; }
+.calday__today {
+  font: 700 7.5px var(--font-mono); letter-spacing: .12em; color: var(--accent);
+}
+.calday__moon { margin-left: auto; font-size: 9px; line-height: 1; color: var(--tint); }
+
+.calevent {
+  display: flex; align-items: center; gap: 5px; width: 100%;
+  padding: 2px 4px; border: none; border-radius: var(--r-xs);
+  background: color-mix(in srgb, var(--tint) 13%, transparent);
+  font: 500 10px var(--font-ui); color: var(--text); cursor: pointer; text-align: left;
+}
+.calevent:hover { background: color-mix(in srgb, var(--tint) 26%, transparent); }
+.calevent__dot { flex: none; width: 5px; height: 5px; border-radius: 50%; background: var(--tint); }
+/* A repeating date is ringed rather than filled: it is a date in the year, not a
+   thing that happened in this one. */
+.calevent--repeats .calevent__dot {
+  background: transparent; box-shadow: inset 0 0 0 1.5px var(--tint);
+}

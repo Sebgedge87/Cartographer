@@ -154,7 +154,11 @@ export function Timeline() {
                 <span className="chip" style={{ ['--chip' as string]: type.color }}>{type.code}</span>
                 <span className="tl-entry__title truncate">{entry.page.title}</span>
                 <span className="tl-entry__field">{entry.field.label}</span>
-                <span className="tl-entry__away">{describeSpan(calendar, away)}</span>
+                <span className="tl-entry__away">
+                  {/* A holiday has no distance from now — it is every year. Showing
+                      "336 years ago" for one would be measuring the wrong thing. */}
+                  {entry.date.repeats ? '↻ every year' : describeSpan(calendar, away)}
+                </span>
               </button>,
             );
             return rows;

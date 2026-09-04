@@ -1,7 +1,7 @@
 import type {
   Area, BlockType, Board, Doc, Edge, Field, Page, PageImage, Project, ProjectSchema, WorldCalendar,
 } from '../types';
-import { normaliseSchema, starterCalendar, starterSchema } from '../defaults';
+import { normaliseSchema, starterSchema } from '../defaults';
 
 /** The four synced tables. Edges only ever carry authored 'manual' rows. */
 export const TABLES = ['projects', 'areas', 'boards', 'pages', 'edges'] as const;
@@ -73,10 +73,12 @@ export function toProject(r: ProjectRow): Project {
 }
 
 export function toSchema(r: ProjectRow): ProjectSchema {
+  // As with import: a row written before calendars carries none, and that absence
+  // is the signal normaliseSchema needs. It supplies the default itself.
   return normaliseSchema({
     types: r.types ?? {},
     typeOrder: r.type_order ?? [],
-    calendar: r.calendar ?? starterCalendar(),
+    calendar: r.calendar as ProjectSchema['calendar'],
   });
 }
 

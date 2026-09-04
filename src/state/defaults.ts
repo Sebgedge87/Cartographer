@@ -20,6 +20,14 @@ export function starterTypes(): Record<string, BlockType> {
     faction: T('Faction', 'FAC', '#c9a26b', [f('scope', 'Scope'), f('goal', 'Goal'), f('asset', 'Key asset')]),
     table: T('Table', 'TBL', '#7fbf6f', [f('die', 'Die'), f('scope', 'Scope')]),
     rule: T('Rule', 'RUL', '#a0a8b4', [f('category', 'Category'), f('phase', 'Phase')]),
+    // A dated thing. Its `when` carries the date, and marking that date as
+    // repeating is what moves the event from the timeline onto the calendar.
+    event: T('Event', 'EVT', '#c98fd0', [
+      f('when', 'When', 'date'),
+      f('kind', 'Kind'),
+      f('where', 'Where', 'ref'),
+      f('outcome', 'Outcome', 'long'),
+    ]),
     note: T('Note', 'NTE', '#8a919e', []),
     image: T('Image', 'IMG', '#cf9a7a', [f('source', 'Source'), f('credit', 'Credit')]),
     blank: T('Blank', 'BLK', '#8a919e', []),
@@ -27,7 +35,7 @@ export function starterTypes(): Record<string, BlockType> {
 }
 
 export const STARTER_ORDER = [
-  'creature', 'npc', 'weapon', 'armour', 'item', 'spell',
+  'creature', 'npc', 'event', 'weapon', 'armour', 'item', 'spell',
   'location', 'faction', 'table', 'rule', 'note', 'image', 'blank',
 ];
 
@@ -102,15 +110,31 @@ export function normaliseSchema(schema: ProjectSchema): ProjectSchema {
   const starters = starterTypes();
   // Projects made before calendars existed have none; give them the starter one
   // rather than leaving every date field with nothing to measure itself against.
+  const predatesCalendars = !schema.calendar;
   const calendar = normaliseCalendar(schema.calendar);
   const types = { ...schema.types };
+  let typeOrderExtra: string[] = [];
+
+  /*
+   * A project that predates calendars cannot have owned a dated type, so it gets
+   * Event once, here. The test is deliberately narrow: block types are the user's
+   * own, and adding one to a project that has already seen this version — where a
+   * missing Event means they deleted it — would be putting it back uninvited.
+   */
+  if (predatesCalendars && !types.event && starters.event) {
+    types.event = starters.event;
+    typeOrderExtra = ['event'];
+  }
   for (const [key, type] of Object.entries(types)) {
     if (type.code === LEGACY_CODES[key] && starters[key]) {
       types[key] = { ...type, code: starters[key]!.code };
     }
   }
   if (!types.blank) types.blank = T('Blank', 'BLK', '#8a919e', []);
-  const typeOrder = schema.typeOrder.includes('blank') ? schema.typeOrder.slice() : [...schema.typeOrder, 'blank'];
+  const ordered = [...schema.typeOrder.filter((k) => !typeOrderExtra.includes(k)), ...typeOrderExtra];
+  const typeOrder = ordered.includes('blank')
+    ? [...ordered.filter((k) => k !== 'blank'), 'blank']
+    : [...ordered, 'blank'];
   return { types, typeOrder, calendar };
 }
 

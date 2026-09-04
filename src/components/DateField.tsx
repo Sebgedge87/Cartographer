@@ -1,4 +1,4 @@
-import type { WorldCalendar } from '../state/types';
+import type { WorldCalendar, WorldDate } from '../state/types';
 import {
   clampDate, daysInMonth, formatDate, moonIllumination, moonPhase, parseDate, serialiseDate,
   weekdayName,
@@ -48,7 +48,7 @@ export function DateField({ calendar, value, onChange }: Props) {
   const parsed = parseDate(value);
   const date = parsed ? clampDate(calendar, parsed) : null;
 
-  const set = (patch: Partial<{ year: number; month: number; day: number }>) => {
+  const set = (patch: Partial<WorldDate>) => {
     // A new date starts at the present: you are nearly always writing about
     // something near now, not near the dawn of the calendar.
     const base = date ?? calendar.today;
@@ -104,6 +104,18 @@ export function DateField({ calendar, value, onChange }: Props) {
       <div className="date-field__read">
         <span className="date-field__weekday">{weekdayName(calendar, date)}</span>
         <span className="date-field__full">{formatDate(calendar, date)}</span>
+        <button
+          className={'date-field__repeat' + (date.repeats ? ' date-field__repeat--on' : '')}
+          aria-pressed={!!date.repeats}
+          title={
+            date.repeats
+              ? 'Comes round every year — shown on the calendar'
+              : 'Mark as a holiday or anniversary: it then comes round every year and appears on the calendar'
+          }
+          onClick={() => set({ repeats: !date.repeats })}
+        >
+          {date.repeats ? '↻ EVERY YEAR' : '↻ ONCE'}
+        </button>
       </div>
 
       {calendar.moons.length > 0 && (

@@ -85,12 +85,18 @@ export interface WorldCalendar {
 
 /**
  * A date in a world calendar. Month and day are 1-based, as they are when written.
- * Stored in a page field as `year-month-day`.
+ * Stored in a page field as `year-month-day`, with `~y` appended when it repeats.
  */
 export interface WorldDate {
   year: number;
   month: number;
   day: number;
+  /**
+   * Comes round every year — a holiday, a feast, an anniversary. The year is still
+   * kept, because a recurring date began somewhere and that first year is worth
+   * knowing; it is simply not the only year the date applies to.
+   */
+  repeats?: boolean;
 }
 
 export interface ProjectSchema {
