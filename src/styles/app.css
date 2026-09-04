@@ -443,9 +443,15 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   flex: none; display: flex; align-items: center; gap: 9px;
   padding: 11px 14px; border-bottom: 1px solid var(--border);
 }
+.editor__name { flex: 1 1 auto; display: flex; align-items: center; gap: 9px; min-width: 0; }
 .editor__title {
-  flex: 1 1 auto; min-width: 0; border: none; background: transparent; padding: 0;
+  flex: 0 1 auto; min-width: 2ch; border: none; background: transparent; padding: 0;
   font: 600 19px var(--font-ui); letter-spacing: -.01em; color: var(--text-strong);
+}
+/* Same type as the field, laid out where nothing can see it, purely to be measured. */
+.editor__sizer {
+  position: absolute; visibility: hidden; pointer-events: none; white-space: pre;
+  font: 600 19px var(--font-ui); letter-spacing: -.01em;
 }
 .editor__title:focus { outline: none; }
 .editor__close {

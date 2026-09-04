@@ -46,6 +46,8 @@ export function PageEditor() {
   const textarea = useRef<HTMLTextAreaElement>(null);
   const popover = useRef<HTMLDivElement>(null);
   const bodyPicker = useRef<HTMLInputElement>(null);
+  const titleInput = useRef<HTMLInputElement>(null);
+  const titleSizer = useRef<HTMLSpanElement>(null);
   /** Where the popover hangs: the start of the trigger, in pane coordinates. */
   const [anchor, setAnchor] = useState<{ left: number; top: number; line: number } | null>(null);
   /** Trigger the user dismissed with Esc, so syncMenu does not immediately reopen it. */
@@ -347,6 +349,15 @@ export function PageEditor() {
 
   const highlighted = menu ? Math.min(menu.i, Math.max(0, options.length - 1)) : 0;
 
+  // Size the title field to its text, capped so a long name still leaves room for
+  // the tag and the close button rather than shouldering them out of the bar.
+  useLayoutEffect(() => {
+    const input = titleInput.current;
+    const sizer = titleSizer.current;
+    if (!input || !sizer) return;
+    input.style.width = `${Math.min(sizer.offsetWidth + 2, 640)}px`;
+  }, [page?.title]);
+
   // The menu follows the caret, so it has to be re-measured after every keystroke
   // that keeps it open. Anchor to the start of the trigger rather than the caret:
   // the menu then holds still while you narrow the query instead of creeping right.
@@ -438,12 +449,18 @@ export function PageEditor() {
       <div className="editor" onPointerDown={(e) => e.stopPropagation()}>
         {/* 1. title bar */}
         <div className="editor__bar">
-          <span className="chip chip--lg" style={{ ['--chip' as string]: type.color }}>{type.code}</span>
-          <input
-            className="editor__title"
-            value={page.title}
-            onChange={(e) => doc.patchPage(page.id, { title: e.target.value })}
-          />
+          <div className="editor__name">
+            <input
+              ref={titleInput}
+              className="editor__title"
+              value={page.title}
+              onChange={(e) => doc.patchPage(page.id, { title: e.target.value })}
+            />
+            {/* Measures the title so the input can hug it and the tag sit beside the
+                name rather than drifting off to the far edge of the bar. */}
+            <span className="editor__sizer" ref={titleSizer} aria-hidden>{page.title || ' '}</span>
+            <span className="chip chip--lg" style={{ ['--chip' as string]: type.color }}>{type.code}</span>
+          </div>
           <button className="editor__close" onClick={closeEditor}>×</button>
         </div>
 

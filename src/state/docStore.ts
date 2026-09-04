@@ -4,7 +4,7 @@ import type {
   Area, BlockType, Board, Doc, Edge, Field, FieldKind, Page, PageImage, Project, ProjectFile, ProjectSchema,
 } from './types';
 import { deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
-import { emptyDoc, normaliseSchema, starterSchema } from './defaults';
+import { codeFor, emptyDoc, normaliseSchema, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
 import { LIMITS, sweepAssets } from '../lib/assets';
 
@@ -411,19 +411,27 @@ export const useDoc = create<DocStore>()(
           withSchema(s, projectId, (schema) => ({
             types: {
               ...schema.types,
-              [key]: { label: 'New type', code: 'XX', color: '#8fa5c9', fields: [{ key: 'f1', label: 'Field', kind: 'text' }] },
+              [key]: {
+                label: 'New type', code: codeFor('New type'), color: '#8fa5c9',
+                fields: [{ key: 'f1', label: 'Field', kind: 'text' }],
+              },
             },
             typeOrder: [...schema.typeOrder.filter((k) => k !== 'blank'), key, 'blank'],
           })),
         );
       },
 
+      // The tag follows the label. It is not editable on its own, so leaving it
+      // behind on a rename would strand a type called Region wearing LOC.
       renameType: (projectId, key, label) =>
         set((s) =>
           withSchema(s, projectId, (schema) => {
             const t = schema.types[key];
             if (!t) return schema;
-            return { ...schema, types: { ...schema.types, [key]: { ...t, label } } };
+            return {
+              ...schema,
+              types: { ...schema.types, [key]: { ...t, label, code: codeFor(label) } },
+            };
           }),
         ),
 
