@@ -9,6 +9,7 @@
 
 const DB_NAME = 'cartographer';
 const STORE = 'kv';
+const ASSETS = 'assets';
 const DOC_KEY = 'doc.v1';
 /** Sync bookkeeping — which rows the server has seen, and when each changed here. */
 export const SYNC_KEY = 'sync.v1';
@@ -16,15 +17,23 @@ const LS_FALLBACK = 'cartographer.v1';
 
 let dbPromise: Promise<IDBDatabase> | null = null;
 
-function openDb(): Promise<IDBDatabase> {
+/**
+ * Version 2 added the `assets` store. Image bytes are kept apart from the document
+ * so that saving, undoing and syncing a page never move a picture around.
+ */
+export function openDb(): Promise<IDBDatabase> {
   if (dbPromise) return dbPromise;
   dbPromise = new Promise((resolve, reject) => {
     if (typeof indexedDB === 'undefined') {
       reject(new Error('no indexedDB'));
       return;
     }
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE);
+    const req = indexedDB.open(DB_NAME, 2);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      if (!db.objectStoreNames.contains(ASSETS)) db.createObjectStore(ASSETS);
+    };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });

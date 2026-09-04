@@ -1,5 +1,6 @@
 import MarkdownIt from 'markdown-it';
 import type { BlockType, Field, Page } from '../state/types';
+import { assetIdFromSrc, assetUrl } from './assets';
 
 type Token = ReturnType<MarkdownIt['parse']>[number];
 
@@ -305,8 +306,27 @@ md.renderer.rules.image = (tokens, idx) => {
   if (!src || src === 'image-url') {
     return `<span class="cg-image-placeholder">IMAGE PLACEHOLDER · ${esc(alt || 'drop a file')}</span>`;
   }
+  const assetId = assetIdFromSrc(src);
+  if (assetId) {
+    // Resolved from the already-loaded cache: rendering is synchronous, so the
+    // caller preloads and re-renders rather than this reaching for the blob.
+    const url = assetUrl(assetId);
+    if (!url) {
+      return `<span class="cg-image-placeholder">IMAGE MISSING · ${esc(alt || assetId)}</span>`;
+    }
+    return `<img class="cg-image" src="${esc(url)}" alt="${esc(alt)}" data-asset="${esc(assetId)}" />`;
+  }
   return `<img class="cg-image" src="${esc(src)}" alt="${esc(alt)}" />`;
 };
+
+/** Asset ids referenced by `![](asset:…)` in a body, so a caller knows what to preload. */
+export function assetRefs(source: string): string[] {
+  const out = new Set<string>();
+  for (const m of source.matchAll(/!\[[^\]]*\]\(asset:([A-Za-z0-9_]+)\)/g)) {
+    if (m[1]) out.add(m[1]);
+  }
+  return [...out];
+}
 
 /* ---------- api ---------- */
 

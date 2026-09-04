@@ -1,6 +1,8 @@
 import { blockType, pageFields, schemaFor, typeOptions, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { FieldGrid } from './FieldGrid';
+import { assetUrl } from '../lib/assets';
+import { useAssets } from '../lib/useAssets';
 
 export function Inspector() {
   const doc = useDoc();
@@ -10,6 +12,11 @@ export function Inspector() {
 
   const page = doc.pages.find((p) => p.id === sel);
   const schema = schemaFor(doc, projectId);
+
+  // Called before the early return below, so the hook order never changes.
+  const header = page?.header ?? null;
+  useAssets(header ? [header] : []);
+  const headerUrl = header ? assetUrl(header) : null;
 
   if (!page) {
     return (
@@ -46,6 +53,12 @@ export function Inspector() {
 
   return (
     <aside className="inspector">
+      {headerUrl && (
+        <div className="inspector__header">
+          <img src={headerUrl} alt={`Header image for ${page.title}`} />
+        </div>
+      )}
+
       <div className="inspector__section">
         <div className="inspector__row">
           <span className="chip chip--lg" style={{ ['--chip' as string]: type.color }}>{type.code}</span>

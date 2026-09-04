@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import { temporal } from 'zundo';
 import type {
-  Area, BlockType, Board, Doc, Edge, Field, FieldKind, Page, Project, ProjectFile, ProjectSchema,
+  Area, BlockType, Board, Doc, Edge, Field, FieldKind, Page, PageImage, Project, ProjectFile, ProjectSchema,
 } from './types';
 import { deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
 import { emptyDoc, normaliseSchema, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
+import { LIMITS, sweepAssets } from '../lib/assets';
 
 export const CARD_W = 244;
 export const CARD_H = 116;
@@ -46,6 +47,13 @@ interface DocActions {
   deletePage: (id: string) => void;
   /** Copy a page onto the same board, offset so it does not land under the original. */
   duplicatePage: (id: string) => string | null;
+
+  /** Attach imported images. Returns how many were refused for hitting the per-page cap. */
+  addPageImages: (pageId: string, images: PageImage[]) => number;
+  /** Drop the ref. The bytes are swept at the next boot, so this stays undoable. */
+  removePageImage: (pageId: string, assetId: string) => void;
+  /** Choose the image shown on the card and at the top of the inspector. */
+  setHeaderImage: (pageId: string, assetId: string | null) => void;
 
   setCustom: (pageId: string, fn: (fields: Field[]) => Field[]) => void;
   addElement: (pageId: string, kind: FieldKind) => void;
@@ -216,7 +224,7 @@ export const useDoc = create<DocStore>()(
           title: title ?? (typeKey === 'blank' ? 'Untitled page' : `Untitled ${blockType.label}`),
           x: at.x, y: at.y, w: CARD_W, h: CARD_H,
           fields: {}, custom: typeKey === 'blank' ? [] : null, cols: 0,
-          body: '', updated: Date.now(),
+          body: '', images: [], header: null, updated: Date.now(),
         };
         set((st) => {
           const pages = [...st.pages, page];
@@ -288,6 +296,55 @@ export const useDoc = create<DocStore>()(
         set((s) => ({
           pages: s.pages.filter((p) => p.id !== id),
           edges: s.edges.filter((e) => e.from !== id && e.to !== id),
+        })),
+
+      /* ---------- images ---------- */
+      addPageImages: (pageId, images) => {
+        const page = get().pages.find((p) => p.id === pageId);
+        if (!page || images.length === 0) return images.length;
+        const room = Math.max(0, LIMITS.maxPerPage - page.images.length);
+        const taken = images.slice(0, room);
+        if (taken.length === 0) return images.length;
+        set((s) => ({
+          pages: s.pages.map((p) =>
+            p.id === pageId
+              ? {
+                  ...p,
+                  images: [...p.images, ...taken],
+                  // The first image a page gets is its header. Anything after that is
+                  // a deliberate choice, so we do not move it out from under the user.
+                  header: p.header ?? taken[0]?.id ?? null,
+                  updated: Date.now(),
+                }
+              : p,
+          ),
+        }));
+        return images.length - taken.length;
+      },
+
+      removePageImage: (pageId, assetId) =>
+        set((s) => ({
+          pages: s.pages.map((p) => {
+            if (p.id !== pageId) return p;
+            const images = p.images.filter((i) => i.id !== assetId);
+            return {
+              ...p,
+              images,
+              // Losing the header promotes whatever is left rather than leaving the
+              // card blank while the page still has pictures.
+              header: p.header === assetId ? (images[0]?.id ?? null) : p.header,
+              updated: Date.now(),
+            };
+          }),
+        })),
+
+      setHeaderImage: (pageId, assetId) =>
+        set((s) => ({
+          pages: s.pages.map((p) =>
+            p.id === pageId && (assetId === null || p.images.some((i) => i.id === assetId))
+              ? { ...p, header: assetId, updated: Date.now() }
+              : p,
+          ),
         })),
 
       /* ---------- per-page custom layouts ---------- */
@@ -513,7 +570,21 @@ type LegacyPage = Page & { areaId?: string };
  * one level deeper.
  */
 export function migrate(doc: Doc): Doc {
-  if (!doc.pages.some((p) => !p.boardId)) return doc;
+  // Images arrived after v1 shipped, so every page gets the fields whether or not
+  // the rest of this migration has anything to do.
+  const withImages = doc.pages.some((p) => !Array.isArray(p.images) || p.header === undefined)
+    ? {
+        ...doc,
+        pages: doc.pages.map((p) => ({
+          ...p,
+          images: Array.isArray(p.images) ? p.images : [],
+          header: p.header ?? null,
+        })),
+      }
+    : doc;
+
+  if (!withImages.pages.some((p) => !p.boardId)) return withImages;
+  doc = withImages;
 
   const boards = [...doc.boards];
   const boardForArea = new Map<string, string>();
@@ -576,6 +647,10 @@ export async function bootDoc(): Promise<void> {
 
   useDoc.getState().hydrate(doc);
   useDoc.temporal.getState().clear();
+
+  // History is empty at this point, so an unreferenced blob cannot be undone back
+  // into use. This is the one safe moment to free them.
+  void sweepAssets(doc.pages.flatMap((p) => p.images.map((i) => i.id)));
 
   const write = debounce((d: Doc) => void saveDoc(d), 400);
   useDoc.subscribe(({ projects, areas, boards, pages, edges, schemas: sc }) =>

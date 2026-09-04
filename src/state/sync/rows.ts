@@ -1,4 +1,4 @@
-import type { Area, BlockType, Board, Doc, Edge, Field, Page, Project, ProjectSchema } from '../types';
+import type { Area, BlockType, Board, Doc, Edge, Field, Page, PageImage, Project, ProjectSchema } from '../types';
 import { normaliseSchema, starterSchema } from '../defaults';
 
 /** The four synced tables. Edges only ever carry authored 'manual' rows. */
@@ -19,7 +19,10 @@ export interface PageRow {
   id: string; project_id: string; board_id: string; type: string; title: string;
   x: number; y: number; w: number; h: number;
   fields: Record<string, string>; custom: Field[] | null; cols: number;
-  body: string; updated: number;
+  body: string;
+  /** Refs only — the bytes are in the local asset store, not in this row. */
+  images: PageImage[]; header: string | null;
+  updated: number;
 }
 export interface EdgeRow {
   id: string; project_id: string; from_page: string; to_page: string;
@@ -48,7 +51,8 @@ export function pageRow(p: Page, updated: number): PageRow {
   return {
     id: p.id, project_id: p.projectId, board_id: p.boardId, type: p.type, title: p.title,
     x: Math.round(p.x), y: Math.round(p.y), w: Math.round(p.w), h: Math.round(p.h),
-    fields: p.fields, custom: p.custom, cols: p.cols, body: p.body, updated,
+    fields: p.fields, custom: p.custom, cols: p.cols, body: p.body,
+    images: p.images, header: p.header, updated,
   };
 }
 
@@ -81,7 +85,8 @@ export function toPage(r: PageRow): Page {
     id: r.id, projectId: r.project_id, boardId: r.board_id, type: r.type, title: r.title,
     x: r.x, y: r.y, w: r.w, h: r.h,
     fields: r.fields ?? {}, custom: r.custom ?? null, cols,
-    body: r.body ?? '', updated: r.updated,
+    body: r.body ?? '', images: r.images ?? [], header: r.header ?? null,
+    updated: r.updated,
   };
 }
 

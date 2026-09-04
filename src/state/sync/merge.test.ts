@@ -11,7 +11,7 @@ const schema = {
 const page = (id: string, title: string, extra: Partial<Page> = {}): Page => ({
   id, projectId: 'p1', boardId: 'bd1', type: 'note', title,
   x: 0, y: 0, w: 244, h: 116, fields: {}, custom: null, cols: 0,
-  body: '', updated: 0, ...extra,
+  body: '', images: [], header: null, updated: 0, ...extra,
 });
 
 const doc = (pages: Page[], edges: Edge[] = []): Doc => ({

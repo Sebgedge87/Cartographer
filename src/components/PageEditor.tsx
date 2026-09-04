@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { Field, FieldKind } from '../state/types';
+import type { Field, FieldKind, PageImage } from '../state/types';
 import { blockType, creatableTypeKeys, isCustomPage, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { createPage, rollAndToast } from '../state/actions';
+import { attachImages, createPage, rollAndToast } from '../state/actions';
 import { caretPoint } from '../lib/caret';
-import { markdownContext, renderMarkdown, toggleTaskLine } from '../lib/markdown';
+import { ASSET_SCHEME } from '../lib/assets';
+import { useAssets } from '../lib/useAssets';
+import { assetRefs, markdownContext, renderMarkdown, toggleTaskLine } from '../lib/markdown';
 import {
   caretTrigger, insertBlock, prefixLine, replaceAtCaret, restoreCaret, uniqueTitle, wrapSelection,
 } from '../lib/text';
 import type { TextEdit } from '../lib/text';
 import { FieldGrid } from './FieldGrid';
 import { FieldsMenu } from './FieldsMenu';
+import { ImageStrip } from './ImageStrip';
 
 interface Option {
   code: string;
@@ -42,6 +45,7 @@ export function PageEditor() {
 
   const textarea = useRef<HTMLTextAreaElement>(null);
   const popover = useRef<HTMLDivElement>(null);
+  const bodyPicker = useRef<HTMLInputElement>(null);
   /** Where the popover hangs: the start of the trigger, in pane coordinates. */
   const [anchor, setAnchor] = useState<{ left: number; top: number; line: number } | null>(null);
   /** Trigger the user dismissed with Esc, so syncMenu does not immediately reopen it. */
@@ -284,6 +288,10 @@ export function PageEditor() {
 
   /* ---------- preview ---------- */
 
+  // Every asset the body or the strip needs, pulled in before markdown asks for it.
+  const bodyRefs = useMemo(() => (page ? assetRefs(page.body) : []), [page?.body]); // eslint-disable-line react-hooks/exhaustive-deps
+  const assetVersion = useAssets(bodyRefs);
+
   const html = useMemo(() => {
     if (!page) return '';
     const ctx = markdownContext(
@@ -293,7 +301,8 @@ export function PageEditor() {
       (p) => pageFields(doc, p),
     );
     return renderMarkdown(page.body, ctx);
-  }, [doc.pages, page, schema]);
+    // assetVersion is not read here — it is the signal that an image URL now resolves.
+  }, [doc.pages, page, schema, assetVersion]);
 
   const onPreviewClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -389,6 +398,23 @@ export function PageEditor() {
   const linkCount = doc.edges.filter((e) => e.from === page.id).length;
 
   const ta = () => textarea.current;
+
+  /** Put a reference to a stored image in the body at the caret. */
+  const insertImage = (image: PageImage) =>
+    apply(ta() ? insertBlock(ta()!, `![${image.name}](${ASSET_SCHEME}${image.id})`) : null);
+
+  /**
+   * Import files onto this page and place them at the caret — as one edit, not one
+   * per image: each insert reads the textarea's current value, and React has not
+   * re-rendered it between two calls, so the second would overwrite the first.
+   */
+  const takeFiles = async (files: Iterable<File>) => {
+    const added = await attachImages(page.id, files);
+    if (added.length === 0) return;
+    const text = added.map((i) => `![${i.name}](${ASSET_SCHEME}${i.id})`).join('\n\n');
+    apply(ta() ? insertBlock(ta()!, text) : null);
+  };
+
   const tools: { label: string; title: string; run: () => void }[] = [
     { label: 'B', title: 'Bold ⌘B', run: () => apply(ta() ? wrapSelection(ta()!, '**', '**', 'bold') : null) },
     { label: 'I', title: 'Italic ⌘I', run: () => apply(ta() ? wrapSelection(ta()!, '*', '*', 'italic') : null) },
@@ -400,7 +426,7 @@ export function PageEditor() {
     { label: '•', title: 'Bullet list', run: () => apply(ta() ? prefixLine(ta()!, '- ') : null) },
     { label: '1.', title: 'Numbered list', run: () => apply(ta() ? prefixLine(ta()!, '1. ') : null) },
     { label: 'TB', title: 'Table', run: () => apply(ta() ? insertBlock(ta()!, '| Roll | Result |\n| --- | --- |\n|  |  |\n') : null) },
-    { label: 'IM', title: 'Image', run: () => apply(ta() ? insertBlock(ta()!, '![caption](image-url)') : null) },
+    { label: 'IM', title: 'Add an image', run: () => bodyPicker.current?.click() },
     { label: 'HR', title: 'Divider', run: () => apply(ta() ? insertBlock(ta()!, '\n---\n') : null) },
     { label: '[[ ]]', title: 'Link to page', run: () => apply(ta() ? insertBlock(ta()!, '[[') : null) },
     { label: '@', title: 'Live stat reference', run: () => apply(ta() ? insertBlock(ta()!, '@') : null) },
@@ -489,6 +515,8 @@ export function PageEditor() {
           )}
         </div>
 
+        {page.images.length > 0 && <ImageStrip page={page} onInsert={insertImage} />}
+
         {/* 4. split body */}
         <div className="editor__split">
           <div className="editor__pane">
@@ -505,6 +533,34 @@ export function PageEditor() {
               onKeyDown={onKeyDown}
               onClick={() => setTimeout(syncMenu, 0)}
               onBlur={() => set({ menu: null })}
+              onPaste={(e) => {
+                // Only intercept when the clipboard actually holds a picture —
+                // pasting text must stay untouched.
+                const files = [...e.clipboardData.files].filter((f) => f.type.startsWith('image/'));
+                if (files.length === 0) return;
+                e.preventDefault();
+                void takeFiles(files);
+              }}
+              onDragOver={(e) => {
+                if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                const files = [...e.dataTransfer.files].filter((f) => f.type.startsWith('image/'));
+                if (files.length === 0) return;
+                e.preventDefault();
+                void takeFiles(files);
+              }}
+            />
+            <input
+              ref={bodyPicker}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                if (e.target.files) void takeFiles(e.target.files);
+                e.target.value = '';
+              }}
             />
             <div className="editor__status">
               <span>{words} WORDS</span>

@@ -3,6 +3,8 @@ import { useUI, type NamePrompt } from './uiStore';
 import { rollDice } from './graph';
 import { buildProjectFile, downloadProject, parseProjectFile } from '../lib/io';
 import { uniqueTitle } from '../lib/text';
+import { LIMITS, importImage } from '../lib/assets';
+import type { PageImage } from './types';
 
 /**
  * The board element, registered by <Board /> so actions raised elsewhere (the command
@@ -157,4 +159,35 @@ export function suggestPageName(type?: string): string {
 /** The block type lookup for the project currently open. */
 export function currentTypes() {
   return schemaFor(useDoc.getState(), useUI.getState().projectId);
+}
+
+/* ---------- images ---------- */
+
+/**
+ * Import dropped, pasted or picked files onto a page and report what happened.
+ * Every failure is a toast rather than a throw: half a drop landing is better than
+ * none, and the user needs to know which half.
+ */
+export async function attachImages(pageId: string, files: Iterable<File>): Promise<PageImage[]> {
+  const list = [...files].filter((f) => f.type.startsWith('image/'));
+  if (list.length === 0) return [];
+
+  const { showToast } = useUI.getState();
+  const accepted: PageImage[] = [];
+  const refused: string[] = [];
+  for (const file of list) {
+    const result = await importImage(file);
+    if (result.ok) accepted.push(result.image);
+    else refused.push(result.reason);
+  }
+
+  const overflow = accepted.length ? useDoc.getState().addPageImages(pageId, accepted) : 0;
+  if (overflow > 0) {
+    refused.push(`Only ${LIMITS.maxPerPage} images fit on a page`);
+    accepted.length -= overflow;
+  }
+
+  if (refused[0]) showToast(refused.length === 1 ? refused[0] : `${refused.length} images refused — ${refused[0]}`);
+  else if (accepted.length) showToast(`Added ${accepted.length} image${accepted.length > 1 ? 's' : ''}`);
+  return accepted;
 }

@@ -257,6 +257,12 @@ select.field option { background: var(--popover); }
 }
 .card__head { display: flex; align-items: center; gap: 6px; padding: 8px 9px 6px; }
 .card__title { font: 600 12.5px var(--font-ui); color: var(--text-strong); }
+.card__banner {
+  flex: none; height: 42px; margin: 0 9px 5px; overflow: hidden;
+  border-radius: var(--r-sm); border: 1px solid rgba(255, 255, 255, .08); background: var(--input);
+}
+.card__banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
 .card__body { flex: 1 1 auto; padding: 0 9px; display: flex; flex-wrap: wrap; gap: 3px 10px; align-content: flex-start; overflow: hidden; }
 .card__stat { display: flex; gap: 5px; font: 400 9.5px var(--font-mono); }
 .card__stat b { font-weight: 500; color: #c3c9d4; }
@@ -361,6 +367,13 @@ select.field option { background: var(--popover); }
   flex: none; width: var(--w-inspector); display: flex; flex-direction: column;
   background: var(--panel); border-left: 1px solid var(--border); overflow: auto;
 }
+.inspector__header {
+  flex: none; border-bottom: 1px solid var(--border); background: var(--canvas);
+}
+.inspector__header img {
+  display: block; width: 100%; height: 168px; object-fit: cover;
+}
+
 .inspector__section { padding: 12px; border-bottom: 1px solid var(--border); }
 .inspector__row { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
 .inspector__empty {
@@ -602,7 +615,10 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   background: rgba(224, 164, 74, .14); border: 1px solid rgba(224, 164, 74, .4);
   color: #e8bd72; font: 500 12px var(--font-mono);
 }
-.md .cg-image { max-width: 100%; border-radius: var(--r-md); border: 1px solid rgba(255, 255, 255, .1); margin: 10px 0; }
+.md .cg-image {
+  display: block; max-width: 100%; max-height: 420px; width: auto; object-fit: contain;
+  border-radius: var(--r-md); border: 1px solid rgba(255, 255, 255, .1); margin: 10px 0;
+}
 .md .cg-image-placeholder {
   display: block; margin: 10px 0; padding: 26px 14px; text-align: center;
   border: 1px dashed var(--border-strong); border-radius: var(--r-md);
@@ -980,3 +996,36 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .md .cg-statline em { font-style: normal; color: var(--dim); }
 .md .cg-statline b { font-weight: 500; color: var(--chip); }
 .md .cg-statline i { font-style: normal; color: var(--ghost); }
+
+/* ---------- page images ---------- */
+
+.images {
+  flex: none; padding: 9px 14px 11px; border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.images__head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.images__count { font: 500 9.5px var(--font-mono); color: var(--faint); letter-spacing: .08em; }
+.images__strip { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 2px; }
+
+.shot { flex: none; width: 104px; }
+.shot__frame {
+  position: relative; height: 62px; border-radius: var(--r-sm); overflow: hidden;
+  background: var(--input); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.shot--header .shot__frame { border-color: var(--accent); }
+.shot__frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.shot__pending { font: 400 12px var(--font-mono); color: var(--ghost); }
+.shot__badge {
+  position: absolute; left: 0; bottom: 0; padding: 2px 5px;
+  background: var(--accent); color: #14100a;
+  font: 700 7.5px var(--font-mono); letter-spacing: .12em;
+}
+.shot__name { margin-top: 4px; font: 400 9.5px var(--font-mono); color: var(--dim); }
+.shot__acts { display: flex; gap: 2px; margin-top: 2px; }
+.shot__act {
+  flex: 1 1 auto; padding: 2px 0; border: 1px solid var(--border); background: var(--input);
+  border-radius: var(--r-sm); font: 400 10px var(--font-mono); color: var(--dim); cursor: pointer;
+}
+.shot__act:hover { border-color: var(--border-hover); color: var(--text); }
+.shot__act[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); }
+.shot__act--danger:hover { color: #e0736a; border-color: rgba(224, 115, 106, .5); }

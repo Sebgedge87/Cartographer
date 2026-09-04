@@ -65,6 +65,19 @@ export interface Board {
   name: string;
 }
 
+/**
+ * A page's reference to a stored image. The bytes live in the local asset store
+ * under `id`; only this ref is ever written to the document, exported, or synced.
+ */
+export interface PageImage {
+  id: string;
+  name: string;
+  /** Dimensions after import shrank it, so a card can reserve the right shape. */
+  w: number;
+  h: number;
+  bytes: number;
+}
+
 /** One document. A page cannot exist off a board. */
 export interface Page {
   id: string;
@@ -88,6 +101,13 @@ export interface Page {
   cols: 0 | 1 | 2 | 3 | 4;
   /** Markdown source. */
   body: string;
+  /** Images attached to this page, in the order they were added. */
+  images: PageImage[];
+  /**
+   * Which of `images` is the header — the one shown on the card and at the top of
+   * the inspector. Null when the page has no images, or none has been chosen.
+   */
+  header: string | null;
   updated: number;
 }
 

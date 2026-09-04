@@ -70,9 +70,18 @@ create table if not exists public.pages (
   custom     jsonb,
   cols       smallint not null default 0 check (cols between 0 and 4),
   body       text not null default '',
+  -- Image references only: [{id, name, w, h, bytes}]. The bytes themselves stay in
+  -- the browser's asset store, so a page row never carries a picture.
+  images     jsonb not null default '[]'::jsonb,
+  -- Which id in `images` is the header shown on the card and in the inspector.
+  header     text,
   updated    bigint not null default 0,
   updated_at timestamptz not null default now()
 );
+
+-- Added after the first release; harmless on a fresh database.
+alter table public.pages add column if not exists images jsonb not null default '[]'::jsonb;
+alter table public.pages add column if not exists header text;
 
 create table if not exists public.edges (
   id         text primary key,

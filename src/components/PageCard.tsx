@@ -1,6 +1,8 @@
 import { memo } from 'react';
 import type { BlockType, Field, Page } from '../state/types';
 import { plainSnippet } from '../lib/markdown';
+import { assetUrl } from '../lib/assets';
+import { useAssets } from '../lib/useAssets';
 
 interface Props {
   page: Page;
@@ -15,20 +17,23 @@ interface Props {
 }
 
 /** Scalar fields only — refs and prose never earn a slot on a 244×116 card. */
-function statChips(page: Page, fields: Field[]) {
+function statChips(page: Page, fields: Field[], limit: number) {
   return fields
     .filter((f) => f.kind !== 'ref' && f.kind !== 'long' && f.kind !== 'heading')
     .map((f) => ({ label: f.label, value: page.fields[f.key] }))
     .filter((c): c is { label: string; value: string } => c.value !== undefined && c.value !== '')
-    .slice(0, 4)
+    .slice(0, limit)
     .map((c) => ({ label: c.label, value: c.value.slice(0, 18) }));
 }
 
 export const PageCard = memo(function PageCard({
   page, type, fields, selected, outCount, inCount, offBoard, onEdit,
 }: Props) {
-  const chips = statChips(page, fields);
-  const snippet = chips.length === 0 ? plainSnippet(page.body) : '';
+  useAssets(page.header ? [page.header] : [], 'thumb');
+  const banner = page.header ? assetUrl(page.header, 'thumb') : null;
+  // The banner takes a third of the card, so fewer stats fit beside it.
+  const chips = statChips(page, fields, banner ? 2 : 4);
+  const snippet = chips.length === 0 && !banner ? plainSnippet(page.body) : '';
 
   return (
     <div
@@ -43,6 +48,12 @@ export const PageCard = memo(function PageCard({
         <span className="chip" style={{ ['--chip' as string]: type.color }}>{type.code}</span>
         <span className="card__title truncate">{page.title}</span>
       </div>
+
+      {banner && (
+        <div className="card__banner">
+          <img src={banner} alt="" draggable={false} />
+        </div>
+      )}
 
       <div className="card__body">
         {chips.map((c) => (
