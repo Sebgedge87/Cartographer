@@ -1322,3 +1322,16 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .calevent--repeats .calevent__dot {
   background: transparent; box-shadow: inset 0 0 0 1.5px var(--tint);
 }
+
+/* Project-wide views, pinned to the foot of the rail beside settings. */
+.rail__views { display: flex; gap: 6px; margin-top: 6px; }
+.rail__view {
+  flex: 1 1 0; min-width: 0; padding: 6px 4px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: transparent;
+  font: 500 9.5px var(--font-mono); letter-spacing: .1em; color: var(--muted); cursor: pointer;
+}
+.rail__view:hover { border-color: var(--border-hover); color: var(--text); }
+.rail__view--on {
+  border-color: var(--accent); color: var(--accent-text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}

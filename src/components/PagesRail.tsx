@@ -22,6 +22,7 @@ export function PagesRail() {
   const renamingBoard = useUI((s) => s.renamingBoard);
   const density = useUI((s) => s.density);
   const set = useUI((s) => s.set);
+  const mode = useUI((s) => s.mode);
   const openArea = useUI((s) => s.openArea);
   const openBoard = useUI((s) => s.openBoard);
   const openPage = useUI((s) => s.openPage);
@@ -210,6 +211,29 @@ export function PagesRail() {
         >
           + AREA
         </button>
+
+        {/* The two views that are about the whole project rather than one board.
+            They sit here, always reachable, rather than behind the settings
+            fly-out with the board's own display options. */}
+        <div className="rail__views">
+          <button
+            className={'rail__view' + (mode === 'timeline' ? ' rail__view--on' : '')}
+            aria-pressed={mode === 'timeline'}
+            title="Everything dated, in order"
+            onClick={() => set({ mode: 'timeline' })}
+          >
+            TIMELINE
+          </button>
+          <button
+            className={'rail__view' + (mode === 'calendar' ? ' rail__view--on' : '')}
+            aria-pressed={mode === 'calendar'}
+            title="The world's calendar, month by month"
+            onClick={() => set({ mode: 'calendar' })}
+          >
+            CALENDAR
+          </button>
+        </div>
+
         <SettingsMenu />
         <div className="rail__hint">DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK</div>
       </div>
