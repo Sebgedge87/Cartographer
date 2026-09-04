@@ -30,6 +30,9 @@ create table if not exists public.projects (
   -- ProjectSchema: { types: Record<key, BlockType>, typeOrder: string[] }
   types       jsonb not null default '{}'::jsonb,
   type_order  jsonb not null default '[]'::jsonb,
+  -- World calendar: months, week, leap rule, moons. Small and rarely changed, so it
+  -- rides along with the project row rather than earning a table of its own.
+  calendar    jsonb,
   updated     bigint not null default 0,
   updated_at  timestamptz not null default now()
 );
@@ -82,6 +85,8 @@ create table if not exists public.pages (
 -- Added after the first release; harmless on a fresh database.
 alter table public.pages add column if not exists images jsonb not null default '[]'::jsonb;
 alter table public.pages add column if not exists header text;
+-- The project's world calendar: months, week, leap rule and moons, whole.
+alter table public.projects add column if not exists calendar jsonb;
 
 create table if not exists public.edges (
   id         text primary key,

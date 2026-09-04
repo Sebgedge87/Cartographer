@@ -1,5 +1,7 @@
-import type { Area, BlockType, Board, Doc, Edge, Field, Page, PageImage, Project, ProjectSchema } from '../types';
-import { normaliseSchema, starterSchema } from '../defaults';
+import type {
+  Area, BlockType, Board, Doc, Edge, Field, Page, PageImage, Project, ProjectSchema, WorldCalendar,
+} from '../types';
+import { normaliseSchema, starterCalendar, starterSchema } from '../defaults';
 
 /** The four synced tables. Edges only ever carry authored 'manual' rows. */
 export const TABLES = ['projects', 'areas', 'boards', 'pages', 'edges'] as const;
@@ -7,7 +9,10 @@ export type Table = (typeof TABLES)[number];
 
 export interface ProjectRow {
   id: string; name: string; system: string; accent: string;
-  types: Record<string, BlockType>; type_order: string[]; updated: number;
+  types: Record<string, BlockType>; type_order: string[];
+  /** The project's world calendar, whole. It is small and changes rarely. */
+  calendar: WorldCalendar | null;
+  updated: number;
 }
 export interface AreaRow {
   id: string; project_id: string; name: string; default_type: string; updated: number;
@@ -35,7 +40,7 @@ export function projectRow(p: Project, schema: ProjectSchema | undefined, update
   const s = schema ?? starterSchema();
   return {
     id: p.id, name: p.name, system: p.system, accent: p.accent,
-    types: s.types, type_order: s.typeOrder, updated,
+    types: s.types, type_order: s.typeOrder, calendar: s.calendar, updated,
   };
 }
 
@@ -68,7 +73,11 @@ export function toProject(r: ProjectRow): Project {
 }
 
 export function toSchema(r: ProjectRow): ProjectSchema {
-  return normaliseSchema({ types: r.types ?? {}, typeOrder: r.type_order ?? [] });
+  return normaliseSchema({
+    types: r.types ?? {},
+    typeOrder: r.type_order ?? [],
+    calendar: r.calendar ?? starterCalendar(),
+  });
 }
 
 export function toArea(r: AreaRow): Area {

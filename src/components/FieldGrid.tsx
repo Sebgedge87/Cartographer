@@ -1,5 +1,6 @@
 import type { Field, FieldKind, Page } from '../state/types';
-import { useDoc } from '../state/docStore';
+import { schemaFor, useDoc } from '../state/docStore';
+import { DateField } from './DateField';
 
 const ELEMENT_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'text', label: 'text' },
@@ -7,6 +8,7 @@ const ELEMENT_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'long', label: 'long' },
   { value: 'ref', label: 'link' },
   { value: 'heading', label: 'sect' },
+  { value: 'date', label: 'date' },
 ];
 
 interface Props {
@@ -29,6 +31,7 @@ export function FieldGrid({ page, fields, editable, cols }: Props) {
   const refOptions = useDoc((s) =>
     s.pages.filter((p) => p.projectId === page.projectId && p.id !== page.id),
   );
+  const calendar = useDoc((s) => schemaFor(s, page.projectId).calendar);
 
   if (!fields.length) return null;
 
@@ -113,7 +116,13 @@ export function FieldGrid({ page, fields, editable, cols }: Props) {
               <span className="field-cell__label">{field.label}</span>
             )}
 
-            {field.kind === 'heading' ? null : field.kind === 'ref' ? (
+            {field.kind === 'heading' ? null : field.kind === 'date' ? (
+              <DateField
+                calendar={calendar}
+                value={value}
+                onChange={(next) => setPageField(page.id, field, next)}
+              />
+            ) : field.kind === 'ref' ? (
               <select
                 className="field field--mono"
                 value={value}

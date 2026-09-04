@@ -30,6 +30,7 @@ const ELEMENT_ADDERS: { kind: FieldKind; label: string }[] = [
   { kind: 'long', label: 'LONG TEXT' },
   { kind: 'ref', label: 'LINK' },
   { kind: 'heading', label: 'SECTION' },
+  { kind: 'date', label: 'DATE' },
 ];
 
 export function PageEditor() {

@@ -17,6 +17,7 @@ export function buildProjectFile(doc: Doc, projectId: string): ProjectFile | nul
     pages,
     types: schema?.types ?? {},
     typeOrder: schema?.typeOrder ?? [],
+    calendar: schema?.calendar,
     links: doc.edges.filter((e) => ids.has(e.from) && ids.has(e.to)),
   };
 }
@@ -48,6 +49,7 @@ export function parseProjectFile(raw: string): ProjectFile | null {
       pages: data.pages,
       types: data.types ?? {},
       typeOrder: data.typeOrder ?? [],
+      calendar: data.calendar,
       links: data.links ?? [],
     };
   } catch {

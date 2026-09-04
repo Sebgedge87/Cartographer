@@ -1,4 +1,4 @@
-import type { BlockType, Doc, Field, ProjectSchema } from './types';
+import type { BlockType, Doc, Field, ProjectSchema, WorldCalendar } from './types';
 
 const f = (key: string, label: string, kind: Field['kind'] = 'text'): Field => ({ key, label, kind });
 const T = (label: string, code: string, color: string, fields: Field[]): BlockType => ({ label, code, color, fields });
@@ -31,8 +31,42 @@ export const STARTER_ORDER = [
   'location', 'faction', 'table', 'rule', 'note', 'image', 'blank',
 ];
 
+/**
+ * The calendar a new project starts with: Earth's shape, none of its names. Twelve
+ * months and a seven-day week are what most invented settings quietly keep, and the
+ * ones that do not are exactly the projects whose owners will rewrite this anyway.
+ * Two moons because one is the boring case and the plural is the point.
+ */
+export function starterCalendar(): WorldCalendar {
+  return {
+    name: 'Common Reckoning',
+    months: [
+      { name: 'Frostwane', days: 31 },
+      { name: 'Thawing', days: 28 },
+      { name: 'Seedfall', days: 31 },
+      { name: 'Greening', days: 30 },
+      { name: 'Highsun', days: 31 },
+      { name: 'Longlight', days: 30 },
+      { name: 'Goldwane', days: 31 },
+      { name: 'Harvestide', days: 31 },
+      { name: 'Emberfall', days: 30 },
+      { name: 'Ashfall', days: 31 },
+      { name: 'Duskrise', days: 30 },
+      { name: 'Deepdark', days: 31 },
+    ],
+    weekdays: ['Sunsday', 'Moonsday', 'Forgeday', 'Wardsday', 'Thornsday', 'Farsday', 'Restday'],
+    hoursPerDay: 24,
+    era: 'CR',
+    leap: { every: 4, skipEvery: 100, keepEvery: 400, monthIndex: 1 },
+    moons: [
+      { id: 'moon1', name: 'The Pale', cycle: 29.5, newMoonOn: 1, color: '#d8dde6' },
+      { id: 'moon2', name: 'Ember', cycle: 43, newMoonOn: 12, color: '#e0684f' },
+    ],
+  };
+}
+
 export function starterSchema(): ProjectSchema {
-  return { types: starterTypes(), typeOrder: STARTER_ORDER.slice() };
+  return { types: starterTypes(), typeOrder: STARTER_ORDER.slice(), calendar: starterCalendar() };
 }
 
 /** 'blank' is always present and is never listed in the schema grid. */
@@ -65,6 +99,9 @@ const LEGACY_CODES: Record<string, string> = {
 
 export function normaliseSchema(schema: ProjectSchema): ProjectSchema {
   const starters = starterTypes();
+  // Projects made before calendars existed have none; give them the starter one
+  // rather than leaving every date field with nothing to measure itself against.
+  const calendar = normaliseCalendar(schema.calendar);
   const types = { ...schema.types };
   for (const [key, type] of Object.entries(types)) {
     if (type.code === LEGACY_CODES[key] && starters[key]) {
@@ -73,7 +110,26 @@ export function normaliseSchema(schema: ProjectSchema): ProjectSchema {
   }
   if (!types.blank) types.blank = T('Blank', 'BLK', '#8a919e', []);
   const typeOrder = schema.typeOrder.includes('blank') ? schema.typeOrder.slice() : [...schema.typeOrder, 'blank'];
-  return { types, typeOrder };
+  return { types, typeOrder, calendar };
+}
+
+/** Fill in anything a stored or imported calendar is missing, or make a whole one. */
+export function normaliseCalendar(calendar: WorldCalendar | undefined): WorldCalendar {
+  const base = starterCalendar();
+  if (!calendar) return base;
+  const months = Array.isArray(calendar.months) && calendar.months.length ? calendar.months : base.months;
+  const weekdays = Array.isArray(calendar.weekdays) && calendar.weekdays.length
+    ? calendar.weekdays
+    : base.weekdays;
+  return {
+    name: calendar.name || base.name,
+    months: months.map((m) => ({ name: m.name || 'Unnamed', days: Math.max(1, Math.round(m.days || 1)) })),
+    weekdays,
+    hoursPerDay: Math.max(1, Math.round(calendar.hoursPerDay || base.hoursPerDay)),
+    era: calendar.era ?? base.era,
+    leap: calendar.leap ?? null,
+    moons: Array.isArray(calendar.moons) ? calendar.moons : [],
+  };
 }
 
 /**

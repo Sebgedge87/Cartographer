@@ -2,9 +2,10 @@ import { create } from 'zustand';
 import { temporal } from 'zundo';
 import type {
   Area, BlockType, Board, Doc, Edge, Field, FieldKind, Page, PageImage, Project, ProjectFile, ProjectSchema,
+  WorldCalendar,
 } from './types';
 import { deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
-import { codeFor, emptyDoc, normaliseSchema, starterSchema } from './defaults';
+import { codeFor, emptyDoc, normaliseSchema, starterCalendar, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
 import { LIMITS, sweepAssets } from '../lib/assets';
 
@@ -66,6 +67,9 @@ interface DocActions {
   moveType: (projectId: string, key: string, dir: -1 | 1) => void;
   /** Refuses while any page still uses the type; returns false if nothing was deleted. */
   deleteType: (projectId: string, key: string) => boolean;
+  /** Replace the project's world calendar. It is small, so it is written whole. */
+  setCalendar: (projectId: string, calendar: WorldCalendar) => void;
+
   addTypeField: (projectId: string, key: string, field?: Field) => void;
   patchTypeField: (projectId: string, key: string, index: number, patch: Partial<Field>) => void;
   deleteTypeField: (projectId: string, key: string, index: number) => void;
@@ -140,6 +144,7 @@ export const useDoc = create<DocStore>()(
         const schema = normaliseSchema({
           types: file.types ?? starterSchema().types,
           typeOrder: file.typeOrder ?? starterSchema().typeOrder,
+          calendar: file.calendar ?? starterCalendar(),
         });
         set((s) => {
           const pages = [...s.pages, ...(file.pages ?? [])];
@@ -362,7 +367,7 @@ export const useDoc = create<DocStore>()(
 
       addElement: (pageId, kind) => {
         const labels: Record<FieldKind, string> = {
-          text: 'Label', number: 'Number', long: 'Notes', ref: 'Link', heading: 'Section',
+          text: 'Label', number: 'Number', long: 'Notes', ref: 'Link', heading: 'Section', date: 'Date',
         };
         get().setCustom(pageId, (fields) =>
           fields.concat([{
@@ -392,10 +397,11 @@ export const useDoc = create<DocStore>()(
         if (!page) return null;
         const key = 't' + Math.random().toString(36).slice(2, 6);
         const fields = (page.custom ?? []).filter((f) => f.kind !== 'heading');
-        const code = ((page.title || '').replace(/[^A-Za-z]/g, '') || 'XX').slice(0, 2).toUpperCase();
         const label = page.title && !page.title.startsWith('Untitled') ? page.title : 'New type';
+        const code = codeFor(label);
         set((s) => ({
           ...withSchema(s, page.projectId, (schema) => ({
+            ...schema,
             types: { ...schema.types, [key]: { label, code, color: '#8fa5c9', fields } },
             typeOrder: [...schema.typeOrder.filter((k) => k !== 'blank'), key, 'blank'],
           })),
@@ -409,6 +415,7 @@ export const useDoc = create<DocStore>()(
         const key = 'custom' + Math.random().toString(36).slice(2, 5);
         set((s) =>
           withSchema(s, projectId, (schema) => ({
+            ...schema,
             types: {
               ...schema.types,
               [key]: {
@@ -467,11 +474,14 @@ export const useDoc = create<DocStore>()(
           withSchema(s, projectId, (schema) => {
             const types = { ...schema.types };
             delete types[key];
-            return { types, typeOrder: schema.typeOrder.filter((k) => k !== key) };
+            return { ...schema, types, typeOrder: schema.typeOrder.filter((k) => k !== key) };
           }),
         );
         return true;
       },
+
+      setCalendar: (projectId, calendar) =>
+        set((s) => withSchema(s, projectId, (schema) => ({ ...schema, calendar }))),
 
       addTypeField: (projectId, key, field) =>
         set((s) =>

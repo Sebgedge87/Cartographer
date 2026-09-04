@@ -473,7 +473,9 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   padding: 8px 14px; border: none; background: transparent; cursor: pointer; text-align: left;
 }
 .stats__caret { font-size: 9px; color: var(--faint); }
-.stats__body { padding: 0 14px 12px; max-height: 240px; overflow: auto; }
+/* Tall enough for a date row, which carries a weekday and a line of moons under
+   its inputs and so stands about twice a text field. */
+.stats__body { padding: 0 14px 12px; max-height: 330px; overflow: auto; }
 .stats__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 0 14px 10px; }
 .stats__new { display: flex; align-items: center; gap: 8px; padding: 8px 14px 12px; }
 .stats__new .field { max-width: 260px; }
@@ -1091,3 +1093,77 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .dice-tray--live { opacity: 1; visibility: visible; }
 .dice-tray--leaving { opacity: 0; }
 .dice-tray canvas { width: 100%; height: 100%; display: block; }
+
+/* ---------- world calendar ---------- */
+
+.calendar__row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-bottom: 14px; }
+.calendar__field { display: flex; flex-direction: column; gap: 4px; flex: 1 1 180px; min-width: 0; }
+.calendar__field--sm { flex: 0 0 128px; }
+.calendar__label {
+  font: 700 8.5px var(--font-mono); letter-spacing: .16em; text-transform: uppercase; color: var(--faint);
+}
+.calendar__readout {
+  padding: 6px 0; font: 400 12px var(--font-mono); color: var(--muted);
+}
+.calendar__note {
+  flex: 1 1 200px; align-self: center; padding-top: 12px;
+  font: 400 11.5px/1.5 var(--font-ui); color: var(--dim);
+}
+.calendar__head {
+  display: flex; align-items: baseline; gap: 10px;
+  margin: 18px 0 9px; padding-top: 13px; border-top: 1px solid var(--border);
+}
+
+.calendar__months { display: grid; grid-template-columns: repeat(auto-fill, minmax(272px, 1fr)); gap: 6px; }
+.cal-month {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 7px; background: var(--chrome); border: 1px solid var(--border); border-radius: var(--r-lg);
+}
+/* The month that gains the leap day, marked so the rule below has a visible target. */
+.cal-month--leap { border-color: rgba(224, 164, 74, .45); }
+.cal-month__n {
+  flex: none; width: 18px; font: 700 9px var(--font-mono); color: var(--ghost); text-align: right;
+}
+.cal-month__days { flex: none; width: 58px; }
+
+.calendar__weekdays { display: grid; grid-template-columns: repeat(auto-fill, minmax(148px, 1fr)); gap: 6px; }
+.cal-day { display: flex; align-items: center; gap: 4px; }
+
+.calendar__moons { display: grid; grid-template-columns: repeat(auto-fill, minmax(288px, 1fr)); gap: 10px; }
+.cal-moon {
+  padding: 10px 11px 11px; background: var(--chrome);
+  border: 1px solid var(--border); border-top: 2px solid var(--tint); border-radius: var(--r-xl);
+}
+.cal-moon__head { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; }
+.cal-moon__row { display: flex; flex-wrap: wrap; gap: 8px; }
+.cal-moon__color { padding: 2px; height: 28px; cursor: pointer; }
+.cal-moon__phase { margin-top: 9px; font: 400 11.5px/1.5 var(--font-ui); color: var(--dim); }
+.cal-moon__phase b { color: var(--muted); font-weight: 600; }
+
+/* ---------- date field ---------- */
+
+.date-field { display: flex; flex-direction: column; gap: 5px; }
+.date-field__row { display: flex; align-items: center; gap: 4px; }
+.date-field__day { flex: none; width: 54px; }
+.date-field__month { flex: 1 1 auto; min-width: 0; }
+.date-field__year { flex: none; width: 72px; }
+.date-field__clear {
+  flex: none; width: 22px; height: 22px; padding: 0; border: none; background: transparent;
+  border-radius: var(--r-sm); color: var(--faint); cursor: pointer;
+}
+.date-field__clear:hover { background: rgba(255, 255, 255, .07); color: var(--text); }
+.date-field__empty {
+  text-align: left; cursor: pointer; color: var(--dim);
+  font: 400 12px var(--font-ui);
+}
+.date-field__empty:hover { color: var(--text); border-color: var(--border-hover); }
+.date-field__read { display: flex; gap: 8px; align-items: baseline; }
+.date-field__weekday {
+  font: 700 8.5px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+}
+.date-field__full { font: 400 10.5px var(--font-mono); color: var(--dim); }
+
+.date-field__moons { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.moon { display: flex; align-items: center; gap: 5px; min-width: 0; }
+.moon__name { font: 500 10px var(--font-mono); color: var(--muted); }
+.moon__phase { font: 400 10px var(--font-mono); color: var(--ghost); }

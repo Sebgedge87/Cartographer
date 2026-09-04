@@ -1,6 +1,6 @@
 /** Cartographer document model. This is the on-disk format: `cartographer/v1`. */
 
-export type FieldKind = 'text' | 'number' | 'long' | 'ref' | 'heading';
+export type FieldKind = 'text' | 'number' | 'long' | 'ref' | 'heading' | 'date';
 
 export interface Field {
   key: string;
@@ -26,10 +26,73 @@ export interface BlockType {
   hidden?: boolean;
 }
 
+/* ---------- world calendar ---------- */
+
+export interface CalendarMonth {
+  name: string;
+  /** Days in a common year. A leap month gains one more; see LeapRule. */
+  days: number;
+}
+
+/**
+ * A moon, and where it is in its cycle.
+ *
+ * `cycle` is how many days a full new-to-new takes, and may be fractional — 29.5 is
+ * the obvious one. `newMoonOn` is how many days after the calendar's origin (year 1,
+ * first month, first day) this moon was last new, which is what fixes its phase to
+ * the calendar rather than leaving it floating.
+ */
+export interface Moon {
+  id: string;
+  name: string;
+  cycle: number;
+  newMoonOn: number;
+  /** Hex, so several moons stay tellable apart at a glance. */
+  color: string;
+}
+
+/**
+ * Gregorian-shaped leap rules, which cover far more invented calendars than they
+ * look like they should: a day every `every` years, skipped every `skipEvery`,
+ * un-skipped every `keepEvery`. Earth is 4 / 100 / 400. Set the last two to 0 for a
+ * plain "every fourth year".
+ */
+export interface LeapRule {
+  every: number;
+  skipEvery: number;
+  keepEvery: number;
+  /** Index into `months` of the month that gains the day. */
+  monthIndex: number;
+}
+
+/** One project's calendar. Travels with the project, like its schema. */
+export interface WorldCalendar {
+  name: string;
+  months: CalendarMonth[];
+  /** Names of the days of the week; the length of this list *is* the week length. */
+  weekdays: string[];
+  hoursPerDay: number;
+  /** Suffix on a written year — "AR", "of the Third Age". */
+  era: string;
+  leap: LeapRule | null;
+  moons: Moon[];
+}
+
+/**
+ * A date in a world calendar. Month and day are 1-based, as they are when written.
+ * Stored in a page field as `year-month-day`.
+ */
+export interface WorldDate {
+  year: number;
+  month: number;
+  day: number;
+}
+
 export interface ProjectSchema {
   types: Record<string, BlockType>;
   /** Display order of type keys; 'blank' is always present and never shown in the schema grid. */
   typeOrder: string[];
+  calendar: WorldCalendar;
 }
 
 export interface Project {
@@ -144,6 +207,8 @@ export interface ProjectFile {
   pages: Page[];
   types: Record<string, BlockType>;
   typeOrder: string[];
+  /** Absent in files written before calendars existed; the importer fills one in. */
+  calendar?: WorldCalendar;
   links: Edge[];
 }
 

@@ -1,11 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { Doc, Edge, Page } from '../types';
+import { starterCalendar } from '../defaults';
 import { mergeDoc, type MergeMeta, type RemoteStamps } from './merge';
 
 const schema = {
   types: { note: { label: 'Note', code: 'NT', color: '#8a919e', fields: [] } },
   typeOrder: ['note'],
+  calendar: starterCalendar(),
 };
 
 const page = (id: string, title: string, extra: Partial<Page> = {}): Page => ({
