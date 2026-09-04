@@ -39,7 +39,13 @@ function boot(): Promise<DiceBox | null> {
       const instance = new DiceBoxClass({
         // A selector string, not the element — the library insists on looking it up.
         container: `#${CONTAINER_ID}`,
-        assetPath: '/assets/dice-box/',
+        // Root-relative, and including whatever path the app is served under. It
+        // cannot be a plain './': the library joins `location.origin` to this
+        // inside its worker, and a dot-relative path there becomes the nonsense
+        // `http://host./assets/...`. Resolving against the page's own URL first
+        // gives `/Cartographer/assets/dice-box/` on Pages and `/assets/dice-box/`
+        // when served from a root.
+        assetPath: new URL(`${import.meta.env.BASE_URL}assets/dice-box/`, window.location.href).pathname,
         theme: 'default',
         themeColor: '#e0a44a',
         // Small enough to leave the page readable underneath: these land over the

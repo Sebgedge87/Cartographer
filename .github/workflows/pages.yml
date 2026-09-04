@@ -1,0 +1,58 @@
+# Build the app and publish it to GitHub Pages, so there is always a URL to open
+# on a device that cannot run the dev server — a phone, or someone else's machine.
+#
+# The build is the local-only one: no Supabase keys are provided, so the published
+# app keeps everything in that browser's own storage. It is for looking at and
+# trying, not for carrying work between devices.
+name: Pages
+
+on:
+  push:
+    branches: [claude/new-session-rhnfh7]
+  workflow_dispatch:
+
+# Least privilege plus the two Pages needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never two deploys at once; let a newer push finish rather than the older one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `npm ci` runs postinstall, which copies the dice-box runtime assets out of
+      # node_modules into public/. prebuild does it again, so this holds even if
+      # install scripts are ever disabled.
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
