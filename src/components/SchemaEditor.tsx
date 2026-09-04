@@ -51,10 +51,11 @@ const EXTENSIONS: { name: string; on: boolean; desc: string; how: ReactNode }[] 
         Write the expression anywhere in a page body — <code>2d6+3</code>, <code>d20</code>,{' '}
         <code>4d8-1</code>. The pattern is <b>dice, d, sides, then an optional + or −
         modifier</b>; leave the count off and it rolls one. It turns into a button in the preview on
-        the right: click it and the result appears at the bottom of the screen showing each die and
-        the total, like <code>2d6+3 → [4 5] +3 = 12</code>. Up to 20 dice in one expression. The{' '}
-        <code>2d6</code> button on the format bar and <code>/dice</code> both insert one. Nothing is
-        stored — every click is a fresh roll.
+        the right: click it and it tumbles, settles on the total in place, then goes back to being
+        the expression. Every die and the total also appear at the bottom of the screen, like{' '}
+        <code>2d6+3 → [4 5] +3 = 12</code>. Up to 20 dice in one expression. The <code>2d6</code>{' '}
+        button on the format bar and <code>/dice</code> both insert one. Nothing is stored — every
+        click is a fresh roll.
       </>
     ),
   },
