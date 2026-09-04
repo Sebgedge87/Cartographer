@@ -318,7 +318,7 @@ export function PageEditor() {
       if (!hit) return;
       const dice = hit.getAttribute('data-dice');
       if (dice) {
-        rollAndToast(dice);
+        rollAndToast(dice, hit as HTMLElement);
         return;
       }
       const pid = hit.getAttribute('data-page');

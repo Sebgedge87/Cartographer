@@ -70,11 +70,91 @@ export function createPage(opts: CreatePageOptions = {}): string | null {
   return id;
 }
 
-export function rollAndToast(expr: string): void {
+const ROLLING = 'cg-dice--rolling';
+const LANDED = 'cg-dice--landed';
+/** How long the die tumbles before it settles. */
+const TUMBLE_MS = 620;
+/** How long the total stays in place of the expression afterwards. */
+const HOLD_MS = 1400;
+
+/** Pending "put the expression back" timers, so a re-roll cancels the old one. */
+const restores = new WeakMap<HTMLElement, number>();
+
+function reducedMotion(): boolean {
+  return typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+/**
+ * Cycle the token through plausible totals at a decelerating rate, then hand back to
+ * `land`. The real result is decided before any of this runs — the tumble is show,
+ * not chance — so what lands always matches what the toast says.
+ */
+function tumble(el: HTMLElement, expr: string, land: () => void): void {
+  // Reset to the expression before measuring, and restore to it afterwards, rather
+  // than to whatever the token currently reads: a click arriving while a previous
+  // result is still on screen would otherwise adopt that number as the label and
+  // keep it there for good. `expr` is the truth; the displayed text is not.
+  const pending = restores.get(el);
+  if (pending !== undefined) window.clearTimeout(pending);
+  el.classList.remove(LANDED);
+  el.style.minWidth = '';
+  el.textContent = expr;
+
+  // Lock the width: the expression and a bare total are different lengths, and a
+  // token that resizes every frame reads as a glitch rather than a roll.
+  el.style.minWidth = `${el.offsetWidth}px`;
+  el.classList.add(ROLLING);
+
+  const start = performance.now();
+  let nextTick = 0;
+
+  const step = (now: number) => {
+    const t = (now - start) / TUMBLE_MS;
+    if (t >= 1) {
+      el.classList.remove(ROLLING);
+      el.classList.add(LANDED);
+      land();
+      restores.set(
+        el,
+        window.setTimeout(() => {
+          restores.delete(el);
+          el.classList.remove(LANDED);
+          el.style.minWidth = '';
+          el.textContent = expr;
+        }, HOLD_MS),
+      );
+      return;
+    }
+    if (now >= nextTick) {
+      // Ticks stretch from 40ms to ~140ms across the tumble, so it slows to a stop.
+      nextTick = now + 40 + t * t * 100;
+      el.textContent = String(rollDice(expr)?.total ?? expr);
+    }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/**
+ * Roll a dice expression. Given the clicked token, the die tumbles there and settles
+ * on the total; without one — or with reduced motion asked for — it just reports.
+ */
+export function rollAndToast(expr: string, el?: HTMLElement | null): void {
   const result = rollDice(expr);
   if (!result) return;
   const mod = result.mod ? (result.mod > 0 ? ` +${result.mod}` : ` ${result.mod}`) : '';
-  useUI.getState().showToast(`${expr} → [${result.rolls.join(' ')}]${mod} = ${result.total}`);
+  const message = `${expr} → [${result.rolls.join(' ')}]${mod} = ${result.total}`;
+  const show = () => useUI.getState().showToast(message);
+
+  // A second click mid-roll would fight the first over the same text node.
+  if (!el || el.classList.contains(ROLLING) || reducedMotion()) {
+    show();
+    return;
+  }
+  tumble(el, expr, () => {
+    el.textContent = String(result.total);
+    show();
+  });
 }
 
 export function exportCurrentProject(): void {
