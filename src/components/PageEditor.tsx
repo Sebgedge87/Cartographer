@@ -108,6 +108,48 @@ export function PageEditor() {
       { code: '@', label: 'Live stat reference', hint: '@Page.field', run: at('@') },
     ];
 
+    // Derived here rather than reused from the render body below: this callback runs
+    // during the same render, before those consts are initialised.
+    const hostType = page ? blockType(schema, page.type) : null;
+    const hostFields = page ? pageFields(doc, page) : [];
+
+    // Table whose columns are this page type's own field labels.
+    const columns = hostFields.filter((f) => f.kind !== 'heading').map((f) => f.label);
+    if (columns.length && hostType) {
+      builtins.push({
+        code: 'TT',
+        label: `Table of ${hostType.label} fields`,
+        hint: 'schema',
+        run: at(
+          `| ${columns.join(' | ')} |\n| ${columns.map(() => '---').join(' | ')} |\n` +
+            `|${columns.map(() => '  ').join('|')}|\n`,
+          2,
+        ),
+      });
+    }
+
+    // Roll tables, pre-numbered — the rows are the tedious part.
+    const rollTable = (sides: number) =>
+      `| d${sides} | Result |\n| --- | --- |\n` +
+      Array.from({ length: sides }, (_, i) => `| ${i + 1} |  |`).join('\n') +
+      '\n';
+    builtins.push(
+      { code: 'd6', label: 'Roll table (d6)', hint: 'random', run: at(rollTable(6), 24) },
+      { code: 'd20', label: 'Roll table (d20)', hint: 'random', run: at(rollTable(20), 25) },
+      {
+        code: '![[',
+        label: 'Embed a page’s stat block',
+        hint: 'live',
+        run: at('![[]]', 3),
+      },
+      {
+        code: '@@',
+        label: 'Inline stat line',
+        hint: 'live',
+        run: at('@@'),
+      },
+    );
+
     // One command per block type: create the page in this area and link it, without
     // ever closing the editor.
     const fromTypes: Option[] = creatableTypeKeys(schema).map((key) => {
@@ -239,7 +281,12 @@ export function PageEditor() {
 
   const html = useMemo(() => {
     if (!page) return '';
-    const ctx = markdownContext(doc.pages, page.projectId, (key) => blockType(schema, key));
+    const ctx = markdownContext(
+      doc.pages,
+      page.projectId,
+      (key) => blockType(schema, key),
+      (p) => pageFields(doc, p),
+    );
     return renderMarkdown(page.body, ctx);
   }, [doc.pages, page, schema]);
 

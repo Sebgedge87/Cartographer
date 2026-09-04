@@ -1,5 +1,5 @@
 import MarkdownIt from 'markdown-it';
-import type { BlockType, Page } from '../state/types';
+import type { BlockType, Field, Page } from '../state/types';
 
 type Token = ReturnType<MarkdownIt['parse']>[number];
 
@@ -9,12 +9,15 @@ export interface MarkdownContext {
   byTitle: Map<string, string>;
   byId: Map<string, Page>;
   typeOf: (typeKey: string) => BlockType;
+  /** The fields a page actually shows — its own layout if it has forked, else its type's. */
+  fieldsOf: (page: Page) => Field[];
 }
 
 const EMPTY_CONTEXT: MarkdownContext = {
   byTitle: new Map(),
   byId: new Map(),
   typeOf: () => ({ label: 'Note', code: 'NT', color: '#8a919e', fields: [] }),
+  fieldsOf: () => [],
 };
 
 let context: MarkdownContext = EMPTY_CONTEXT;
@@ -28,7 +31,16 @@ const esc = (s: string) =>
  * text tokens the inline rules left behind — which also means they can never fire
  * inside a code span, a link href or an image alt.
  */
-const INLINE = /\[\[([^\]\n]+)\]\]|@([A-Za-z0-9'’\- ]+?)\.([a-z_]+)|\b(\d{0,3}d\d{1,3}(?:[+-]\d{1,3})?)\b/g;
+const INLINE = new RegExp(
+  [
+    /!\[\[([^\]\n]+)\]\]/,                        // ![[Page]]  — embedded stat block
+    /\[\[([^\]\n]+)\]\]/,                          // [[Page]]   — link
+    /@@([A-Za-z0-9'’\- ]+)/,                         // @@Page     — inline stat line
+    /@([A-Za-z0-9'’\- ]+?)\.([a-z_]+)/,              // @Page.field
+    /\b(\d{0,3}d\d{1,3}(?:[+-]\d{1,3})?)\b/,        // 2d6+3
+  ].map((r) => r.source).join('|'),
+  'g',
+);
 
 const md: MarkdownIt = new MarkdownIt({
   // Author-entered HTML is never trusted: markdown-it escapes it, and every custom
@@ -39,6 +51,21 @@ const md: MarkdownIt = new MarkdownIt({
 });
 
 /* ---------- custom tokens ---------- */
+
+/**
+ * The longest leading run of `text` that names a page, trimmed at word boundaries.
+ * Returns null when no prefix matches, so `@@` before ordinary prose stays prose.
+ */
+function longestKnownTitle(text: string): string | null {
+  let candidate = text.trimEnd();
+  while (candidate.length) {
+    if (context.byTitle.has(candidate.toLowerCase())) return candidate;
+    const cut = candidate.lastIndexOf(' ');
+    if (cut < 0) return null;
+    candidate = candidate.slice(0, cut);
+  }
+  return null;
+}
 
 md.core.ruler.push('cartographer_inline', (state) => {
   for (const block of state.tokens) {
@@ -59,15 +86,42 @@ md.core.ruler.push('cartographer_inline', (state) => {
           t.content = child.content.slice(last, m.index);
           next.push(t);
         }
-        const token = new state.Token(m[1] ? 'cg_wikilink' : m[4] ? 'cg_dice' : 'cg_stat', '', 0);
-        token.content = m[0];
-        token.meta = m[1]
-          ? { name: m[1].trim() }
-          : m[4]
-            ? { expr: m[4] }
-            : { name: (m[2] ?? '').trim(), field: m[3] ?? '' };
+        const [, embed, link, statline, refName, refField, dice] = m;
+
+        // `@@Name` has no closing delimiter, so the pattern greedily eats the rest of
+        // the sentence. Walk back word by word to the longest run that is a real page
+        // title, and hand the remainder back to the text that follows.
+        let consumed = m[0].length;
+        let resolved: string | null | undefined = statline;
+        if (statline !== undefined) {
+          resolved = longestKnownTitle(statline);
+          if (resolved === null) {
+            const text = new state.Token('text', '', 0);
+            text.content = m[0];
+            next.push(text);
+            last = m.index + m[0].length;
+            continue;
+          }
+          consumed = 2 + resolved.length;
+          INLINE.lastIndex = m.index + consumed;
+        }
+
+        const type =
+          embed ? 'cg_embed'
+            : link ? 'cg_wikilink'
+            : statline !== undefined ? 'cg_statline'
+            : dice ? 'cg_dice'
+            : 'cg_stat';
+        const token = new state.Token(type, '', 0);
+        token.content = m[0].slice(0, consumed);
+        token.meta =
+          embed ? { name: embed.trim() }
+            : link ? { name: link.trim() }
+            : statline !== undefined ? { name: (resolved ?? '').trim() }
+            : dice ? { expr: dice }
+            : { name: (refName ?? '').trim(), field: refField ?? '' };
         next.push(token);
-        last = m.index + m[0].length;
+        last = m.index + consumed;
       }
       if (last < child.content.length) {
         const t = new state.Token('text', '', 0);
@@ -162,6 +216,61 @@ md.renderer.rules.cg_stat = (tokens, idx) => {
   );
 };
 
+/** The target page's whole stat block, rendered inline where it was referenced. */
+md.renderer.rules.cg_embed = (tokens, idx) => {
+  const name = String(tokens[idx]?.meta?.name ?? '');
+  const id = context.byTitle.get(name.toLowerCase());
+  const page = id ? context.byId.get(id) : undefined;
+  if (!page) return `<span class="cg-link cg-link--new" data-new="${esc(name)}">${esc(name)} +</span>`;
+
+  const t = context.typeOf(page.type);
+  const rows = context
+    .fieldsOf(page)
+    .filter((f) => f.kind !== 'heading' && (page.fields[f.key] ?? '') !== '')
+    .map(
+      (f) =>
+        `<span class="cg-embed__cell"><em>${esc(f.label)}</em>` +
+        `<b>${esc(page.fields[f.key] ?? '')}</b></span>`,
+    )
+    .join('');
+
+  return (
+    `<span class="cg-embed" data-page="${esc(page.id)}" style="--chip:${esc(t.color)}">` +
+    `<span class="cg-embed__head"><b>${esc(t.code)}</b>${esc(page.title)}</span>` +
+    (rows
+      ? `<span class="cg-embed__grid">${rows}</span>`
+      : '<span class="cg-embed__empty">No fields filled in</span>') +
+    '</span>'
+  );
+};
+
+/** The same stat block squeezed onto one line, for use mid-sentence. */
+md.renderer.rules.cg_statline = (tokens, idx) => {
+  const token = tokens[idx];
+  const name = String(token?.meta?.name ?? '');
+  const id = context.byTitle.get(name.toLowerCase());
+  const page = id ? context.byId.get(id) : undefined;
+  if (!page) return esc(String(token?.content ?? ''));
+
+  const t = context.typeOf(page.type);
+  const parts = context
+    .fieldsOf(page)
+    .filter((f) => f.kind !== 'heading' && f.kind !== 'long' && (page.fields[f.key] ?? '') !== '')
+    // Clipped like the board card's stat chips: this form is meant to sit inside a
+    // sentence, and a long value pushes it onto a second line.
+    .map((f) => {
+      const value = page.fields[f.key] ?? '';
+      const short = value.length > 22 ? `${value.slice(0, 22)}…` : value;
+      return `<em>${esc(f.label)}</em> <b>${esc(short)}</b>`;
+    });
+
+  return (
+    `<span class="cg-statline" data-page="${esc(page.id)}" style="--chip:${esc(t.color)}">` +
+    (parts.length ? parts.join('<i>·</i>') : `<em>${esc(page.title)}</em>`) +
+    '</span>'
+  );
+};
+
 md.renderer.rules.cg_dice = (tokens, idx) => {
   const expr = String(tokens[idx]?.meta?.expr ?? '');
   return `<span class="cg-dice" data-dice="${esc(expr)}" title="Click to roll">${esc(expr)}</span>`;
@@ -220,6 +329,7 @@ export function markdownContext(
   pages: Page[],
   projectId: string | null,
   typeOf: (typeKey: string) => BlockType,
+  fieldsOf: (page: Page) => Field[],
 ): MarkdownContext {
   const byTitle = new Map<string, string>();
   const byId = new Map<string, Page>();
@@ -228,7 +338,7 @@ export function markdownContext(
     byTitle.set(p.title.toLowerCase(), p.id);
     byId.set(p.id, p);
   }
-  return { byTitle, byId, typeOf };
+  return { byTitle, byId, typeOf, fieldsOf };
 }
 
 /** Strip markdown furniture down to a one-line preview for a board card. */

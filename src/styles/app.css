@@ -942,3 +942,38 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   width: 13px; height: 13px; margin-right: 7px; vertical-align: -1px;
   accent-color: var(--accent); cursor: pointer;
 }
+
+/* ---------- embedded stat blocks ---------- */
+
+.md .cg-embed {
+  display: block; margin: 12px 0; padding: 11px 13px 12px;
+  background: rgba(255, 255, 255, .03);
+  border: 1px solid color-mix(in srgb, var(--chip) 30%, transparent);
+  border-left: 2px solid var(--chip);
+  border-radius: 0 var(--r-md) var(--r-md) 0;
+  cursor: pointer;
+}
+.md .cg-embed:hover { background: rgba(255, 255, 255, .05); }
+.md .cg-embed__head {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 8px;
+  font: 600 13.5px var(--font-ui); color: var(--text-strong);
+}
+.md .cg-embed__head b { font: 700 8.5px var(--font-mono); color: var(--chip); }
+.md .cg-embed__grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 4px 14px;
+}
+.md .cg-embed__cell { display: flex; gap: 6px; font: 400 11.5px var(--font-mono); }
+.md .cg-embed__cell em { font-style: normal; color: var(--dim); }
+.md .cg-embed__cell b { font-weight: 500; color: var(--text-mono); }
+.md .cg-embed__empty { font: 400 11px var(--font-mono); color: var(--ghost); }
+
+.md .cg-statline {
+  display: inline-flex; align-items: baseline; gap: 6px; flex-wrap: wrap;
+  padding: 1px 7px; border-radius: var(--r-sm);
+  background: rgba(255, 255, 255, .05);
+  border: 1px solid color-mix(in srgb, var(--chip) 27%, transparent);
+  font: 500 11.5px var(--font-mono); cursor: pointer;
+}
+.md .cg-statline em { font-style: normal; color: var(--dim); }
+.md .cg-statline b { font-weight: 500; color: var(--chip); }
+.md .cg-statline i { font-style: normal; color: var(--ghost); }
