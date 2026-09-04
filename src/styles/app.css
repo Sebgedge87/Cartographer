@@ -758,6 +758,10 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .settings__panel {
   position: absolute; left: calc(100% + 9px); bottom: 0; z-index: 60;
   width: 288px; padding: 4px 0;
+  /* The button sits at the foot of the rail, so the panel grows upward — on a short
+     window it would climb off the top. Cap it to what the window can hold and let
+     the panel scroll instead. */
+  max-height: calc(100vh - 58px); overflow-y: auto; overscroll-behavior: contain;
   background: var(--popover); border: 1px solid var(--border-strong);
   border-radius: var(--r-xl); box-shadow: var(--shadow-popover);
   animation: cgFly .16s cubic-bezier(.2, .8, .3, 1) both;
@@ -779,6 +783,11 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 }
 .settings__row:last-child { margin-bottom: 0; }
 .settings__row .segments { margin-left: auto; flex: none; }
+/* A row whose control is too wide to sit beside its label. */
+.settings__row--stack { display: block; }
+.settings__row--stack > span { display: block; margin-bottom: 6px; }
+.settings__row--stack .segments { margin-left: 0; }
+.segments--wrap { flex-wrap: wrap; }
 .settings__row .segment { padding: 4px 7px; font-size: 8.5px; letter-spacing: .08em; }
 
 .settings__item {

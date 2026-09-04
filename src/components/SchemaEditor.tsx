@@ -2,7 +2,6 @@ import type { FieldKind } from '../state/types';
 import type { ReactNode } from 'react';
 import { blockType, schemaFor, typeOptions, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { CalendarEditor } from './CalendarEditor';
 
 const FIELD_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'text', label: 'text' },
@@ -273,16 +272,6 @@ export function SchemaEditor() {
               + AREA
             </button>
           </div>
-        </section>
-
-        <section className="schema__section">
-          <div className="schema__head">
-            <span className="label">Calendar</span>
-            <span className="schema__note">
-              How a year works here — every date field on every page is read against it
-            </span>
-          </div>
-          <CalendarEditor projectId={projectId} calendar={schema.calendar} />
         </section>
 
         <section className="schema__section">

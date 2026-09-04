@@ -25,6 +25,7 @@ const VIEWS: { value: ViewMode; label: string }[] = [
   { value: 'board', label: 'BOARD' },
   { value: 'table', label: 'PAGES' },
   { value: 'timeline', label: 'TIME' },
+  { value: 'calendar', label: 'CAL' },
   { value: 'schema', label: 'SCHEMA' },
 ];
 
@@ -92,9 +93,11 @@ export function SettingsMenu() {
 
             <div className="settings__group">
               <div className="settings__label">View</div>
-              <div className="settings__row">
+              {/* Stacked, not inline: six views do not fit beside a label in a
+                  288px panel, and the last one was being clipped off the edge. */}
+              <div className="settings__row settings__row--stack">
                 <span>Showing</span>
-                <div className="segments">
+                <div className="segments segments--wrap">
                   {VIEWS.map((v) => (
                     <button
                       key={v.value}

@@ -218,7 +218,7 @@ export interface ProjectFile {
 }
 
 /** 'area' lists the boards in the selected area; 'board' is the page canvas. */
-export type ViewMode = 'area' | 'board' | 'table' | 'timeline' | 'schema';
+export type ViewMode = 'area' | 'board' | 'table' | 'timeline' | 'calendar' | 'schema';
 
 export interface Camera {
   x: number;
