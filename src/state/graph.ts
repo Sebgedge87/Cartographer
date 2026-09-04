@@ -201,12 +201,12 @@ export function fitCamera(pages: Page[], width: number, height: number): Camera 
 }
 
 /** Roll a dice expression like 2d6+3. Caps at 20 dice. */
-export function rollDice(expr: string): { rolls: number[]; mod: number; total: number } | null {
+export function rollDice(expr: string): { rolls: number[]; sides: number; mod: number; total: number } | null {
   const m = /^(\d*)d(\d+)([+-]\d+)?$/.exec(expr);
   if (!m) return null;
   const n = Math.min(parseInt(m[1] || '1', 10), 20);
   const sides = parseInt(m[2]!, 10);
   const mod = parseInt(m[3] || '0', 10);
   const rolls = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * sides));
-  return { rolls, mod, total: rolls.reduce((a, b) => a + b, 0) + mod };
+  return { rolls, sides, mod, total: rolls.reduce((a, b) => a + b, 0) + mod };
 }

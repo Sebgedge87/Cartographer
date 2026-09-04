@@ -72,10 +72,11 @@ export function createPage(opts: CreatePageOptions = {}): string | null {
 
 const ROLLING = 'cg-dice--rolling';
 const LANDED = 'cg-dice--landed';
-/** How long the die tumbles before it settles. */
-const TUMBLE_MS = 620;
-/** How long the total stays in place of the expression afterwards. */
-const HOLD_MS = 1400;
+/** A token never shakes longer than this, however the throw goes. */
+const MAX_SHAKE_MS = 5000;
+/** How long the total stays in place of the expression. Matches the tray's linger,
+ * so the token and the dice clear together rather than one blinking out first. */
+const HOLD_MS = 1700;
 
 /** Pending "put the expression back" timers, so a re-roll cancels the old one. */
 const restores = new WeakMap<HTMLElement, number>();
@@ -85,11 +86,11 @@ function reducedMotion(): boolean {
 }
 
 /**
- * Cycle the token through plausible totals at a decelerating rate, then hand back to
- * `land`. The real result is decided before any of this runs — the tumble is show,
- * not chance — so what lands always matches what the toast says.
+ * Put the token into its rolling state and hold it there. The dice on screen decide
+ * when this ends, so unlike the token's own animation it has no fixed duration —
+ * only the hard stop below, in case a throw never reports back.
  */
-function tumble(el: HTMLElement, expr: string, land: () => void): void {
+function shake(el: HTMLElement, expr: string): void {
   // Reset to the expression before measuring, and restore to it afterwards, rather
   // than to whatever the token currently reads: a click arriving while a previous
   // result is still on screen would otherwise adopt that number as the label and
@@ -109,25 +110,15 @@ function tumble(el: HTMLElement, expr: string, land: () => void): void {
   let nextTick = 0;
 
   const step = (now: number) => {
-    const t = (now - start) / TUMBLE_MS;
-    if (t >= 1) {
-      el.classList.remove(ROLLING);
-      el.classList.add(LANDED);
-      land();
-      restores.set(
-        el,
-        window.setTimeout(() => {
-          restores.delete(el);
-          el.classList.remove(LANDED);
-          el.style.minWidth = '';
-          el.textContent = expr;
-        }, HOLD_MS),
-      );
+    // The dice on screen end this, not a clock. The cap only exists so a throw that
+    // never reports back cannot leave the token shaking for good.
+    if (!el.classList.contains(ROLLING)) return;
+    if (now - start > MAX_SHAKE_MS) {
+      land(el, expr, rollDice(expr)?.total ?? 0);
       return;
     }
     if (now >= nextTick) {
-      // Ticks stretch from 40ms to ~140ms across the tumble, so it slows to a stop.
-      nextTick = now + 40 + t * t * 100;
+      nextTick = now + 70;
       el.textContent = String(rollDice(expr)?.total ?? expr);
     }
     requestAnimationFrame(step);
@@ -135,9 +126,32 @@ function tumble(el: HTMLElement, expr: string, land: () => void): void {
   requestAnimationFrame(step);
 }
 
+/** Stop the token on the real total, hold it, then put the expression back. */
+function land(el: HTMLElement, expr: string, total: number): void {
+  if (!el.classList.contains(ROLLING)) return;
+  el.classList.remove(ROLLING);
+  el.classList.add(LANDED);
+  el.textContent = String(total);
+  restores.set(
+    el,
+    window.setTimeout(() => {
+      restores.delete(el);
+      el.classList.remove(LANDED);
+      el.style.minWidth = '';
+      el.textContent = expr;
+    }, HOLD_MS),
+  );
+}
+
+let throwId = 0;
+
 /**
- * Roll a dice expression. Given the clicked token, the die tumbles there and settles
- * on the total; without one — or with reduced motion asked for — it just reports.
+ * Roll a dice expression.
+ *
+ * Given the clicked token, the dice are thrown across the screen and bounce to a
+ * stop; the token shakes while they are in the air and shows the total the moment
+ * they land, so the two read as one event. Without a token — or with reduced motion
+ * asked for — it just reports.
  */
 export function rollAndToast(expr: string, el?: HTMLElement | null): void {
   const result = rollDice(expr);
@@ -151,9 +165,22 @@ export function rollAndToast(expr: string, el?: HTMLElement | null): void {
     show();
     return;
   }
-  tumble(el, expr, () => {
-    el.textContent = String(result.total);
-    show();
+
+  const box = el.getBoundingClientRect();
+  const sides = result.sides;
+
+  shake(el, expr);
+  useUI.getState().set({
+    tray: {
+      id: ++throwId,
+      sides,
+      rolls: result.rolls,
+      from: { x: box.left + box.width / 2, y: box.top + box.height / 2 },
+      onSettle: () => {
+        land(el, expr, result.total);
+        show();
+      },
+    },
   });
 }
 

@@ -50,6 +50,21 @@ export interface NewMenu {
 
 const DEFAULT_CAM: Camera = { x: 260, y: 180, z: 1 };
 
+/**
+ * One throw of the dice. The values are already decided when this is set — the tray
+ * only performs them — so what lands always agrees with what was reported.
+ */
+export interface DiceThrow {
+  /** Distinguishes one throw from the next, so the tray remounts rather than reuses. */
+  id: number;
+  sides: number;
+  rolls: number[];
+  /** Viewport point the dice are thrown from — the token that was clicked. */
+  from: { x: number; y: number };
+  /** Called once, when the last die stops moving. */
+  onSettle: () => void;
+}
+
 interface UIState {
   view: 'home' | 'project';
   projectId: string | null;
@@ -74,6 +89,8 @@ interface UIState {
   context: ContextMenu | null;
   prompt: NamePrompt | null;
   toast: string | null;
+  /** An in-flight dice roll, or null. Ephemeral by nature — never persisted. */
+  tray: DiceThrow | null;
 
   search: string;
   collapsed: Record<string, boolean>;
@@ -124,6 +141,7 @@ export const useUI = create<UIStore>()((set) => ({
   context: null,
   prompt: null,
   toast: null,
+  tray: null,
   search: '',
   collapsed: {},
   fieldsOpen: true,

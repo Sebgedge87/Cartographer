@@ -13,6 +13,7 @@ import { Inspector } from './components/Inspector';
 import { PageEditor } from './components/PageEditor';
 import { NewPageMenu } from './components/NewPageMenu';
 import { Toast } from './components/Toast';
+import { DiceTray } from './components/DiceTray';
 import { ContextMenu } from './components/ContextMenu';
 import { NamePrompt } from './components/NamePrompt';
 import { SignIn } from './components/SignIn';
@@ -94,6 +95,7 @@ export function App() {
       <ContextMenu />
       <NamePrompt />
       <Toast />
+      <DiceTray />
     </>
   );
 }

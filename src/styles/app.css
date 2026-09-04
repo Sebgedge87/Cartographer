@@ -1074,3 +1074,43 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .shot__act:hover { border-color: var(--border-hover); color: var(--text); }
 .shot__act[aria-pressed='true'] { color: var(--accent); border-color: var(--accent); }
 .shot__act--danger:hover { color: #e0736a; border-color: rgba(224, 115, 106, .5); }
+
+/* ---------- dice tray ---------- */
+
+.dice-tray {
+  position: fixed; inset: 0; z-index: 90; pointer-events: none;
+  transition: opacity var(--dice-fade, .32s) ease;
+}
+.dice-tray--leaving { opacity: 0; }
+
+.die {
+  position: absolute; top: 0; left: 0;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: var(--r-md);
+  background: linear-gradient(155deg, #f4ead6, #cdbb9c);
+  color: #1a1712; font-family: var(--font-mono); font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .55);
+  will-change: transform;
+}
+/* Landed: the accent picks them out against the board, and one small settle pulse.
+   The transition catches the single jump to upright, so the die rocks into place. */
+.die--down {
+  background: linear-gradient(155deg, #f7e6c2, #e0a44a);
+  transition: transform .2s cubic-bezier(.2, .8, .3, 1.1);
+}
+.die--settled {
+  color: #14100a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .5), 0 0 0 1px rgba(224, 164, 74, .8),
+    inset 0 1px 0 rgba(255, 255, 255, .6);
+  animation: cgDieSettle .3s ease-out both;
+}
+@keyframes cgDieSettle {
+  0%   { filter: brightness(1.5); }
+  100% { filter: brightness(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .die--settled { animation: none; }
+  .die--down { transition: none; }
+}
