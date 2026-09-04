@@ -399,7 +399,6 @@ export function PageEditor() {
     { label: 'GM', title: 'GM-only callout', run: () => apply(ta() ? prefixLine(ta()!, '> [!gm] ') : null) },
     { label: '•', title: 'Bullet list', run: () => apply(ta() ? prefixLine(ta()!, '- ') : null) },
     { label: '1.', title: 'Numbered list', run: () => apply(ta() ? prefixLine(ta()!, '1. ') : null) },
-    { label: '{}', title: 'Code', run: () => apply(ta() ? wrapSelection(ta()!, '`', '`', 'code') : null) },
     { label: 'TB', title: 'Table', run: () => apply(ta() ? insertBlock(ta()!, '| Roll | Result |\n| --- | --- |\n|  |  |\n') : null) },
     { label: 'IM', title: 'Image', run: () => apply(ta() ? insertBlock(ta()!, '![caption](image-url)') : null) },
     { label: 'HR', title: 'Divider', run: () => apply(ta() ? insertBlock(ta()!, '\n---\n') : null) },
