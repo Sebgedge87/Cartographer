@@ -1079,38 +1079,57 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 
 .dice-tray {
   position: fixed; inset: 0; z-index: 90; pointer-events: none;
-  transition: opacity var(--dice-fade, .32s) ease;
+  /* Applies to the .die children, so every solid shares one vanishing point. */
+  perspective: 1100px;
+  transition: opacity .32s ease;
 }
 .dice-tray--leaving { opacity: 0; }
 
 .die {
   position: absolute; top: 0; left: 0;
-  display: flex; align-items: center; justify-content: center;
-  border-radius: var(--r-md);
-  background: linear-gradient(155deg, #f4ead6, #cdbb9c);
-  color: #1a1712; font-family: var(--font-mono); font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .55);
+  transform-style: preserve-3d;
+  font-family: var(--font-mono); font-weight: 700; font-variant-numeric: tabular-nums;
   will-change: transform;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .6));
 }
+.die__body {
+  position: absolute; inset: 0;
+  transform-style: preserve-3d;
+}
+
+/* The two polygon faces, clipped to the silhouette and held apart by the edges. */
+.die__face {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(150deg, #fbf3e2 0%, #efe0c2 46%, #cdbb9c 100%);
+  color: #1a1712;
+  backface-visibility: hidden;
+}
+.die__face--back { background: linear-gradient(150deg, #e9dcc2, #bfae90); }
+
+/* One quad per side, standing between the faces — this is what gives the solid
+   its thickness, and what you see when a die turns edge-on mid-flight. */
+.die__edge {
+  position: absolute; left: 50%; top: 50%;
+  background: linear-gradient(90deg, #8d7b5f, #d9c8a8, #8d7b5f);
+}
+
 /* Landed: the accent picks them out against the board, and one small settle pulse.
-   The transition catches the single jump to upright, so the die rocks into place. */
-.die--down {
-  background: linear-gradient(155deg, #f7e6c2, #e0a44a);
-  transition: transform .2s cubic-bezier(.2, .8, .3, 1.1);
-}
+   The transition catches the single turn to face-on, so the die rocks into place. */
+.die--down .die__face { background: linear-gradient(150deg, #fbeccb, #e0a44a); }
+.die--down .die__face--back { background: linear-gradient(150deg, #e7d0a2, #c78d3c); }
+.die--down .die__edge { background: linear-gradient(90deg, #8c6a2e, #e0bd7e, #7d5d27); }
+.die--down .die__body { transition: transform .26s cubic-bezier(.2, .8, .3, 1.1); }
 .die--settled {
   color: #14100a;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .5), 0 0 0 1px rgba(224, 164, 74, .8),
-    inset 0 1px 0 rgba(255, 255, 255, .6);
   animation: cgDieSettle .3s ease-out both;
 }
 @keyframes cgDieSettle {
-  0%   { filter: brightness(1.5); }
-  100% { filter: brightness(1); }
+  0%   { filter: drop-shadow(0 8px 14px rgba(0, 0, 0, .6)) brightness(1.55); }
+  100% { filter: drop-shadow(0 6px 12px rgba(0, 0, 0, .55)) brightness(1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .die--settled { animation: none; }
-  .die--down { transition: none; }
+  .die--down .die__body { transition: none; }
 }

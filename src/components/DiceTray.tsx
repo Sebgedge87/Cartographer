@@ -26,25 +26,78 @@ const FACE_SWAP_MS = 70;
 const FLOOR_INSET = 78;
 
 /**
- * Silhouettes, so a d20 does not read as a d6. Faces stay numerals on every die:
- * pips only work for six sides, and this app has no idea what system you are using.
+ * Each die is a real solid: two polygon faces held apart by a ring of edge quads,
+ * assembled in CSS 3D. `n` is how many sides that polygon has and `depth` is the
+ * solid's thickness as a fraction of its width — a d6 is a four-sided polygon as
+ * thick as its side length, which is to say a cube. The rest are prisms: an
+ * icosahedron's twenty faces would each be four pixels of unreadable numeral at
+ * this size, so the silhouette carries the die's identity and the face carries
+ * the number.
+ *
+ * `pointy` puts a vertex at the top instead of an edge — a d4 points up, a cube
+ * sits flat.
  */
-const SHAPES: Record<number, string> = {
-  4: 'polygon(50% 3%, 97% 94%, 3% 94%)',
-  8: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
-  10: 'polygon(50% 0%, 96% 34%, 78% 100%, 22% 100%, 4% 34%)',
-  12: 'polygon(50% 0%, 98% 36%, 79% 97%, 21% 97%, 2% 36%)',
-  20: 'polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%)',
-  100: 'polygon(50% 0%, 96% 34%, 78% 100%, 22% 100%, 4% 34%)',
+interface Geometry {
+  n: number;
+  pointy: boolean;
+  depth: number;
+}
+
+const GEOMETRY: Record<number, Geometry> = {
+  4: { n: 3, pointy: true, depth: 0.5 },
+  6: { n: 4, pointy: false, depth: 0.707 },
+  8: { n: 4, pointy: true, depth: 0.58 },
+  10: { n: 5, pointy: true, depth: 0.5 },
+  12: { n: 5, pointy: true, depth: 0.56 },
+  20: { n: 6, pointy: true, depth: 0.5 },
+  100: { n: 5, pointy: true, depth: 0.5 },
 };
+const DEFAULT_GEOMETRY: Geometry = { n: 4, pointy: false, depth: 0.707 };
+
+/** Where the first vertex sits, in degrees. Everything else follows from it. */
+function firstVertex(g: Geometry): number {
+  return g.pointy ? -90 : -90 + 180 / g.n;
+}
+
+/** The face outline, as a clip-path. Generated so the edges below line up with it. */
+function facePolygon(g: Geometry): string {
+  const start = firstVertex(g);
+  const points = Array.from({ length: g.n }, (_, k) => {
+    const a = ((start + (k * 360) / g.n) * Math.PI) / 180;
+    return `${(50 + 50 * Math.cos(a)).toFixed(2)}% ${(50 + 50 * Math.sin(a)).toFixed(2)}%`;
+  });
+  return `polygon(${points.join(', ')})`;
+}
+
+/**
+ * One edge quad per side, standing perpendicular to the two faces and closing the
+ * gap between them. Turn to face the side's midpoint, walk out to the polygon's
+ * apothem, then swing the quad a quarter turn about its own vertical so its width
+ * lies along the solid's depth and its height along the edge.
+ */
+function edgeTransform(g: Geometry, k: number, apothem: number): string {
+  // Side k spans vertices k and k+1, so its midpoint sits half a step further round.
+  const bearing = firstVertex(g) + ((k + 0.5) * 360) / g.n;
+  return `rotateZ(${bearing.toFixed(2)}deg) translateX(${apothem.toFixed(2)}px) rotateY(90deg)`;
+}
+
+/** Distance from the centre to the middle of a side, for a polygon of this radius. */
+const apothemOf = (g: Geometry, radius: number) => radius * Math.cos(Math.PI / g.n);
+/** Length of one side. */
+const sideOf = (g: Geometry, radius: number) => 2 * radius * Math.sin(Math.PI / g.n);
 
 interface Body {
   x: number;
   y: number;
   vx: number;
   vy: number;
-  angle: number;
-  spin: number;
+  /** Orientation, in degrees, and how fast each axis is turning. */
+  rx: number;
+  ry: number;
+  rz: number;
+  wx: number;
+  wy: number;
+  wz: number;
   settled: boolean;
   /** Consecutive fixed steps spent slow enough to be stopping. */
   resting: number;
@@ -64,6 +117,7 @@ function Tray({ roll }: { roll: DiceThrow }) {
   const wrap = useRef<HTMLDivElement>(null);
   const dice = useRef<(HTMLDivElement | null)[]>([]);
   const faces = useRef<(HTMLSpanElement | null)[]>([]);
+  const backs = useRef<(HTMLSpanElement | null)[]>([]);
 
   useEffect(() => {
     const count = roll.rolls.length;
@@ -80,24 +134,41 @@ function Tray({ roll }: { roll: DiceThrow }) {
       // Only a little upward: the dice have most of a screen to fall through, and a
       // hard throw just sends them off the top for a second before anything happens.
       vy: rand(-620, -320),
-      angle: rand(0, 360),
-      spin: rand(-620, 620),
+      rx: rand(0, 360),
+      ry: rand(0, 360),
+      rz: rand(0, 360),
+      wx: rand(-760, 760),
+      wy: rand(-760, 760),
+      wz: rand(-560, 560),
       settled: false,
       resting: 0,
       swappedAt: 0,
     }));
 
+    /** A die reads the same from either side, so both faces carry the same number. */
+    const setFace = (i: number, value: number) => {
+      const front = faces.current[i];
+      const back = backs.current[i];
+      if (front) front.textContent = String(value);
+      if (back) back.textContent = String(value);
+    };
+
     const paint = (i: number, b: Body) => {
       const el = dice.current[i];
-      if (el) el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0) rotate(${b.angle}deg)`;
+      if (!el) return;
+      el.style.transform = `translate3d(${b.x}px, ${b.y}px, 0)`;
+      const body = el.firstElementChild as HTMLElement | null;
+      if (body) {
+        body.style.transform =
+          `rotateX(${b.rx.toFixed(1)}deg) rotateY(${b.ry.toFixed(1)}deg) rotateZ(${b.rz.toFixed(1)}deg)`;
+      }
     };
 
     const finish = () => {
       if (done) return;
       done = true;
       for (let i = 0; i < count; i++) {
-        const face = faces.current[i];
-        if (face) face.textContent = String(roll.rolls[i]);
+        setFace(i, roll.rolls[i] ?? 0);
         dice.current[i]?.classList.add('die--settled');
       }
       roll.onSettle();
@@ -130,16 +201,20 @@ function Tray({ roll }: { roll: DiceThrow }) {
         b.vx *= AIR_DRAG;
         b.x += b.vx * FIXED_DT;
         b.y += b.vy * FIXED_DT;
-        b.angle += b.spin * FIXED_DT;
+        b.rx += b.wx * FIXED_DT;
+        b.ry += b.wy * FIXED_DT;
+        b.rz += b.wz * FIXED_DT;
 
         if (b.x < 0) {
           b.x = 0;
           b.vx = Math.abs(b.vx) * WALL_BOUNCE;
-          b.spin = -b.spin * FLOOR_GRIP;
+          b.wy = -b.wy * FLOOR_GRIP;
+          b.wz = -b.wz * FLOOR_GRIP;
         } else if (b.x > right) {
           b.x = right;
           b.vx = -Math.abs(b.vx) * WALL_BOUNCE;
-          b.spin = -b.spin * FLOOR_GRIP;
+          b.wy = -b.wy * FLOOR_GRIP;
+          b.wz = -b.wz * FLOOR_GRIP;
         }
         if (b.y < 0) {
           b.y = 0;
@@ -148,7 +223,9 @@ function Tray({ roll }: { roll: DiceThrow }) {
           b.y = floor;
           b.vy = -Math.abs(b.vy) * FLOOR_BOUNCE;
           b.vx *= FLOOR_GRIP;
-          b.spin *= FLOOR_GRIP;
+          b.wx *= FLOOR_GRIP;
+          b.wy *= FLOOR_GRIP;
+          b.wz *= FLOOR_GRIP;
         }
 
         // Settling is a speed test, not a position test: a die can legitimately
@@ -161,13 +238,18 @@ function Tray({ roll }: { roll: DiceThrow }) {
             b.settled = true;
             b.vx = 0;
             b.vy = 0;
-            b.spin = 0;
+            b.wx = 0;
+            b.wy = 0;
+            b.wz = 0;
             b.y = Math.min(b.y, floor);
-            // Come to rest upright, keeping a slight tilt so a handful of dice does
-            // not look like a grid. Snapping to the nearest quarter turn instead
-            // would leave half of them showing their number upside down, and a
-            // hexagon lying on its side no longer reads as a d20.
-            b.angle = Math.round(b.angle / 360) * 360 + rand(-7, 7);
+            // Turn face-on to the reader, keeping a slight tilt so a handful of dice
+            // does not look like a grid. Rounding to whole turns rather than zeroing
+            // means the die finishes the rotation it was in, instead of unwinding.
+            // Not quite square on: a few degrees of tilt keeps an edge in view, so
+            // the die still reads as a solid at rest rather than a printed shape.
+            b.rx = Math.round(b.rx / 360) * 360 + rand(-13, 13);
+            b.ry = Math.round(b.ry / 360) * 360 + rand(-13, 13);
+            b.rz = Math.round(b.rz / 360) * 360 + rand(-8, 8);
             dice.current[i]?.classList.add('die--down');
           }
         } else {
@@ -184,7 +266,7 @@ function Tray({ roll }: { roll: DiceThrow }) {
           const c = bodies[j]!;
           const dx = c.x - a.x;
           const dist = Math.hypot(dx, c.y - a.y) || 0.01;
-          const overlap = size * 0.96 - dist;
+          const overlap = size * 1.16 - dist;
           if (overlap <= 0) continue;
           const slide = (dx < 0 ? -1 : 1) * overlap * 0.5;
           a.x = Math.max(0, Math.min(right, a.x - slide));
@@ -218,8 +300,7 @@ function Tray({ roll }: { roll: DiceThrow }) {
         moving = true;
         if (now - b.swappedAt > FACE_SWAP_MS) {
           b.swappedAt = now;
-          const face = faces.current[i];
-          if (face) face.textContent = String(1 + Math.floor(Math.random() * roll.sides));
+          setFace(i, 1 + Math.floor(Math.random() * roll.sides));
         }
       }
 
@@ -264,7 +345,12 @@ function Tray({ roll }: { roll: DiceThrow }) {
 
   const count = roll.rolls.length;
   const size = count > 8 ? 34 : count > 4 ? 40 : 48;
-  const shape = SHAPES[roll.sides];
+  const geometry = GEOMETRY[roll.sides] ?? DEFAULT_GEOMETRY;
+  const radius = size / 2;
+  const depth = size * geometry.depth;
+  const apothem = apothemOf(geometry, radius);
+  const side = sideOf(geometry, radius);
+  const clipPath = facePolygon(geometry);
 
   return (
     <div className="dice-tray" ref={wrap} aria-hidden>
@@ -273,14 +359,33 @@ function Tray({ roll }: { roll: DiceThrow }) {
           key={i}
           className="die"
           ref={(el) => { dice.current[i] = el; }}
-          style={{
-            width: size,
-            height: size,
-            fontSize: size * 0.42,
-            ...(shape ? { clipPath: shape, borderRadius: 0 } : null),
-          }}
+          style={{ width: size, height: size, fontSize: size * 0.4 }}
         >
-          <span ref={(el) => { faces.current[i] = el; }} />
+          <div className="die__body">
+            <div className="die__face" style={{ clipPath, transform: `translateZ(${depth / 2}px)` }}>
+              <span ref={(el) => { faces.current[i] = el; }} />
+            </div>
+            {/* Turned to face outwards, so its numeral reads the right way round. */}
+            <div
+              className="die__face die__face--back"
+              style={{ clipPath, transform: `translateZ(${-depth / 2}px) rotateY(180deg)` }}
+            >
+              <span ref={(el) => { backs.current[i] = el; }} />
+            </div>
+            {Array.from({ length: geometry.n }, (_, k) => (
+              <div
+                key={k}
+                className="die__edge"
+                style={{
+                  width: depth,
+                  height: side,
+                  marginLeft: -depth / 2,
+                  marginTop: -side / 2,
+                  transform: edgeTransform(geometry, k, apothem),
+                }}
+              />
+            ))}
+          </div>
         </div>
       ))}
     </div>
