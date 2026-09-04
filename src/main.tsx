@@ -3,8 +3,12 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { bootDoc } from './state/docStore';
 import { watchAuth } from './state/sync/auth';
+import { applyTheme, storedTheme } from './lib/theme';
 import './styles/tokens.css';
 import './styles/app.css';
+
+// Before anything renders, so the app never flashes the wrong ground on the way in.
+applyTheme(storedTheme());
 
 const root = createRoot(document.getElementById('root')!);
 

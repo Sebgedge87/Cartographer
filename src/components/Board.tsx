@@ -103,7 +103,7 @@ export function Board() {
           return {
             id: e.id,
             d: edgePath(a, b, e.id),
-            color: lit ? 'var(--accent)' : e.kind === 'field' ? '#59b8c4' : '#4a5568',
+            color: lit ? 'var(--accent)' : e.kind === 'field' ? 'var(--link)' : 'var(--edge-line)',
             width: lit ? 2 : 1.4,
             dash: e.kind === 'manual' ? '6 5' : undefined,
             opacity: lit ? 1 : 0.75,

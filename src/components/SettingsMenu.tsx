@@ -6,6 +6,8 @@ import { useSync } from '../state/syncStore';
 import { exportCurrentProject } from '../state/actions';
 import { signOut } from '../state/sync/auth';
 import { syncNow } from '../state/sync/engine';
+import { importImage } from '../lib/assets';
+import type { Theme } from '../lib/theme';
 
 const GRIDS: { value: GridStyle; label: string }[] = [
   { value: 'blueprint', label: 'BLUEPRINT' },
@@ -24,6 +26,12 @@ const VIEWS: { value: ViewMode; label: string }[] = [
   { value: 'table', label: 'PAGES' },
   { value: 'timeline', label: 'TIME' },
   { value: 'schema', label: 'SCHEMA' },
+];
+
+const THEMES: { value: Theme; label: string }[] = [
+  { value: 'dark', label: 'DARK' },
+  { value: 'light', label: 'LIGHT' },
+  { value: 'parchment', label: 'PAPER' },
 ];
 
 const SYNC_LABEL: Record<string, string> = {
@@ -45,6 +53,12 @@ export function SettingsMenu() {
   const grid = useUI((s) => s.grid);
   const density = useUI((s) => s.density);
   const showInspector = useUI((s) => s.showInspector);
+  const theme = useUI((s) => s.theme);
+  const sheet = useUI((s) => s.sheet);
+  const setTheme = useUI((s) => s.setTheme);
+  const setSheet = useUI((s) => s.setSheet);
+  const showToast = useUI((s) => s.showToast);
+  const sheetPicker = useRef<HTMLInputElement>(null);
   const set = useUI((s) => s.set);
   const goHome = useUI((s) => s.goHome);
 
@@ -94,6 +108,64 @@ export function SettingsMenu() {
                   ))}
                 </div>
               </div>
+            </div>
+
+            <div className="settings__group">
+              <div className="settings__label">Theme</div>
+              <div className="settings__row">
+                <span>Ground</span>
+                <div className="segments">
+                  {THEMES.map((t) => (
+                    <button
+                      key={t.value}
+                      className="segment"
+                      aria-pressed={theme === t.value}
+                      onClick={() => setTheme(t.value)}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {theme === 'parchment' && (
+                <>
+                  <div className="settings__row">
+                    <span>Sheet</span>
+                    <div className="segments">
+                      <button className="segment" onClick={() => sheetPicker.current?.click()}>
+                        {sheet ? 'REPLACE' : 'USE AN IMAGE'}
+                      </button>
+                      {sheet && (
+                        <button className="segment" onClick={() => setSheet(null)}>
+                          DRAWN
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="settings__hint">
+                    Your own paper, behind the whole app. Anything without a strong pattern reads
+                    best — the text sits directly on it.
+                  </div>
+                  <input
+                    ref={sheetPicker}
+                    type="file"
+                    accept="image/*"
+                    hidden
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      e.target.value = '';
+                      if (!file) return;
+                      const result = await importImage(file);
+                      if (result.ok) {
+                        setSheet(result.image.id);
+                        showToast('Sheet set');
+                      } else {
+                        showToast(result.reason);
+                      }
+                    }}
+                  />
+                </>
+              )}
             </div>
 
             <div className="settings__group">

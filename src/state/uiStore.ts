@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { Camera, ViewMode } from './types';
 import { ZOOM_MAX, ZOOM_MIN } from './graph';
+import { applyTheme, rememberSheet, storedSheet, storedTheme, type Theme } from '../lib/theme';
 
 export type GridStyle = 'blueprint' | 'dots' | 'none';
 export type Density = 'dense' | 'comfortable';
@@ -101,10 +102,17 @@ interface UIState {
   grid: GridStyle;
   density: Density;
   showInspector: boolean;
+  theme: Theme;
+  /** Asset id of a supplied parchment sheet, or null for the drawn one. */
+  sheet: string | null;
 }
 
 interface UIActions {
   set: <K extends keyof UIState>(patch: Pick<UIState, K> | Partial<UIState>) => void;
+  /** Switch theme: writes it to the root element and remembers it, then to state. */
+  setTheme: (theme: Theme) => void;
+  /** Use this stored image as the parchment sheet; null goes back to the drawn one. */
+  setSheet: (assetId: string | null) => void;
   openProject: (projectId: string, areaId: string | null, boardId: string | null) => void;
   openArea: (areaId: string) => void;
   openBoard: (boardId: string, areaId: string) => void;
@@ -123,7 +131,7 @@ export type UIStore = UIState & UIActions;
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 
-export const useUI = create<UIStore>()((set) => ({
+export const useUI = create<UIStore>()((set, get) => ({
   view: 'home',
   projectId: null,
   areaId: null,
@@ -150,8 +158,22 @@ export const useUI = create<UIStore>()((set) => ({
   grid: 'blueprint',
   density: 'dense',
   showInspector: true,
+  // Read from storage rather than defaulted: the theme is applied before the first
+  // paint in main.tsx, and the store has to agree with what is already on screen.
+  theme: storedTheme(),
+  sheet: storedSheet(),
 
   set: (patch) => set(patch as Partial<UIState>),
+
+  setTheme: (theme) => {
+    applyTheme(theme, get().sheet);
+    set({ theme });
+  },
+
+  setSheet: (assetId) => {
+    rememberSheet(assetId);
+    set({ sheet: assetId });
+  },
 
   openProject: (projectId, areaId, boardId) =>
     set({

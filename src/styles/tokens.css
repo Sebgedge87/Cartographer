@@ -1,5 +1,16 @@
-/* Cartographer design tokens — values are final, see design/SPEC.md */
+/*
+ * Cartographer design tokens.
+ *
+ * Three themes, and the rule that keeps them honest: nothing outside this file names
+ * a colour. Every surface, border, wash and shadow is a token here, because a light
+ * theme is not a dark one with the text flipped — a border that is white at 9% on a
+ * dark ground has to become black at 12% on a light one, and any literal left behind
+ * in a stylesheet is a hole the light theme falls through.
+ *
+ * `:root` is the dark theme and the default. The others override only what differs.
+ */
 :root {
+  /* -- surfaces -- */
   --canvas: #0b0d11;
   --panel: #0e1116;
   --chrome: #101419;
@@ -8,33 +19,51 @@
   --card-selected: #181d26;
   --input: #161b23;
   --code-bg: #0a0c10;
+  /* A panel floating over the board, which needs to hide what is behind it. */
+  --overlay: rgba(16, 20, 25, .92);
+  /* Behind a modal. */
+  --scrim: rgba(6, 8, 11, .72);
 
-  --border: rgba(255, 255, 255, 0.09);
-  --border-soft: rgba(255, 255, 255, 0.06);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --border-hover: rgba(255, 255, 255, 0.22);
+  /* -- washes: a surface tinted by its own ground, for stripes and hovers -- */
+  --wash-1: rgba(255, 255, 255, .03);
+  --wash-2: rgba(255, 255, 255, .05);
+  --wash-3: rgba(255, 255, 255, .07);
+  --grid-line: rgba(255, 255, 255, .035);
 
+  /* -- borders -- */
+  --border: rgba(255, 255, 255, .09);
+  --border-soft: rgba(255, 255, 255, .06);
+  --border-strong: rgba(255, 255, 255, .16);
+  --border-hover: rgba(255, 255, 255, .22);
+
+  /* -- accent and status -- */
   --accent: #e0a44a;
   --accent-hover: #f0b862;
-  --accent-tint: rgba(224, 164, 74, 0.13);
-  --accent-ink: #14181f;
+  --accent-tint: rgba(224, 164, 74, .13);
+  /* Text sitting on an accent fill. */
+  --accent-ink: #14100a;
+  /* Accent used as text on the page ground. */
+  --accent-text: #e8bd72;
   --link: #59b8c4;
   --link-hover: #8fd8e0;
+  --danger: #e0684f;
+  --danger-text: #c9604f;
+  --ok: #66c39a;
+  --off-board: #8a6c3a;
+  --edge-line: #4a5568;
 
+  /* -- text -- */
   --text: #e7e9ee;
   --text-strong: #f2f4f8;
   --text-prose: #d3d8e0;
   --text-mono: #c8cdd6;
+  --text-soft: #a8b0bd;
   --muted: #8a919e;
   --dim: #6d7684;
   --faint: #5c6472;
   --ghost: #414856;
   --hairline-ink: #4d5563;
-
-  --danger: #e0684f;
-  --danger-text: #c9604f;
-  --ok: #66c39a;
-  --off-board: #8a6c3a;
+  --code-ink: #e0c08a;
 
   --font-ui: 'Space Grotesk', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
@@ -53,6 +82,158 @@
   --card-w: 244px;
   --card-h: 116px;
   --grid-unit: 24px;
+
+
+  /*
+   * Block-type colours are the user's data, not the theme's — they are chosen once
+   * and then have to work on whatever ground is underneath. These two darken them
+   * for a light ground. A custom property is substituted where it is *used*, not
+   * where it is declared, so `var(--tint)` here resolves against the element that
+   * carries it further down the tree.
+   */
+  --tint-ink: var(--tint);
+  --chip-ink: var(--chip);
+
+  /* Only the parchment theme paints this; the others leave the ground flat. */
+  --page-image: none;
+  --scrollbar: #2a313c;
+  color-scheme: dark;
+}
+
+/*
+ * Light. Warm rather than white — this is a drafting tool, and a sheet of paper is
+ * a kinder ground for a day of reading than a screen of pure #fff.
+ */
+:root[data-theme='light'] {
+  --canvas: #f3f1ec;
+  --panel: #faf9f6;
+  --chrome: #efedE8;
+  --popover: #ffffff;
+  --card: #ffffff;
+  --card-selected: #fdf5e6;
+  --input: #ffffff;
+  --code-bg: #f1efe9;
+  --overlay: rgba(250, 249, 246, .95);
+  --scrim: rgba(40, 36, 30, .38);
+
+  --wash-1: rgba(0, 0, 0, .028);
+  --wash-2: rgba(0, 0, 0, .05);
+  --wash-3: rgba(0, 0, 0, .075);
+  --grid-line: rgba(0, 0, 0, .085);
+
+  --border: rgba(0, 0, 0, .13);
+  --border-soft: rgba(0, 0, 0, .08);
+  --border-strong: rgba(0, 0, 0, .22);
+  --border-hover: rgba(0, 0, 0, .34);
+
+  /* The dark theme's amber is too pale to read as text on paper. */
+  --accent: #b5760d;
+  --accent-hover: #96610a;
+  --accent-tint: rgba(181, 118, 13, .13);
+  --accent-ink: #ffffff;
+  --accent-text: #8a5a09;
+  --link: #10707e;
+  --link-hover: #0a5560;
+  --danger: #c0392b;
+  --danger-text: #a52f22;
+  --ok: #2c7a52;
+  --off-board: #8a6c3a;
+  --edge-line: #9aa2ae;
+
+  --text: #23262c;
+  --text-strong: #0f1216;
+  --text-prose: #2e333a;
+  --text-mono: #35393f;
+  --text-soft: #4e545d;
+  --muted: #5f656e;
+  --dim: #767c86;
+  /* The quiet tier still has to be readable: these are lifted until month numbers
+     and hint text clear 3:1 against the panel they sit on. */
+  --faint: #6b7079;
+  --ghost: #7c828c;
+  --hairline-ink: #a9aeb6;
+  --code-ink: #8a5a09;
+
+  --shadow-card: 0 2px 6px rgba(30, 26, 18, .10);
+  --shadow-card-selected: 0 8px 22px rgba(30, 26, 18, .18);
+  --shadow-popover: 0 12px 34px rgba(30, 26, 18, .20);
+  --shadow-modal: 0 24px 70px rgba(30, 26, 18, .28);
+
+  /* Type colours were picked against a dark ground; they need taking down to
+     read on this one. Hue is kept, so a Creature is still the same red. */
+  --tint-ink: color-mix(in srgb, var(--tint) 62%, #120c02);
+  --chip-ink: color-mix(in srgb, var(--chip) 62%, #120c02);
+
+  --scrollbar: #c9c5bd;
+  color-scheme: light;
+}
+
+/*
+ * Parchment. The whole ground is a sheet — `--page-image` is painted on the body and
+ * every surface above it is a translucent warm wash, so the texture reads through the
+ * app rather than sitting behind a wall of panels. Text is near-black throughout.
+ */
+:root[data-theme='parchment'] {
+  /* Under the image, and what shows if it never loads. */
+  --canvas: #d9c49b;
+  --panel: rgba(252, 244, 226, .58);
+  --chrome: rgba(250, 240, 218, .50);
+  --popover: rgba(250, 242, 222, .96);
+  --card: rgba(253, 246, 230, .88);
+  --card-selected: rgba(255, 250, 236, .96);
+  --input: rgba(255, 251, 240, .78);
+  --code-bg: rgba(226, 210, 178, .6);
+  --overlay: rgba(250, 242, 222, .96);
+  --scrim: rgba(58, 42, 20, .42);
+
+  --wash-1: rgba(90, 62, 22, .045);
+  --wash-2: rgba(90, 62, 22, .08);
+  --wash-3: rgba(90, 62, 22, .12);
+  --grid-line: rgba(90, 62, 22, .07);
+
+  --border: rgba(84, 58, 22, .22);
+  --border-soft: rgba(84, 58, 22, .13);
+  --border-strong: rgba(84, 58, 22, .36);
+  --border-hover: rgba(84, 58, 22, .5);
+
+  --accent: #9a5b13;
+  --accent-hover: #7d4809;
+  --accent-tint: rgba(154, 91, 19, .16);
+  --accent-ink: #fff6e4;
+  --accent-text: #7d4809;
+  --link: #1d5f6b;
+  --link-hover: #12454f;
+  --danger: #9c2f21;
+  --danger-text: #8a271b;
+  --ok: #2f6b45;
+  --off-board: #8a6c3a;
+  --edge-line: #8a6f47;
+
+  /* Black fonts, as asked — the whole range stays in warm near-blacks and browns. */
+  --text: #17110a;
+  --text-strong: #0b0803;
+  --text-prose: #1c150c;
+  --text-mono: #241a0e;
+  --text-soft: #3b2c17;
+  --muted: #4b3920;
+  --dim: #5e4a2c;
+  --faint: #644d31;
+  --ghost: #77603f;
+  --hairline-ink: #8b7150;
+  --code-ink: #7d4809;
+
+  --shadow-card: 0 3px 10px rgba(58, 40, 16, .18);
+  --shadow-card-selected: 0 10px 26px rgba(58, 40, 16, .28);
+  --shadow-popover: 0 14px 40px rgba(58, 40, 16, .3);
+  --shadow-modal: 0 26px 76px rgba(58, 40, 16, .38);
+
+  /* Type colours were picked against a dark ground; they need taking down to
+     read on this one. Hue is kept, so a Creature is still the same red. */
+  --tint-ink: color-mix(in srgb, var(--tint) 55%, #120c02);
+  --chip-ink: color-mix(in srgb, var(--chip) 55%, #120c02);
+
+  --scrollbar: #b39a72;
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; }
@@ -65,11 +246,25 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
+/*
+ * The sheet. Fixed rather than on the body's own background so it does not scroll or
+ * tile oddly, and behind everything because every surface above it is translucent.
+ */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image: var(--page-image);
+  background-size: cover;
+  background-position: center;
+  display: var(--page-image-display, none);
+}
+:root[data-theme='parchment'] body::before { display: block; }
+
 a { color: var(--link); text-decoration: none; }
 a:hover { color: var(--link-hover); }
 input, textarea, select, button { font-family: inherit; color: inherit; }
 ::-webkit-scrollbar { width: 9px; height: 9px; }
-::-webkit-scrollbar-thumb { background: #2a313c; border-radius: 6px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 
 @keyframes cgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
