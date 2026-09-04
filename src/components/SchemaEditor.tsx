@@ -1,4 +1,5 @@
 import type { FieldKind } from '../state/types';
+import type { ReactNode } from 'react';
 import { blockType, schemaFor, typeOptions, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 
@@ -9,13 +10,87 @@ const FIELD_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'ref', label: 'link' },
 ];
 
-const EXTENSIONS = [
-  { name: 'Custom / commands', on: true, desc: 'Every block type you define gets its own /command that creates the page and links it.' },
-  { name: 'JSON interchange', on: true, desc: 'Export and import the whole project — pages, links, schema — as portable JSON.' },
-  { name: 'Dice engine', on: true, desc: 'Any dice expression in prose is clickable and rolls inline.' },
-  { name: 'Template library', on: false, desc: 'Save a page as a reusable template with its fields pre-filled.' },
-  { name: 'Print / layout export', on: false, desc: 'Compose selected pages into a printable rulebook spread.' },
-  { name: 'Desktop build', on: false, desc: 'Same board, offline, local files. Web and installable share this data format.' },
+/**
+ * `how` is the part that was missing: what a switched-on extension actually asks you
+ * to type or click. For a SLOT it says what stands in for it today instead, so the
+ * card is never just a promise.
+ */
+const EXTENSIONS: { name: string; on: boolean; desc: string; how: ReactNode }[] = [
+  {
+    name: 'Custom / commands',
+    on: true,
+    desc: 'Every block type you define gets its own /command that creates the page and links it.',
+    how: (
+      <>
+        In a page body, type <code>/</code> at the start of a line. Every type in this project is
+        listed — <code>/creature</code>, <code>/item</code>, one per row. Picking one makes a new page
+        of that type on this board and drops a <code>[[link]]</code> to it where the caret was.
+        Rename a type and its command follows; hide a type and its command goes away.
+      </>
+    ),
+  },
+  {
+    name: 'JSON interchange',
+    on: true,
+    desc: 'Export and import the whole project — pages, links, schema — as portable JSON.',
+    how: (
+      <>
+        <b>Settings → Export as JSON</b> writes this project to a file: pages, boards, areas, the
+        links you drew by hand, and the schema above. <b>Home → IMPORT</b> reads one back as a new
+        project. Image references travel with it, but the picture files themselves do not — they
+        live outside the document.
+      </>
+    ),
+  },
+  {
+    name: 'Dice engine',
+    on: true,
+    desc: 'Any dice expression in prose is clickable and rolls inline.',
+    how: (
+      <>
+        Write the expression anywhere in a page body — <code>2d6+3</code>, <code>d20</code>,{' '}
+        <code>4d8-1</code>. The pattern is <b>dice, d, sides, then an optional + or −
+        modifier</b>; leave the count off and it rolls one. It turns into a button in the preview on
+        the right: click it and the result appears at the bottom of the screen showing each die and
+        the total, like <code>2d6+3 → [4 5] +3 = 12</code>. Up to 20 dice in one expression. The{' '}
+        <code>2d6</code> button on the format bar and <code>/dice</code> both insert one. Nothing is
+        stored — every click is a fresh roll.
+      </>
+    ),
+  },
+  {
+    name: 'Template library',
+    on: false,
+    desc: 'Save a page as a reusable template with its fields pre-filled.',
+    how: (
+      <>
+        Not built. The nearest thing today: right-click a page and choose <b>Duplicate</b>, which
+        copies its fields, body and images onto the same board.
+      </>
+    ),
+  },
+  {
+    name: 'Print / layout export',
+    on: false,
+    desc: 'Compose selected pages into a printable rulebook spread.',
+    how: (
+      <>
+        Not built. Today the ways out are <b>Export as JSON</b>, or your browser’s own print command
+        on whatever is on screen.
+      </>
+    ),
+  },
+  {
+    name: 'Desktop build',
+    on: false,
+    desc: 'Same board, offline, local files. Web and installable share this data format.',
+    how: (
+      <>
+        Not built, and nothing to do here. It matters that the format is already the same: a desktop
+        build would open the exact files this one exports, so nothing you write now is stranded.
+      </>
+    ),
+  },
 ];
 
 export function SchemaEditor() {
@@ -211,6 +286,10 @@ export function SchemaEditor() {
                   </span>
                 </div>
                 <p className="plugin__desc">{x.desc}</p>
+                <p className="plugin__how">
+                  <b className="plugin__how-label">{x.on ? 'How to use it' : 'Instead, today'}</b>
+                  {x.how}
+                </p>
               </div>
             ))}
           </div>

@@ -347,7 +347,7 @@ select.field option { background: var(--popover); }
 .area-line__count { flex: none; font: 500 9px var(--font-mono); letter-spacing: .06em; color: var(--faint); }
 .area-line select { width: 120px; flex: none; }
 
-.plugin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; }
+.plugin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; align-items: start; }
 .plugin {
   padding: 12px 13px; background: var(--chrome); border: 1px solid var(--border); border-radius: var(--r-xl);
 }
@@ -360,6 +360,21 @@ select.field option { background: var(--popover); }
 }
 .plugin__pill--on { background: rgba(102, 195, 154, .16); color: var(--ok); }
 .plugin__desc { margin: 0; font: 400 11.5px/1.55 var(--font-ui); color: var(--muted); }
+.plugin__how {
+  margin: 9px 0 0; padding-top: 9px; border-top: 1px solid var(--border);
+  font: 400 11.5px/1.6 var(--font-ui); color: var(--dim);
+}
+/* Scoped to the label: a plain <b> in the copy stays plain emphasis. */
+.plugin__how-label {
+  display: block; margin-bottom: 4px;
+  font: 700 8.5px var(--font-mono); letter-spacing: .18em; text-transform: uppercase;
+  color: var(--faint);
+}
+.plugin__how b { font-weight: 600; color: var(--muted); }
+.plugin__how code {
+  padding: 1px 4px; border-radius: var(--r-xs); background: var(--input);
+  font: 400 10.5px var(--font-mono); color: var(--text-mono);
+}
 
 /* ---------- inspector ---------- */
 
