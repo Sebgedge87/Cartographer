@@ -444,9 +444,6 @@ export function PageEditor() {
             value={page.title}
             onChange={(e) => doc.patchPage(page.id, { title: e.target.value })}
           />
-          <span className="editor__area">
-            {doc.boards.find((b) => b.id === page.boardId)?.name ?? ''}
-          </span>
           <button className="editor__close" onClick={closeEditor}>×</button>
         </div>
 
