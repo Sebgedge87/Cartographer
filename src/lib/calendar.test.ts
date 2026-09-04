@@ -2,8 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { WorldCalendar } from '../state/types';
 import {
-  clampDate, daysInMonth, daysInYear, formatDate, fromDayNumber, isLeapYear,
-  moonIllumination, moonPhase, parseDate, serialiseDate, toDayNumber, weekdayName,
+  clampDate, compareDates, daysBetween, daysInMonth, daysInYear, describeSpan, formatDate,
+  fromDayNumber, isLeapYear, moonIllumination, moonPhase, parseDate, serialiseDate,
+  toDayNumber, weekdayName,
 } from './calendar';
 
 /** A small, awkward calendar: three months of unequal length, a four-day week. */
@@ -19,6 +20,7 @@ const cal: WorldCalendar = {
   era: 'TR',
   leap: { every: 4, skipEvery: 0, keepEvery: 0, monthIndex: 1 },
   moons: [{ id: 'm', name: 'Pale', cycle: 8, newMoonOn: 1, color: '#fff' }],
+  today: { year: 3, month: 2, day: 1 },
 };
 
 const earth: WorldCalendar = {
@@ -110,4 +112,28 @@ test('clamping pulls a date back inside the calendar', () => {
 
 test('a date reads with its month name and era', () => {
   assert.equal(formatDate(cal, { year: 1147, month: 3, day: 12 }), '12 Gamma, 1147 TR');
+});
+
+test('dates compare by day number, not by their parts', () => {
+  // Day 3 of a 5-day month sorts before day 1 of the next, which a naive
+  // month-then-day comparison would also get right — but a shorter later month
+  // is where that falls over, so check across one.
+  assert.ok(compareDates(cal, { year: 1, month: 1, day: 10 }, { year: 1, month: 2, day: 1 }) < 0);
+  assert.ok(compareDates(cal, { year: 2, month: 1, day: 1 }, { year: 1, month: 3, day: 7 }) > 0);
+  assert.equal(compareDates(cal, { year: 4, month: 2, day: 3 }, { year: 4, month: 2, day: 3 }), 0);
+});
+
+test('the gap between two dates counts the leap day', () => {
+  // Year 4 is a leap year here, so month 2 has six days rather than five.
+  assert.equal(daysBetween(cal, { year: 4, month: 1, day: 1 }, { year: 5, month: 1, day: 1 }), 23);
+  assert.equal(daysBetween(cal, { year: 5, month: 1, day: 1 }, { year: 6, month: 1, day: 1 }), 22);
+  assert.equal(daysBetween(cal, { year: 1, month: 1, day: 5 }, { year: 1, month: 1, day: 1 }), -4);
+});
+
+test('a span is described in the largest unit that still means something', () => {
+  assert.equal(describeSpan(cal, 0), 'today');
+  assert.equal(describeSpan(cal, -3), '3 days ago');
+  assert.equal(describeSpan(cal, 1), 'in 1 day');
+  assert.equal(describeSpan(cal, -8), '1 month ago', 'a 22-day year of 3 months makes a month ~7 days');
+  assert.equal(describeSpan(cal, 44), 'in 2 years');
 });

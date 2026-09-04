@@ -62,6 +62,7 @@ export function starterCalendar(): WorldCalendar {
       { id: 'moon1', name: 'The Pale', cycle: 29.5, newMoonOn: 1, color: '#d8dde6' },
       { id: 'moon2', name: 'Ember', cycle: 43, newMoonOn: 12, color: '#e0684f' },
     ],
+    today: { year: 1147, month: 10, day: 12 },
   };
 }
 
@@ -129,6 +130,7 @@ export function normaliseCalendar(calendar: WorldCalendar | undefined): WorldCal
     era: calendar.era ?? base.era,
     leap: calendar.leap ?? null,
     moons: Array.isArray(calendar.moons) ? calendar.moons : [],
+    today: calendar.today ?? base.today,
   };
 }
 

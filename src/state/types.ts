@@ -76,6 +76,11 @@ export interface WorldCalendar {
   era: string;
   leap: LeapRule | null;
   moons: Moon[];
+  /**
+   * Where the world is now. Marks the timeline, and is what a new date starts on —
+   * you are almost always writing about a date near the present, not near year 1.
+   */
+  today: WorldDate;
 }
 
 /**
@@ -213,7 +218,7 @@ export interface ProjectFile {
 }
 
 /** 'area' lists the boards in the selected area; 'board' is the page canvas. */
-export type ViewMode = 'area' | 'board' | 'table' | 'schema';
+export type ViewMode = 'area' | 'board' | 'table' | 'timeline' | 'schema';
 
 export interface Camera {
   x: number;

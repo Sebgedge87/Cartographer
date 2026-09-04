@@ -8,6 +8,7 @@ import { PagesRail } from './components/PagesRail';
 import { Board } from './components/Board';
 import { AreaView } from './components/AreaView';
 import { PagesTable } from './components/PagesTable';
+import { Timeline } from './components/Timeline';
 import { SchemaEditor } from './components/SchemaEditor';
 import { Inspector } from './components/Inspector';
 import { PageEditor } from './components/PageEditor';
@@ -84,9 +85,10 @@ export function App() {
               {mode === 'area' && <AreaView />}
               {mode === 'board' && <Board />}
               {mode === 'table' && <PagesTable />}
+              {mode === 'timeline' && <Timeline />}
               {mode === 'schema' && <SchemaEditor />}
             </div>
-            {showInspector && mode !== 'schema' && mode !== 'area' && <Inspector />}
+            {showInspector && mode !== 'schema' && mode !== 'area' && mode !== 'timeline' && <Inspector />}
           </div>
           <PageEditor />
           <NewPageMenu />

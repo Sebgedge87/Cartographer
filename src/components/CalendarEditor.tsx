@@ -1,6 +1,7 @@
 import type { CalendarMonth, Moon, WorldCalendar } from '../state/types';
 import { useDoc } from '../state/docStore';
-import { daysInYear, moonIllumination, moonPhase } from '../lib/calendar';
+import { daysInYear, moonIllumination, moonPhase, parseDate, serialiseDate } from '../lib/calendar';
+import { DateField } from './DateField';
 
 const MOON_COLORS = ['#d8dde6', '#e0684f', '#6fb0e0', '#9b8ce0', '#66c39a', '#e0a44a'];
 
@@ -87,6 +88,20 @@ export function CalendarEditor({ projectId, calendar }: Props) {
       </div>
 
       {/* ---- months ---- */}
+      <div className="calendar__head">
+        <span className="label">Now</span>
+        <span className="schema__note">
+          Where the world currently stands — marks the timeline, and is where a new date starts
+        </span>
+      </div>
+      <div className="calendar__today">
+        <DateField
+          calendar={calendar}
+          value={serialiseDate(calendar.today)}
+          onChange={(next) => patch({ today: parseDate(next) ?? calendar.today })}
+        />
+      </div>
+
       <div className="calendar__head">
         <span className="label">Months</span>
         <span className="schema__note">In order, with the days each holds</span>

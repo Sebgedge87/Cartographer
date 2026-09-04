@@ -49,7 +49,9 @@ export function DateField({ calendar, value, onChange }: Props) {
   const date = parsed ? clampDate(calendar, parsed) : null;
 
   const set = (patch: Partial<{ year: number; month: number; day: number }>) => {
-    const base = date ?? { year: 1, month: 1, day: 1 };
+    // A new date starts at the present: you are nearly always writing about
+    // something near now, not near the dawn of the calendar.
+    const base = date ?? calendar.today;
     onChange(serialiseDate(clampDate(calendar, { ...base, ...patch })));
   };
 

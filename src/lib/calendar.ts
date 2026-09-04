@@ -168,3 +168,35 @@ export function formatDate(cal: WorldCalendar, date: WorldDate): string {
   const era = cal.era ? ` ${cal.era}` : '';
   return `${date.day} ${month}, ${date.year}${era}`;
 }
+
+/* ---------- timeline ---------- */
+
+/** Compare two dates the only way that always works: by their day number. */
+export function compareDates(cal: WorldCalendar, a: WorldDate, b: WorldDate): number {
+  return toDayNumber(cal, a) - toDayNumber(cal, b);
+}
+
+/**
+ * How far apart two dates are, in whole days. Signed: negative when `a` is earlier,
+ * which is what lets a caller say "before" or "after" without a second comparison.
+ */
+export function daysBetween(cal: WorldCalendar, a: WorldDate, b: WorldDate): number {
+  return toDayNumber(cal, b) - toDayNumber(cal, a);
+}
+
+/**
+ * A span in the largest unit that still says something useful: years once there are
+ * some, otherwise months, otherwise days. "1 year" beats "412 days" for a reader.
+ */
+export function describeSpan(cal: WorldCalendar, days: number): string {
+  const size = Math.abs(days);
+  if (size === 0) return 'today';
+  const yearLength = cal.months.reduce((sum, m) => sum + m.days, 0) || 1;
+  const monthLength = yearLength / Math.max(1, cal.months.length);
+  const unit = (n: number, name: string) => `${n} ${name}${n === 1 ? '' : 's'}`;
+  const text =
+    size >= yearLength ? unit(Math.round(size / yearLength), 'year')
+      : size >= monthLength ? unit(Math.round(size / monthLength), 'month')
+        : unit(size, 'day');
+  return days < 0 ? `${text} ago` : `in ${text}`;
+}

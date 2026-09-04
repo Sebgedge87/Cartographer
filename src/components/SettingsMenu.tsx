@@ -22,6 +22,7 @@ const VIEWS: { value: ViewMode; label: string }[] = [
   { value: 'area', label: 'AREA' },
   { value: 'board', label: 'BOARD' },
   { value: 'table', label: 'PAGES' },
+  { value: 'timeline', label: 'TIME' },
   { value: 'schema', label: 'SCHEMA' },
 ];
 

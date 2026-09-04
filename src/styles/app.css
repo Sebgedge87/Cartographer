@@ -1167,3 +1167,79 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .moon { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .moon__name { font: 500 10px var(--font-mono); color: var(--muted); }
 .moon__phase { font: 400 10px var(--font-mono); color: var(--ghost); }
+
+/* ---------- timeline ---------- */
+
+.timeline { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
+.timeline__head {
+  flex: none; display: flex; align-items: baseline; gap: 10px;
+  padding: 11px 16px; border-bottom: 1px solid var(--border); background: var(--panel);
+}
+.timeline__scroll { flex: 1 1 auto; overflow: auto; padding: 14px 16px 60px; }
+/* The rule the entries hang off. Drawn as a border on the container rather than an
+   element, so nothing has to be sized to the content's height. */
+.timeline__spine {
+  position: relative; max-width: 860px; margin: 0 auto;
+  padding-left: 122px; border-left: 1px solid var(--border);
+  margin-left: 122px;
+}
+
+.tl-year {
+  position: relative; margin: 22px 0 8px -122px;
+  font: 700 13px var(--font-mono); letter-spacing: .1em; color: var(--text-strong);
+}
+.tl-year:first-child { margin-top: 0; }
+.tl-year__era { margin-left: 6px; font-size: 9px; color: var(--faint); }
+
+.tl-entry {
+  position: relative; display: flex; align-items: center; gap: 9px; width: 100%;
+  margin-left: -122px; padding: 6px 9px 6px 0;
+  border: none; background: transparent; border-radius: var(--r-sm);
+  cursor: pointer; text-align: left; color: var(--text);
+}
+.tl-entry:hover { background: var(--card); }
+/* Dated from elsewhere in the project — still true, just not where you are. */
+.tl-entry--other-area { opacity: .55; }
+.tl-entry__when {
+  flex: none; width: 106px; display: flex; flex-direction: column; gap: 1px; text-align: right;
+  padding-right: 6px;
+}
+.tl-entry__when b { font: 500 11.5px var(--font-mono); color: var(--text-mono); }
+.tl-entry__weekday { font: 400 8.5px var(--font-mono); letter-spacing: .1em; color: var(--ghost); text-transform: uppercase; }
+.tl-entry__dot {
+  flex: none; width: 7px; height: 7px; margin-left: 6px; border-radius: 50%;
+  background: var(--tint); box-shadow: 0 0 0 3px var(--canvas);
+}
+.tl-entry__title { font: 500 13px var(--font-ui); color: var(--text-strong); }
+.tl-entry__field {
+  flex: none; font: 400 9.5px var(--font-mono); letter-spacing: .08em;
+  color: var(--faint); text-transform: uppercase;
+}
+.tl-entry__away { flex: none; margin-left: auto; font: 400 10px var(--font-mono); color: var(--ghost); }
+
+.tl-today {
+  position: relative; display: flex; align-items: center; gap: 9px;
+  margin: 10px 0 10px -122px; padding: 4px 0 4px 112px;
+}
+.tl-today::before {
+  content: ''; position: absolute; left: 122px; right: 0; top: 50%;
+  height: 1px; background: var(--accent); opacity: .45;
+}
+.tl-today__dot {
+  position: relative; z-index: 1; flex: none; width: 9px; height: 9px; margin-left: 5px;
+  border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--canvas);
+}
+.tl-today__label {
+  position: relative; z-index: 1; padding: 1px 7px; background: var(--canvas);
+  font: 700 9px var(--font-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--accent);
+}
+
+.timeline__empty {
+  margin: auto; padding: 40px 24px; max-width: 46ch; text-align: center; display: grid; gap: 10px;
+  justify-items: center;
+}
+.timeline__empty b { font: 500 11px var(--font-mono); letter-spacing: .2em; color: var(--ghost); }
+.timeline__empty span { font: 400 12.5px/1.6 var(--font-ui); color: var(--faint); }
+.timeline__empty span b { font: 600 12.5px var(--font-ui); letter-spacing: 0; color: var(--muted); }
+
+.calendar__today { max-width: 340px; margin-bottom: 4px; }
