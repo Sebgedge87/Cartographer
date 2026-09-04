@@ -459,11 +459,8 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   flex: none; display: flex; align-items: center; gap: 5px;
   padding: 7px 14px; border-bottom: 1px solid var(--border); overflow-x: auto;
 }
+/* Still used by the COLS label in the element builder. */
 .format__label { flex: none; font: 700 9px var(--font-mono); letter-spacing: .2em; color: var(--faint); margin-right: 4px; }
-.format__hint {
-  flex: none; margin-left: auto; padding-left: 14px;
-  font: 400 9px var(--font-mono); letter-spacing: .06em; color: var(--ghost); white-space: nowrap;
-}
 
 .stats { flex: none; border-bottom: 1px solid var(--border); }
 .stats__head {
@@ -471,7 +468,6 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   padding: 8px 14px; border: none; background: transparent; cursor: pointer; text-align: left;
 }
 .stats__caret { font-size: 9px; color: var(--faint); }
-.stats__note { margin-left: auto; font: 500 9px var(--font-mono); letter-spacing: .1em; color: var(--ghost); }
 .stats__body { padding: 0 14px 12px; max-height: 240px; overflow: auto; }
 .stats__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 0 14px 10px; }
 .stats__new { display: flex; align-items: center; gap: 8px; padding: 8px 14px 12px; }

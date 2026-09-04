@@ -452,13 +452,11 @@ export function PageEditor() {
 
         {/* 2. format bar */}
         <div className="format">
-          <span className="format__label">FORMAT</span>
           {tools.map((t) => (
             <button key={t.label} className="btn btn--sm" title={t.title} onClick={t.run}>
               {t.label}
             </button>
           ))}
-          <span className="format__hint">TYPE / FOR COMMANDS · [[ TO LINK · @Page.field FOR LIVE STAT</span>
         </div>
 
         {/* 3. stat block / elements */}
@@ -470,9 +468,6 @@ export function PageEditor() {
               <span className="area-row__count">{fields.length}</span>
             </button>
             <span className="spacer" />
-            <span className="stats__note">
-              {custom ? 'CUSTOM LAYOUT' : `SCHEMA: ${type.label.toUpperCase()}`}
-            </span>
             <FieldsMenu page={page} type={type} custom={custom} />
           </div>
 
