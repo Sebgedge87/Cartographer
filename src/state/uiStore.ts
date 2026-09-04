@@ -50,19 +50,18 @@ export interface NewMenu {
 
 const DEFAULT_CAM: Camera = { x: 260, y: 180, z: 1 };
 
-/**
- * One throw of the dice. The values are already decided when this is set — the tray
- * only performs them — so what lands always agrees with what was reported.
- */
+/** One throw of the dice, handed to the tray to simulate. */
 export interface DiceThrow {
   /** Distinguishes one throw from the next, so the tray remounts rather than reuses. */
   id: number;
-  sides: number;
-  rolls: number[];
-  /** Viewport point the dice are thrown from — the token that was clicked. */
-  from: { x: number; y: number };
-  /** Called once, when the last die stops moving. */
-  onSettle: () => void;
+  /** Dice notation the tray rolls, e.g. `2d6+3`. */
+  notation: string;
+  /**
+   * Called once, with the values the dice actually came to rest on. The simulation
+   * is the source of randomness here — nothing is decided in advance and then
+   * performed — so the caller reports what this hands back.
+   */
+  onSettle: (rolls: number[], total: number) => void;
 }
 
 interface UIState {

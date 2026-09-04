@@ -4,6 +4,7 @@ import { rollDice } from './graph';
 import { buildProjectFile, downloadProject, parseProjectFile } from '../lib/io';
 import { uniqueTitle } from '../lib/text';
 import { LIMITS, importImage } from '../lib/assets';
+import { webglAvailable } from '../lib/webgl';
 import type { PageImage } from './types';
 
 /**
@@ -72,8 +73,12 @@ export function createPage(opts: CreatePageOptions = {}): string | null {
 
 const ROLLING = 'cg-dice--rolling';
 const LANDED = 'cg-dice--landed';
-/** A token never shakes longer than this, however the throw goes. */
-const MAX_SHAKE_MS = 5000;
+/**
+ * A token never shakes longer than this, however the throw goes. It is only a
+ * release valve: the tray always reports back, and this just stops the token
+ * fidgeting for ever if something has gone badly wrong.
+ */
+const MAX_SHAKE_MS = 12000;
 /** How long the total stays in place of the expression. Matches the tray's linger,
  * so the token and the dice clear together rather than one blinking out first. */
 const HOLD_MS = 1700;
@@ -111,10 +116,14 @@ function shake(el: HTMLElement, expr: string): void {
 
   const step = (now: number) => {
     // The dice on screen end this, not a clock. The cap only exists so a throw that
-    // never reports back cannot leave the token shaking for good.
+    // never reports back cannot leave the token shaking for good — and it gives up
+    // by putting the expression back, never by inventing a total. A number here
+    // would be the token's own roll, contradicting the dice on the table.
     if (!el.classList.contains(ROLLING)) return;
     if (now - start > MAX_SHAKE_MS) {
-      land(el, expr, rollDice(expr)?.total ?? 0);
+      el.classList.remove(ROLLING);
+      el.style.minWidth = '';
+      el.textContent = expr;
       return;
     }
     if (now >= nextTick) {
@@ -126,9 +135,14 @@ function shake(el: HTMLElement, expr: string): void {
   requestAnimationFrame(step);
 }
 
-/** Stop the token on the real total, hold it, then put the expression back. */
+/**
+ * Stop the token on the real total, hold it, then put the expression back. Never
+ * conditional on the token still shaking: the dice decide the number, and it has to
+ * appear whenever they report, however long they took.
+ */
 function land(el: HTMLElement, expr: string, total: number): void {
-  if (!el.classList.contains(ROLLING)) return;
+  const pending = restores.get(el);
+  if (pending !== undefined) window.clearTimeout(pending);
   el.classList.remove(ROLLING);
   el.classList.add(LANDED);
   el.textContent = String(total);
@@ -154,31 +168,31 @@ let throwId = 0;
  * asked for — it just reports.
  */
 export function rollAndToast(expr: string, el?: HTMLElement | null): void {
-  const result = rollDice(expr);
-  if (!result) return;
-  const mod = result.mod ? (result.mod > 0 ? ` +${result.mod}` : ` ${result.mod}`) : '';
-  const message = `${expr} → [${result.rolls.join(' ')}]${mod} = ${result.total}`;
-  const show = () => useUI.getState().showToast(message);
+  const parsed = rollDice(expr);
+  if (!parsed) return;
 
-  // A second click mid-roll would fight the first over the same text node.
-  if (!el || el.classList.contains(ROLLING) || reducedMotion()) {
-    show();
+  const modifier = parsed.mod;
+  const message = (rolls: number[], total: number) => {
+    const sign = modifier ? (modifier > 0 ? ` +${modifier}` : ` ${modifier}`) : '';
+    return `${expr} → [${rolls.join(' ')}]${sign} = ${total}`;
+  };
+
+  // No token to throw from, no 3D, or motion turned down: report the roll made here
+  // and leave it at that. A second click mid-roll would fight the first over the
+  // same text node, so that waits too.
+  if (!el || el.classList.contains(ROLLING) || reducedMotion() || !webglAvailable()) {
+    useUI.getState().showToast(message(parsed.rolls, parsed.total));
     return;
   }
-
-  const box = el.getBoundingClientRect();
-  const sides = result.sides;
 
   shake(el, expr);
   useUI.getState().set({
     tray: {
       id: ++throwId,
-      sides,
-      rolls: result.rolls,
-      from: { x: box.left + box.width / 2, y: box.top + box.height / 2 },
-      onSettle: () => {
-        land(el, expr, result.total);
-        show();
+      notation: expr,
+      onSettle: (rolls, total) => {
+        land(el, expr, total);
+        useUI.getState().showToast(message(rolls, total));
       },
     },
   });

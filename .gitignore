@@ -9,3 +9,8 @@ src-tauri/target
 # local secrets
 .env
 .env.local
+
+# Generated dice-box runtime assets. scripts/copy-dice-assets.mjs writes
+# public/assets/dice-box; the library's own postinstall also drops copies at
+# public/assets/themes and public/assets/ammo. All of it comes from node_modules.
+public/assets/

@@ -51,12 +51,13 @@ const EXTENSIONS: { name: string; on: boolean; desc: string; how: ReactNode }[] 
         Write the expression anywhere in a page body — <code>2d6+3</code>, <code>d20</code>,{' '}
         <code>4d8-1</code>. The pattern is <b>dice, d, sides, then an optional + or −
         modifier</b>; leave the count off and it rolls one. It turns into a button in the preview on
-        the right: click it and the dice are thrown across the screen, bounce, and come to rest
-        showing their faces. The token settles on the total at the same moment, and the whole roll
-        is written out at the foot of the screen, like <code>2d6+3 → [4 5] +3 = 12</code>. Click
-        anywhere to clear the dice early. Up to 20 in one expression. The <code>2d6</code> button on
-        the format bar and <code>/dice</code> both insert one. Nothing is stored — every click is a
-        fresh roll.
+        the right: click it and real dice are thrown across the screen — proper solids, simulated
+        physics — and the numbers are whatever they land on. The token shows the total as they
+        settle, and the whole roll is written out at the foot of the screen, like{' '}
+        <code>2d6+3 → [4 5] +3 = 12</code>. Click anywhere to clear them early. Up to 20 dice in one
+        expression. The <code>2d6</code> button on the format bar and <code>/dice</code> both insert
+        one. Nothing is stored — every click is a fresh roll. With reduced motion turned on, or on
+        a machine without 3D, the roll is simply reported.
       </>
     ),
   },
