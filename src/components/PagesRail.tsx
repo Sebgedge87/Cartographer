@@ -204,17 +204,9 @@ export function PagesRail() {
       </div>
 
       <div className="rail__foot">
-        <button
-          className="btn btn--sm btn--dashed"
-          style={{ width: '100%' }}
-          onClick={() => promptNew({ kind: 'area', initial: 'New area' })}
-        >
-          + AREA
-        </button>
-
         {/* The two views that are about the whole project rather than one board.
-            They sit here, always reachable, rather than behind the settings
-            fly-out with the board's own display options. */}
+            Fixtures, so they come first — `+ AREA` below is an action on the tree
+            above it, and belongs next to what it acts on. */}
         <div className="rail__views">
           <button
             className={'rail__view' + (mode === 'timeline' ? ' rail__view--on' : '')}
@@ -234,6 +226,13 @@ export function PagesRail() {
           </button>
         </div>
 
+        <button
+          className="btn btn--sm btn--dashed"
+          style={{ width: '100%' }}
+          onClick={() => promptNew({ kind: 'area', initial: 'New area' })}
+        >
+          + AREA
+        </button>
         <SettingsMenu />
         <div className="rail__hint">DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK</div>
       </div>
