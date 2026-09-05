@@ -71,8 +71,10 @@ const EXTENSIONS: { name: string; on: boolean; desc: string; how: ReactNode }[] 
         an English dictionary loaded the first time you open a page body, with{' '}
         <b>every name this project already uses</b> added to it — page titles, areas, boards, block
         types, months, weekdays and moons. Rename a keep and the old name stops being known.
-        Misspellings are underlined in the left-hand pane; <b>right-click one</b> for suggestions,
-        or <b>Add to dictionary</b> to keep it for good. Added words are listed under{' '}
+        Misspellings are underlined in the left-hand pane. <b>Point at one</b>, or right-click it,
+        and the suggestions open under the word itself — pick one to swap it in, or{' '}
+        <b>Add to dictionary</b> to keep the word for good. Hovering closes again when you move
+        away; right-clicking pins the menu open. Added words are listed under{' '}
         <b>Settings → Writing</b>, where clicking one takes it back out; they travel with the
         project, in its export and its sync. Code spans, links, <code>[[wikilinks]]</code>, dice and{' '}
         <code>@Page.field</code> references are not prose and are never checked, and neither is

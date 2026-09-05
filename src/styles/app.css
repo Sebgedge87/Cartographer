@@ -508,19 +508,6 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   text-decoration-skip-ink: none; text-underline-offset: 3px;
 }
 .editor__status--flag { color: var(--danger-text); }
-/* Suggestions are words, not commands, so they read as text rather than in the
-   menu's usual sentence case. The title is the word as it was actually typed, so
-   it is the one menu title that must not be shouted into capitals. */
-.context--spell .context__title { text-transform: none; letter-spacing: .08em; }
-.context--spell .context__item { font-family: var(--font-mono); font-size: 12px; }
-.context--spell .context__item--add {
-  margin-top: 3px; border-top: 1px solid var(--border);
-  border-radius: 0 0 var(--r-sm) var(--r-sm);
-  font-family: var(--font-ui); font-size: 12.5px; color: var(--faint);
-}
-.context__none {
-  padding: 7px 8px; font: 500 9px var(--font-mono); letter-spacing: .12em; color: var(--ghost);
-}
 .editor__status {
   flex: none; height: 26px; display: flex; align-items: center; gap: 12px; padding: 0 18px;
   border-top: 1px solid var(--border); background: var(--canvas);
@@ -964,6 +951,28 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .context__item--danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .context__item:disabled { color: var(--ghost); cursor: not-allowed; }
 .context__item:disabled:hover { background: transparent; }
+
+/* The spelling suggestions reuse this menu, and must be defined after it: they
+   share its specificity, so source order is all that decides which position wins.
+
+   Absolute inside the editor pane, not fixed to the window. The editor's own
+   entrance animation keeps a filling `transform` on it, which makes it the
+   containing block for anything fixed inside — so window coordinates would put
+   this a hundred pixels from the word it belongs to. */
+.context--spell { position: absolute; z-index: 6; }
+/* Suggestions are words, not commands, so they read as text rather than in the
+   menu's usual sentence case. The title is the word as it was actually typed, so
+   it is the one menu title that must not be shouted into capitals. */
+.context--spell .context__title { text-transform: none; letter-spacing: .08em; }
+.context--spell .context__item { font-family: var(--font-mono); font-size: 12px; }
+.context--spell .context__item--add {
+  margin-top: 3px; border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  font-family: var(--font-ui); font-size: 12.5px; color: var(--faint);
+}
+.context__none {
+  padding: 7px 8px; font: 500 9px var(--font-mono); letter-spacing: .12em; color: var(--ghost);
+}
 
 /* ---------- name prompt ---------- */
 

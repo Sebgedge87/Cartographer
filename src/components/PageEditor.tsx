@@ -19,16 +19,31 @@ import { SpellUnderlay } from './SpellUnderlay';
 import { FieldsMenu } from './FieldsMenu';
 import { ImageStrip } from './ImageStrip';
 
-/** A right-click that landed on an underlined word, and what to offer for it. */
+/** An underlined word the suggestions are open for, and what to offer for it. */
 interface Misspelt {
-  x: number;
-  y: number;
   word: string;
   start: number;
   end: number;
+  /**
+   * The word's own box, in the pane's coordinates. The menu hangs off it rather
+   * than off the pointer: the word is what the menu is about, and hovering has no
+   * click to take a position from anyway.
+   *
+   * Pane-relative, not viewport-relative, because the scrim behind the editor
+   * carries a `backdrop-filter` — which makes it the containing block for
+   * anything `position: fixed` inside it, so viewport coordinates land elsewhere.
+   */
+  at: { left: number; top: number; bottom: number };
   /** Empty until the worker answers; a spinner would be slower than the list. */
   suggestions: string[];
+  /** Opened by hovering, so it goes away again when the pointer leaves. */
+  hover: boolean;
 }
+
+/** Long enough not to fire while the pointer is only crossing the word. */
+const HOVER_IN_MS = 280;
+/** Short, but long enough to travel from the word down onto the menu. */
+const HOVER_OUT_MS = 220;
 
 interface Option {
   code: string;
@@ -70,8 +85,14 @@ export function PageEditor() {
   const [anchor, setAnchor] = useState<{ left: number; top: number; line: number } | null>(null);
   /** Trigger the user dismissed with Esc, so syncMenu does not immediately reopen it. */
   const dismissed = useRef<string | null>(null);
-  /** An open right-click menu on a misspelt word: where it is, and what to offer. */
+  /** The open suggestions, if any: which word, where it sits, and what to offer. */
   const [misspelt, setMisspelt] = useState<Misspelt | null>(null);
+  /** Clamped to the window; measured once the menu has a size. */
+  const [spellPos, setSpellPos] = useState({ left: 0, top: 0 });
+  const spellMenu = useRef<HTMLDivElement>(null);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  /** Last point hit-tested, so a pointer that has barely moved is not re-tested. */
+  const lastMove = useRef({ x: -1, y: -1 });
   const page = doc.pages.find((p) => p.id === editing);
   const schema = schemaFor(doc, projectId);
 
@@ -113,37 +134,100 @@ export function PageEditor() {
   const { spans, status: spellStatus } = useSpellcheck(page?.body ?? '', spelling && !!page, known);
 
   /**
-   * Which underlined word a right-click landed on. The underlay has already laid
-   * the text out and boxed every misspelling, so the answer is a hit test against
-   * those boxes — no second measurement, and no guessing at a caret from a point.
+   * Which underlined word a point is over. The underlay has already laid the text
+   * out and boxed every misspelling, so the answer is a hit test against those
+   * boxes — no second measurement, and no guessing at a caret from a point. The
+   * box comes back too, because that is where the menu belongs.
    */
   const wordAt = useCallback((x: number, y: number) => {
+    const pane = spellInk.current?.closest('.editor__pane');
     const marks = spellInk.current?.querySelectorAll<HTMLElement>('mark') ?? [];
+    if (!pane) return null;
+    const origin = pane.getBoundingClientRect();
     for (const mark of marks) {
+      // A word that wrapped has two boxes; the menu hangs off the one under the
+      // pointer rather than off the pair's bounding box, which spans both lines.
       for (const rect of mark.getClientRects()) {
         if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-          return { start: Number(mark.dataset.start), end: Number(mark.dataset.end) };
+          return {
+            start: Number(mark.dataset.start),
+            end: Number(mark.dataset.end),
+            at: {
+              left: rect.left - origin.left,
+              top: rect.top - origin.top,
+              bottom: rect.bottom - origin.top,
+            },
+          };
         }
       }
     }
     return null;
   }, []);
 
+  const clearHoverTimer = useCallback(() => {
+    if (hoverTimer.current) clearTimeout(hoverTimer.current);
+    hoverTimer.current = undefined;
+  }, []);
+
+  /** Open the suggestions for a word, and ask the worker to fill them in. */
+  const openSuggestions = useCallback(
+    (hit: NonNullable<ReturnType<typeof wordAt>>, hover: boolean) => {
+      const body = useDoc.getState().pages.find((p) => p.id === editing)?.body;
+      if (body === undefined) return;
+      const word = body.slice(hit.start, hit.end);
+      setMisspelt({ word, start: hit.start, end: hit.end, at: hit.at, suggestions: [], hover });
+      void suggestFor(word).then((suggestions) =>
+        setMisspelt((m) => (m && m.word === word && m.start === hit.start ? { ...m, suggestions } : m)),
+      );
+    },
+    [editing],
+  );
+
   const onContextMenu = useCallback(
     (e: React.MouseEvent<HTMLTextAreaElement>) => {
-      if (!page) return;
       const hit = wordAt(e.clientX, e.clientY);
       // Off a misspelling, the browser's own menu is the better one: it has cut,
       // copy and paste, which nothing here can offer.
       if (!hit) return;
       e.preventDefault();
-      const word = page.body.slice(hit.start, hit.end);
-      setMisspelt({ x: e.clientX, y: e.clientY, word, start: hit.start, end: hit.end, suggestions: [] });
-      void suggestFor(word).then((suggestions) =>
-        setMisspelt((m) => (m && m.word === word && m.start === hit.start ? { ...m, suggestions } : m)),
-      );
+      clearHoverTimer();
+      openSuggestions(hit, false);
     },
-    [page, wordAt],
+    [clearHoverTimer, openSuggestions, wordAt],
+  );
+
+  /**
+   * Hovering an underlined word opens the same menu, after a pause — the word is
+   * the thing being asked about, so pointing at it is the obvious way to ask.
+   * A menu opened by right-clicking stays put; only a hovered one follows the
+   * pointer away.
+   */
+  const onPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLTextAreaElement>) => {
+      // Not mid-drag: selecting text across a misspelling is not asking about it.
+      if (!spelling || e.buttons !== 0) return;
+      // A menu opened by right-clicking is pinned; hovering has nothing to say
+      // about it, and a hit test on every pixel of travel is not free.
+      if (misspelt && !misspelt.hover) return;
+      const last = lastMove.current;
+      if (Math.abs(e.clientX - last.x) < 3 && Math.abs(e.clientY - last.y) < 3) return;
+      lastMove.current = { x: e.clientX, y: e.clientY };
+      const hit = wordAt(e.clientX, e.clientY);
+      const open = misspelt;
+      if (hit) {
+        if (open && open.start === hit.start) return;
+        clearHoverTimer();
+        hoverTimer.current = setTimeout(() => openSuggestions(hit, true), HOVER_IN_MS);
+        return;
+      }
+      if (!open?.hover) {
+        clearHoverTimer();
+        return;
+      }
+      if (hoverTimer.current) return;
+      hoverTimer.current = setTimeout(() => setMisspelt(null), HOVER_OUT_MS);
+    },
+    [clearHoverTimer, misspelt, openSuggestions, spelling, wordAt],
   );
 
   /** Swap a misspelt word for a suggestion, leaving the caret after it. */
@@ -158,11 +242,30 @@ export function PageEditor() {
     [apply, page],
   );
 
-  // The menu is pinned to a point on screen, so anything that moves the text under
+  // Hang the menu under the word, or over it when the word is near the foot of the
+  // pane, and keep the whole of it inside. Measured after it has a size, which is
+  // also after the suggestions have arrived and changed its height.
+  useLayoutEffect(() => {
+    const el = spellMenu.current;
+    const pane = el?.parentElement;
+    if (!misspelt || !el || !pane) return;
+    const below = misspelt.at.bottom + 5;
+    // 34px is the status strip along the foot of the pane, as for the slash menu.
+    const room = pane.clientHeight - 34;
+    setSpellPos({
+      left: Math.max(8, Math.min(misspelt.at.left, pane.clientWidth - el.offsetWidth - 8)),
+      top: below + el.offsetHeight > room ? Math.max(8, misspelt.at.top - el.offsetHeight - 5) : below,
+    });
+  }, [misspelt]);
+
+  // The menu is pinned to where the word was, so anything that moves the text under
   // it — a keystroke, a scroll, a click elsewhere — has to close it.
   useEffect(() => {
     if (!misspelt) return;
-    const close = () => setMisspelt(null);
+    const close = () => {
+      clearHoverTimer();
+      setMisspelt(null);
+    };
     window.addEventListener('pointerdown', close);
     window.addEventListener('keydown', close);
     textarea.current?.addEventListener('scroll', close, { passive: true });
@@ -172,7 +275,10 @@ export function PageEditor() {
       window.removeEventListener('keydown', close);
       ta?.removeEventListener('scroll', close);
     };
-  }, [misspelt]);
+  }, [clearHoverTimer, misspelt]);
+
+  // A pending open must not survive the page it was measured on.
+  useEffect(() => clearHoverTimer, [clearHoverTimer, page?.id]);
 
   /* ---------- popover options ---------- */
 
@@ -467,7 +573,9 @@ export function PageEditor() {
   // caret's line when there is no room under it.
   useLayoutEffect(() => {
     const el = popover.current;
-    const pane = textarea.current?.parentElement;
+    // Named, not walked: the textarea's parent is the layer it shares with the
+    // spelling underlay, and this menu is positioned against the pane itself.
+    const pane = textarea.current?.closest('.editor__pane');
     if (!el || !pane || !anchor) return;
     const maxLeft = pane.clientWidth - el.offsetWidth - 14;
     el.style.left = `${Math.max(14, Math.min(anchor.left, maxLeft))}px`;
@@ -630,6 +738,17 @@ export function PageEditor() {
               // name of a keep, is worse than either alone.
               spellCheck={false}
               onContextMenu={onContextMenu}
+              onPointerMove={onPointerMove}
+              // Leaving the text closes a hovered menu, unless the pointer went
+              // onto the menu itself — which cancels this before it fires.
+              onPointerLeave={() => {
+                // Forget where the pointer was: coming back to the same word must
+                // count as a move, or the throttle below swallows it.
+                lastMove.current = { x: -1, y: -1 };
+                if (!misspelt?.hover) return;
+                clearHoverTimer();
+                hoverTimer.current = setTimeout(() => setMisspelt(null), HOVER_OUT_MS);
+              }}
               value={page.body}
               placeholder="Write. / for commands, [[ to link, @Page.field for a live stat."
               onChange={(e) => {
@@ -685,10 +804,17 @@ export function PageEditor() {
 
             {misspelt && (
               <div
+                ref={spellMenu}
                 className="context context--spell"
-                style={{ left: misspelt.x, top: misspelt.y }}
+                style={{ left: spellPos.left, top: spellPos.top }}
                 onPointerDown={(e) => e.stopPropagation()}
                 onContextMenu={(e) => e.preventDefault()}
+                onPointerEnter={clearHoverTimer}
+                onPointerLeave={() => {
+                  if (!misspelt.hover) return;
+                  clearHoverTimer();
+                  hoverTimer.current = setTimeout(() => setMisspelt(null), HOVER_OUT_MS);
+                }}
               >
                 <div className="context__title truncate">{misspelt.word}</div>
                 {misspelt.suggestions.length === 0 && (
