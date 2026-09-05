@@ -70,6 +70,9 @@ interface DocActions {
   deleteType: (projectId: string, key: string) => boolean;
   /** Replace the project's world calendar. It is small, so it is written whole. */
   setCalendar: (projectId: string, calendar: WorldCalendar) => void;
+  /** Teach the spellchecker a word for this project. A duplicate is a no-op. */
+  addWord: (projectId: string, word: string) => void;
+  removeWord: (projectId: string, word: string) => void;
 
   addTypeField: (projectId: string, key: string, field?: Field) => void;
   patchTypeField: (projectId: string, key: string, index: number, patch: Partial<Field>) => void;
@@ -148,6 +151,7 @@ export const useDoc = create<DocStore>()(
           types: file.types ?? starterSchema().types,
           typeOrder: file.typeOrder ?? starterSchema().typeOrder,
           calendar: file.calendar as ProjectSchema['calendar'],
+          dictionary: file.dictionary ?? [],
         });
         set((s) => {
           const pages = [...s.pages, ...(file.pages ?? [])];
@@ -492,6 +496,24 @@ export const useDoc = create<DocStore>()(
 
       setCalendar: (projectId, calendar) =>
         set((s) => withSchema(s, projectId, (schema) => ({ ...schema, calendar }))),
+
+      addWord: (projectId, word) =>
+        set((s) =>
+          withSchema(s, projectId, (schema) => {
+            const clean = word.trim();
+            const has = schema.dictionary.some((w) => w.toLowerCase() === clean.toLowerCase());
+            if (!clean || has) return schema;
+            return { ...schema, dictionary: [...schema.dictionary, clean] };
+          }),
+        ),
+
+      removeWord: (projectId, word) =>
+        set((s) =>
+          withSchema(s, projectId, (schema) => ({
+            ...schema,
+            dictionary: schema.dictionary.filter((w) => w.toLowerCase() !== word.toLowerCase()),
+          })),
+        ),
 
       addTypeField: (projectId, key, field) =>
         set((s) =>

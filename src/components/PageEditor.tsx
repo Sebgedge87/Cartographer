@@ -4,6 +4,9 @@ import { blockType, creatableTypeKeys, isCustomPage, pageFields, schemaFor, useD
 import { useUI } from '../state/uiStore';
 import { attachImages, createPage, rollAndToast } from '../state/actions';
 import { caretPoint } from '../lib/caret';
+import { knownWords } from '../lib/dictionary';
+import { suggestFor } from '../lib/spell';
+import { useSpellcheck } from '../lib/useSpellcheck';
 import { ASSET_SCHEME } from '../lib/assets';
 import { useAssets } from '../lib/useAssets';
 import { assetRefs, markdownContext, renderMarkdown, toggleTaskLine } from '../lib/markdown';
@@ -12,8 +15,20 @@ import {
 } from '../lib/text';
 import type { TextEdit } from '../lib/text';
 import { FieldGrid } from './FieldGrid';
+import { SpellUnderlay } from './SpellUnderlay';
 import { FieldsMenu } from './FieldsMenu';
 import { ImageStrip } from './ImageStrip';
+
+/** A right-click that landed on an underlined word, and what to offer for it. */
+interface Misspelt {
+  x: number;
+  y: number;
+  word: string;
+  start: number;
+  end: number;
+  /** Empty until the worker answers; a spinner would be slower than the list. */
+  suggestions: string[];
+}
 
 interface Option {
   code: string;
@@ -43,16 +58,20 @@ export function PageEditor() {
   const openPage = useUI((s) => s.openPage);
   const closeEditor = useUI((s) => s.closeEditor);
   const showToast = useUI((s) => s.showToast);
+  const spelling = useUI((s) => s.spelling);
 
   const textarea = useRef<HTMLTextAreaElement>(null);
   const popover = useRef<HTMLDivElement>(null);
   const bodyPicker = useRef<HTMLInputElement>(null);
   const titleInput = useRef<HTMLInputElement>(null);
   const titleSizer = useRef<HTMLSpanElement>(null);
+  const spellInk = useRef<HTMLDivElement>(null);
   /** Where the popover hangs: the start of the trigger, in pane coordinates. */
   const [anchor, setAnchor] = useState<{ left: number; top: number; line: number } | null>(null);
   /** Trigger the user dismissed with Esc, so syncMenu does not immediately reopen it. */
   const dismissed = useRef<string | null>(null);
+  /** An open right-click menu on a misspelt word: where it is, and what to offer. */
+  const [misspelt, setMisspelt] = useState<Misspelt | null>(null);
   const page = doc.pages.find((p) => p.id === editing);
   const schema = schemaFor(doc, projectId);
 
@@ -82,6 +101,78 @@ export function PageEditor() {
     if (current && current.kind === trigger.kind && current.q === trigger.q) return;
     set({ menu: { kind: trigger.kind, q: trigger.q, len: trigger.len, i: 0 } });
   }, [set]);
+
+  /* ---------- spelling ---------- */
+
+  // The project's own names, plus whatever has been added by hand. Rebuilt with the
+  // document because a page renamed a second ago should stop being underlined.
+  const known = useMemo(
+    () => (projectId ? knownWords(doc, projectId, schema.dictionary) : []),
+    [doc, projectId, schema.dictionary],
+  );
+  const { spans, status: spellStatus } = useSpellcheck(page?.body ?? '', spelling && !!page, known);
+
+  /**
+   * Which underlined word a right-click landed on. The underlay has already laid
+   * the text out and boxed every misspelling, so the answer is a hit test against
+   * those boxes — no second measurement, and no guessing at a caret from a point.
+   */
+  const wordAt = useCallback((x: number, y: number) => {
+    const marks = spellInk.current?.querySelectorAll<HTMLElement>('mark') ?? [];
+    for (const mark of marks) {
+      for (const rect of mark.getClientRects()) {
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+          return { start: Number(mark.dataset.start), end: Number(mark.dataset.end) };
+        }
+      }
+    }
+    return null;
+  }, []);
+
+  const onContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLTextAreaElement>) => {
+      if (!page) return;
+      const hit = wordAt(e.clientX, e.clientY);
+      // Off a misspelling, the browser's own menu is the better one: it has cut,
+      // copy and paste, which nothing here can offer.
+      if (!hit) return;
+      e.preventDefault();
+      const word = page.body.slice(hit.start, hit.end);
+      setMisspelt({ x: e.clientX, y: e.clientY, word, start: hit.start, end: hit.end, suggestions: [] });
+      void suggestFor(word).then((suggestions) =>
+        setMisspelt((m) => (m && m.word === word && m.start === hit.start ? { ...m, suggestions } : m)),
+      );
+    },
+    [page, wordAt],
+  );
+
+  /** Swap a misspelt word for a suggestion, leaving the caret after it. */
+  const correctWord = useCallback(
+    (m: Misspelt, replacement: string) => {
+      if (!page) return;
+      const value = page.body.slice(0, m.start) + replacement + page.body.slice(m.end);
+      const caret = m.start + replacement.length;
+      setMisspelt(null);
+      apply({ value, start: caret, end: caret });
+    },
+    [apply, page],
+  );
+
+  // The menu is pinned to a point on screen, so anything that moves the text under
+  // it — a keystroke, a scroll, a click elsewhere — has to close it.
+  useEffect(() => {
+    if (!misspelt) return;
+    const close = () => setMisspelt(null);
+    window.addEventListener('pointerdown', close);
+    window.addEventListener('keydown', close);
+    textarea.current?.addEventListener('scroll', close, { passive: true });
+    const ta = textarea.current;
+    return () => {
+      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('keydown', close);
+      ta?.removeEventListener('scroll', close);
+    };
+  }, [misspelt]);
 
   /* ---------- popover options ---------- */
 
@@ -530,14 +621,15 @@ export function PageEditor() {
         {/* 4. split body */}
         <div className="editor__split">
           <div className="editor__pane">
+            <div className="editor__write">
             <textarea
               ref={textarea}
               className="editor__textarea"
-              // The browser's own spellcheck, on the one field that holds prose.
-              // Invented names get underlined until you right-click and add them
-              // to the dictionary — which is why the app's context menu leaves
-              // text fields to the browser.
-              spellCheck
+              // The browser's own checker is off because ours is on: two sets of
+              // squiggles under the same word, one of which cannot be taught the
+              // name of a keep, is worse than either alone.
+              spellCheck={false}
+              onContextMenu={onContextMenu}
               value={page.body}
               placeholder="Write. / for commands, [[ to link, @Page.field for a live stat."
               onChange={(e) => {
@@ -565,6 +657,11 @@ export function PageEditor() {
                 void takeFiles(files);
               }}
             />
+            {/* After the textarea, not before it: a ref is attached in tree order,
+                and the underlay measures the textarea the moment it mounts. It is
+                still painted behind, which is z-index's job rather than the DOM's. */}
+            {spelling && <SpellUnderlay text={page.body} spans={spans} textarea={textarea} inner={spellInk} />}
+            </div>
             <input
               ref={bodyPicker}
               type="file"
@@ -580,7 +677,40 @@ export function PageEditor() {
               <span>{words} WORDS</span>
               <span>{linkCount} LINKS</span>
               <span>MARKDOWN</span>
+              {spelling && spellStatus === 'loading' && <span>SPELLING…</span>}
+              {spelling && spellStatus === 'ready' && spans.length > 0 && (
+                <span className="editor__status--flag">{spans.length} MISSPELT</span>
+              )}
             </div>
+
+            {misspelt && (
+              <div
+                className="context context--spell"
+                style={{ left: misspelt.x, top: misspelt.y }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <div className="context__title truncate">{misspelt.word}</div>
+                {misspelt.suggestions.length === 0 && (
+                  <div className="context__none">NO SUGGESTIONS</div>
+                )}
+                {misspelt.suggestions.map((s) => (
+                  <button key={s} className="context__item" onClick={() => correctWord(misspelt, s)}>
+                    {s}
+                  </button>
+                ))}
+                <button
+                  className="context__item context__item--add"
+                  onClick={() => {
+                    if (projectId) doc.addWord(projectId, misspelt.word);
+                    setMisspelt(null);
+                    showToast(`Added “${misspelt.word}” to this project’s dictionary`);
+                  }}
+                >
+                  Add to dictionary
+                </button>
+              </div>
+            )}
 
             {menu && (
               <div className="popover" ref={popover}>

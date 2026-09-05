@@ -75,7 +75,12 @@ export function starterCalendar(): WorldCalendar {
 }
 
 export function starterSchema(): ProjectSchema {
-  return { types: starterTypes(), typeOrder: STARTER_ORDER.slice(), calendar: starterCalendar() };
+  return {
+    types: starterTypes(),
+    typeOrder: STARTER_ORDER.slice(),
+    calendar: starterCalendar(),
+    dictionary: [],
+  };
 }
 
 /** 'blank' is always present and is never listed in the schema grid. */
@@ -135,7 +140,16 @@ export function normaliseSchema(schema: ProjectSchema): ProjectSchema {
   const typeOrder = ordered.includes('blank')
     ? [...ordered.filter((k) => k !== 'blank'), 'blank']
     : [...ordered, 'blank'];
-  return { types, typeOrder, calendar };
+  // Case-insensitively unique: "Thrym" and "thrym" teach the checker the same thing.
+  const seen = new Set<string>();
+  const dictionary: string[] = [];
+  for (const raw of Array.isArray(schema.dictionary) ? schema.dictionary : []) {
+    const word = String(raw).trim();
+    if (!word || seen.has(word.toLowerCase())) continue;
+    seen.add(word.toLowerCase());
+    dictionary.push(word);
+  }
+  return { types, typeOrder, calendar, dictionary };
 }
 
 /** Fill in anything a stored or imported calendar is missing, or make a whole one. */

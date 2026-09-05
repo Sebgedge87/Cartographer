@@ -33,8 +33,9 @@ jobs:
           node-version: 20
           cache: npm
 
-      # `npm ci` runs postinstall, which copies the dice-box runtime assets out of
-      # node_modules into public/. prebuild does it again, so this holds even if
+      # `npm ci` runs postinstall, which copies the runtime assets out of
+      # node_modules into public/ — the dice-box physics and models, and the
+      # spellchecker's dictionary. prebuild does it again, so this holds even if
       # install scripts are ever disabled.
       - run: npm ci
 

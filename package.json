@@ -6,19 +6,21 @@
   "description": "Drafting board for TTRPG and board game design",
   "scripts": {
     "dev": "vite",
-    "predev": "node scripts/copy-dice-assets.mjs",
+    "predev": "node scripts/copy-runtime-assets.mjs",
     "build": "tsc --noEmit && vite build",
-    "prebuild": "node scripts/copy-dice-assets.mjs",
+    "prebuild": "node scripts/copy-runtime-assets.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
-    "dice-assets": "node scripts/copy-dice-assets.mjs",
-    "postinstall": "node scripts/copy-dice-assets.mjs --soft"
+    "postinstall": "node scripts/copy-runtime-assets.mjs --soft",
+    "assets": "node scripts/copy-runtime-assets.mjs"
   },
   "dependencies": {
     "@3d-dice/dice-box": "^1.1.4",
     "@supabase/supabase-js": "^2.112.4",
+    "dictionary-en": "^4.0.0",
     "markdown-it": "^14.1.0",
+    "nspell": "^2.1.5",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "zundo": "^2.1.0",

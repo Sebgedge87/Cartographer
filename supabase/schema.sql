@@ -33,6 +33,9 @@ create table if not exists public.projects (
   -- World calendar: months, week, leap rule, moons. Small and rarely changed, so it
   -- rides along with the project row rather than earning a table of its own.
   calendar    jsonb,
+  -- Words added to this project's spellchecker, by hand. Names the document already
+  -- carries are harvested from it on load rather than stored twice.
+  dictionary  jsonb not null default '[]'::jsonb,
   updated     bigint not null default 0,
   updated_at  timestamptz not null default now()
 );
@@ -87,6 +90,9 @@ alter table public.pages add column if not exists images jsonb not null default 
 alter table public.pages add column if not exists header text;
 -- The project's world calendar: months, week, leap rule and moons, whole.
 alter table public.projects add column if not exists calendar jsonb;
+-- Words added to the project's spellchecker, so a name invented on one device is
+-- not underlined on the next.
+alter table public.projects add column if not exists dictionary jsonb not null default '[]'::jsonb;
 
 create table if not exists public.edges (
   id         text primary key,

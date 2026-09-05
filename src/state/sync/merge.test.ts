@@ -8,6 +8,7 @@ const schema = {
   types: { note: { label: 'Note', code: 'NT', color: '#8a919e', fields: [] } },
   typeOrder: ['note'],
   calendar: starterCalendar(),
+  dictionary: [],
 };
 
 const page = (id: string, title: string, extra: Partial<Page> = {}): Page => ({

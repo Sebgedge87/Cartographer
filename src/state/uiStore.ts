@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { Camera, ViewMode } from './types';
 import { ZOOM_MAX, ZOOM_MIN } from './graph';
 import { applyTheme, rememberSheet, storedSheet, storedTheme, type Theme } from '../lib/theme';
+import { rememberSpelling, stopSpelling, storedSpelling } from '../lib/spell';
 
 export type GridStyle = 'blueprint' | 'dots' | 'none';
 export type Density = 'dense' | 'comfortable';
@@ -106,6 +107,8 @@ interface UIState {
   theme: Theme;
   /** Asset id of a supplied parchment sheet, or null for the drawn one. */
   sheet: string | null;
+  /** Whether the editor checks spelling. Remembered across sessions. */
+  spelling: boolean;
 }
 
 interface UIActions {
@@ -114,6 +117,8 @@ interface UIActions {
   setTheme: (theme: Theme) => void;
   /** Use this stored image as the parchment sheet; null goes back to the drawn one. */
   setSheet: (assetId: string | null) => void;
+  /** Turn spellchecking on or off. Off also frees the dictionary the worker holds. */
+  setSpelling: (on: boolean) => void;
   openProject: (projectId: string, areaId: string | null, boardId: string | null) => void;
   openArea: (areaId: string) => void;
   openBoard: (boardId: string, areaId: string) => void;
@@ -163,6 +168,7 @@ export const useUI = create<UIStore>()((set, get) => ({
   // paint in main.tsx, and the store has to agree with what is already on screen.
   theme: storedTheme(),
   sheet: storedSheet(),
+  spelling: storedSpelling(),
 
   set: (patch) => set(patch as Partial<UIState>),
 
@@ -174,6 +180,14 @@ export const useUI = create<UIStore>()((set, get) => ({
   setSheet: (assetId) => {
     rememberSheet(assetId);
     set({ sheet: assetId });
+  },
+
+  setSpelling: (on) => {
+    rememberSpelling(on);
+    // Turning it off gives back the half-megabyte dictionary rather than leaving a
+    // worker sitting on it; turning it back on loads it again on the next check.
+    if (!on) stopSpelling();
+    set({ spelling: on });
   },
 
   openProject: (projectId, areaId, boardId) =>

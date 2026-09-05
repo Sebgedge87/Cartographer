@@ -27,7 +27,7 @@ section): the template library, print/layout export, and the Tauri desktop wrapp
 npm install
 npm run dev      # http://localhost:5173
 npm run build    # typecheck + production build
-npm test         # merge / conflict-resolution tests
+npm test         # merge, calendar, word-scanning and dictionary tests
 ```
 
 ## Reference
@@ -56,6 +56,10 @@ src/
   lib/
     markdown.ts         markdown-it + wikilink / @stat / dice rules
     text.ts             textarea primitives and caret-trigger detection
+    words.ts            the words in a markdown body — code and links are not prose
+    dictionary.ts       a project's own vocabulary, harvested from what it names
+    spell.worker.ts     the spellchecker: Hunspell, off the main thread
+    spell.ts            its client, plus the on/off preference
     io.ts               project file build / parse / download
     persist.ts          IndexedDB local storage (localStorage fallback)
     supabase.ts         client, created only when credentials are configured

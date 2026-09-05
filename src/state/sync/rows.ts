@@ -12,6 +12,8 @@ export interface ProjectRow {
   types: Record<string, BlockType>; type_order: string[];
   /** The project's world calendar, whole. It is small and changes rarely. */
   calendar: WorldCalendar | null;
+  /** Words added to the project's spellchecker, so they follow it between devices. */
+  dictionary: string[] | null;
   updated: number;
 }
 export interface AreaRow {
@@ -40,7 +42,8 @@ export function projectRow(p: Project, schema: ProjectSchema | undefined, update
   const s = schema ?? starterSchema();
   return {
     id: p.id, name: p.name, system: p.system, accent: p.accent,
-    types: s.types, type_order: s.typeOrder, calendar: s.calendar, updated,
+    types: s.types, type_order: s.typeOrder, calendar: s.calendar,
+    dictionary: s.dictionary, updated,
   };
 }
 
@@ -79,6 +82,7 @@ export function toSchema(r: ProjectRow): ProjectSchema {
     types: r.types ?? {},
     typeOrder: r.type_order ?? [],
     calendar: r.calendar as ProjectSchema['calendar'],
+    dictionary: r.dictionary ?? [],
   });
 }
 

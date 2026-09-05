@@ -7,6 +7,7 @@ import { exportCurrentProject } from '../state/actions';
 import { signOut } from '../state/sync/auth';
 import { syncNow } from '../state/sync/engine';
 import { importImage } from '../lib/assets';
+import { useDoc } from '../state/docStore';
 import type { Theme } from '../lib/theme';
 
 const GRIDS: { value: GridStyle; label: string }[] = [
@@ -62,6 +63,12 @@ export function SettingsMenu() {
   const sheetPicker = useRef<HTMLInputElement>(null);
   const set = useUI((s) => s.set);
   const goHome = useUI((s) => s.goHome);
+
+  const spelling = useUI((s) => s.spelling);
+  const setSpelling = useUI((s) => s.setSpelling);
+  const projectId = useUI((s) => s.projectId);
+  const doc = useDoc();
+  const added = (projectId ? doc.schemas[projectId]?.dictionary : undefined) ?? [];
 
   const status = useSync((s) => s.status);
   const email = useSync((s) => s.email);
@@ -225,6 +232,39 @@ export function SettingsMenu() {
                   </button>
                 </div>
               </div>
+            </div>
+
+            <div className="settings__group">
+              <div className="settings__label">Writing</div>
+              <div className="settings__row">
+                <span>Spelling</span>
+                <div className="segments">
+                  <button className="segment" aria-pressed={spelling} onClick={() => setSpelling(true)}>
+                    CHECKED
+                  </button>
+                  <button className="segment" aria-pressed={!spelling} onClick={() => setSpelling(false)}>
+                    OFF
+                  </button>
+                </div>
+              </div>
+              <div className="settings__hint">
+                Page titles, areas, block types and month names are known already — the
+                dictionary below is only for what nothing in the project has named yet.
+              </div>
+              {added.length > 0 && (
+                <div className="settings__words">
+                  {added.map((word) => (
+                    <button
+                      key={word}
+                      className="settings__word"
+                      title="Forget this word"
+                      onClick={() => projectId && doc.removeWord(projectId, word)}
+                    >
+                      {word}<span>×</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div className="settings__group">

@@ -18,6 +18,7 @@ export function buildProjectFile(doc: Doc, projectId: string): ProjectFile | nul
     types: schema?.types ?? {},
     typeOrder: schema?.typeOrder ?? [],
     calendar: schema?.calendar,
+    dictionary: schema?.dictionary ?? [],
     links: doc.edges.filter((e) => ids.has(e.from) && ids.has(e.to)),
   };
 }
@@ -50,6 +51,7 @@ export function parseProjectFile(raw: string): ProjectFile | null {
       types: data.types ?? {},
       typeOrder: data.typeOrder ?? [],
       calendar: data.calendar,
+      dictionary: Array.isArray(data.dictionary) ? data.dictionary : [],
       links: data.links ?? [],
     };
   } catch {

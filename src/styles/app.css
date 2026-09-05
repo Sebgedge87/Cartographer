@@ -484,11 +484,43 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .editor__split { flex: 1 1 auto; display: flex; min-height: 0; }
 .editor__pane { flex: 1 1 50%; min-width: 0; display: flex; flex-direction: column; position: relative; }
 .editor__pane + .editor__pane { border-left: 1px solid var(--border); }
+/* The textarea and the layer that underlines its misspelt words. They are given
+   their typography together and never apart: the underlay only lines up while it
+   lays text out exactly as the textarea does. */
+.editor__textarea, .editor__spell-ink {
+  padding: 16px 18px 40px; font: 400 13px/1.75 var(--font-mono);
+  white-space: pre-wrap; overflow-wrap: break-word;
+}
+.editor__write { position: relative; flex: 1 1 auto; min-height: 0; display: flex; background: var(--canvas); }
 .editor__textarea {
-  flex: 1 1 auto; width: 100%; resize: none; border: none; background: var(--canvas);
-  padding: 16px 18px 40px; font: 400 13px/1.75 var(--font-mono); color: var(--text-mono);
+  flex: 1 1 auto; width: 100%; resize: none; border: none;
+  /* Transparent, not the canvas colour: the underlay is behind it. */
+  background: transparent; position: relative; z-index: 1; color: var(--text-mono);
 }
 .editor__textarea:focus { outline: none; }
+.editor__spell { position: absolute; inset: 0; overflow: hidden; z-index: 0; pointer-events: none; }
+/* Its width is set from the textarea's content box, which is narrower once a
+   scrollbar appears; anything else wraps a line early and the marks drift. */
+.editor__spell-ink { color: transparent; }
+.editor__spell-ink mark {
+  background: none; color: transparent;
+  text-decoration: underline wavy var(--danger);
+  text-decoration-skip-ink: none; text-underline-offset: 3px;
+}
+.editor__status--flag { color: var(--danger-text); }
+/* Suggestions are words, not commands, so they read as text rather than in the
+   menu's usual sentence case. The title is the word as it was actually typed, so
+   it is the one menu title that must not be shouted into capitals. */
+.context--spell .context__title { text-transform: none; letter-spacing: .08em; }
+.context--spell .context__item { font-family: var(--font-mono); font-size: 12px; }
+.context--spell .context__item--add {
+  margin-top: 3px; border-top: 1px solid var(--border);
+  border-radius: 0 0 var(--r-sm) var(--r-sm);
+  font-family: var(--font-ui); font-size: 12.5px; color: var(--faint);
+}
+.context__none {
+  padding: 7px 8px; font: 500 9px var(--font-mono); letter-spacing: .12em; color: var(--ghost);
+}
 .editor__status {
   flex: none; height: 26px; display: flex; align-items: center; gap: 12px; padding: 0 18px;
   border-top: 1px solid var(--border); background: var(--canvas);
@@ -896,6 +928,17 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   font: 500 11px var(--font-mono); letter-spacing: .1em; color: var(--dim);
 }
 .board-tile--new:hover { border-color: var(--accent); color: var(--accent); transform: none; }
+
+/* Words added to the project's spellchecker. Clicking one takes it back out. */
+.settings__words { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 7px; }
+.settings__word {
+  display: inline-flex; align-items: center; gap: 5px; padding: 3px 6px;
+  border: 1px solid var(--border); border-radius: var(--r-sm); background: var(--input);
+  font: 400 11px var(--font-mono); color: var(--text); cursor: pointer;
+}
+.settings__word:hover { border-color: var(--danger); color: var(--danger-text); }
+.settings__word span { color: var(--ghost); }
+.settings__word:hover span { color: var(--danger-text); }
 
 /* ---------- right-click menu ---------- */
 

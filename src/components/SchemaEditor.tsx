@@ -62,6 +62,26 @@ const EXTENSIONS: { name: string; on: boolean; desc: string; how: ReactNode }[] 
     ),
   },
   {
+    name: 'Spellcheck',
+    on: true,
+    desc: 'The editor checks its own spelling, against a dictionary that knows your invented names.',
+    how: (
+      <>
+        A browser will not let a page teach its own spellchecker a word, so this one is the app’s:
+        an English dictionary loaded the first time you open a page body, with{' '}
+        <b>every name this project already uses</b> added to it — page titles, areas, boards, block
+        types, months, weekdays and moons. Rename a keep and the old name stops being known.
+        Misspellings are underlined in the left-hand pane; <b>right-click one</b> for suggestions,
+        or <b>Add to dictionary</b> to keep it for good. Added words are listed under{' '}
+        <b>Settings → Writing</b>, where clicking one takes it back out; they travel with the
+        project, in its export and its sync. Code spans, links, <code>[[wikilinks]]</code>, dice and{' '}
+        <code>@Page.field</code> references are not prose and are never checked, and neither is
+        anything in capitals — <code>HP</code> is not a typo. Turn the whole thing off under{' '}
+        <b>Settings → Writing</b> and the dictionary is dropped from memory.
+      </>
+    ),
+  },
+  {
     name: 'Template library',
     on: false,
     desc: 'Save a page as a reusable template with its fields pre-filled.',

@@ -104,6 +104,12 @@ export interface ProjectSchema {
   /** Display order of type keys; 'blank' is always present and never shown in the schema grid. */
   typeOrder: string[];
   calendar: WorldCalendar;
+  /**
+   * Words the spellchecker should accept in this project, added by hand. Names the
+   * project already uses — page titles, areas, months — are harvested rather than
+   * stored, so this holds only what nothing else in the document already says.
+   */
+  dictionary: string[];
 }
 
 export interface Project {
@@ -220,6 +226,8 @@ export interface ProjectFile {
   typeOrder: string[];
   /** Absent in files written before calendars existed; the importer fills one in. */
   calendar?: WorldCalendar;
+  /** Words added to this project's spellchecker. Absent in older files. */
+  dictionary?: string[];
   links: Edge[];
 }
 
