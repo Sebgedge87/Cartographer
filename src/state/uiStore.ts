@@ -18,7 +18,8 @@ export interface EditorMenu {
 
 /** What was right-clicked. `id` is the area/board/page; for canvas it is the board. */
 export interface ContextTarget {
-  kind: 'project' | 'area' | 'board' | 'page' | 'canvas';
+  /** 'app' is the fallback: right-clicked somewhere with nothing specific under it. */
+  kind: 'project' | 'area' | 'board' | 'page' | 'canvas' | 'app';
   id: string;
   /** World point under the cursor, so "new page here" lands where you clicked. */
   world?: { x: number; y: number };

@@ -23,6 +23,8 @@ export function ContextMenu() {
   const openBoard = useUI((s) => s.openBoard);
   const openPage = useUI((s) => s.openPage);
   const showToast = useUI((s) => s.showToast);
+  const projectId = useUI((s) => s.projectId);
+  const goHome = useUI((s) => s.goHome);
 
   const panel = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: 0, y: 0 });
@@ -160,6 +162,25 @@ export function ContextMenu() {
         run: act(() => board && promptNew({ kind: 'board', initial: 'New board', areaId: board.areaId })),
       },
     ];
+  }
+
+  /*
+   * The fallback, for a right-click that landed on nothing in particular — empty
+   * rail, a heading, the space beside a view. It carries what is true wherever you
+   * are rather than what is true of a thing you clicked.
+   */
+  if (kind === 'app') {
+    const project = doc.projects.find((p) => p.id === projectId);
+    title = project?.name ?? 'Cartographer';
+    items = project
+      ? [
+          { label: 'New area', run: act(() => promptNew({ kind: 'area', initial: 'New area' })) },
+          { label: 'Timeline', run: act(() => set({ mode: 'timeline' })) },
+          { label: 'Calendar', run: act(() => set({ mode: 'calendar' })) },
+          { label: 'Export as JSON', run: act(exportCurrentProject) },
+          { label: 'All projects', run: act(goHome) },
+        ]
+      : [{ label: 'New project', run: act(() => doc.addProject()) }];
   }
 
   return (

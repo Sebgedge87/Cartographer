@@ -60,6 +60,33 @@ function useGlobalKeys() {
   }, []);
 }
 
+/**
+ * The app's own menu on a right-click anywhere, rather than the browser's.
+ *
+ * A specific handler — a card, a rail row, the canvas — gets there first and calls
+ * preventDefault, so this only fires where nothing more particular claimed it.
+ * Text fields are left alone on purpose: the browser's menu there carries
+ * spellcheck and cut/copy/paste, which this app cannot offer and the user wants.
+ */
+function useGlobalContextMenu() {
+  useEffect(() => {
+    const onMenu = (e: MouseEvent) => {
+      if (e.defaultPrevented) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('input, textarea, select, [contenteditable="true"]')) return;
+      // Something is selected; the browser's copy is more use than our menu.
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) return;
+      e.preventDefault();
+      useUI.getState().set({
+        context: { x: e.clientX, y: e.clientY, target: { kind: 'app', id: '' } },
+      });
+    };
+    window.addEventListener('contextmenu', onMenu);
+    return () => window.removeEventListener('contextmenu', onMenu);
+  }, []);
+}
+
 export function App() {
   const view = useUI((s) => s.view);
   const mode = useUI((s) => s.mode);
@@ -68,6 +95,7 @@ export function App() {
   const offlineChosen = useSync((s) => s.offlineChosen);
   const setSync = useSync((s) => s.set);
   useGlobalKeys();
+  useGlobalContextMenu();
 
   if (syncStatus === 'signed-out' && !offlineChosen) {
     return <SignIn onSkip={() => setSync({ offlineChosen: true })} />;
