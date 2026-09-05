@@ -533,7 +533,11 @@ export function PageEditor() {
             <textarea
               ref={textarea}
               className="editor__textarea"
-              spellCheck={false}
+              // The browser's own spellcheck, on the one field that holds prose.
+              // Invented names get underlined until you right-click and add them
+              // to the dictionary — which is why the app's context menu leaves
+              // text fields to the browser.
+              spellCheck
               value={page.body}
               placeholder="Write. / for commands, [[ to link, @Page.field for a live stat."
               onChange={(e) => {
