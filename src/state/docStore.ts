@@ -129,15 +129,15 @@ export const useDoc = create<DocStore>()(
         const id = uid('p');
         const areaId = uid('a');
         const boardId = uid('b');
+        const title = name?.trim() || 'New project';
         set((s) => ({
-          projects: [
-            ...s.projects,
-            { id, name: name?.trim() || 'New project', system: 'Untitled', accent: '#8fa5c9' },
-          ],
+          projects: [...s.projects, { id, name: title, system: 'Untitled', accent: '#8fa5c9' }],
           areas: [...s.areas, { id: areaId, projectId: id, name: 'Notes', defaultType: 'note' }],
           // A page needs a board and a board needs an area, so a new project comes
-          // with one of each rather than an empty shell you cannot add to.
-          boards: [...s.boards, { id: boardId, projectId: id, areaId, name: 'First board' }],
+          // with one of each rather than an empty shell you cannot add to. The board
+          // carries the project's name: it is the one you have just been asked for,
+          // and "First board" is a label nobody would have chosen.
+          boards: [...s.boards, { id: boardId, projectId: id, areaId, name: title }],
           schemas: { ...s.schemas, [id]: starterSchema() },
         }));
         return id;
