@@ -294,17 +294,37 @@ select.field option { background: var(--popover); }
 .zoom { display: flex; align-items: center; gap: 2px; }
 .zoom__value { min-width: 46px; text-align: center; }
 
+/*
+ * A card wears its block type as a colour and its place in the hierarchy as how
+ * strongly it wears it: a top-level region carries a solid bar, a landmark three
+ * levels under it a faint one. Hue still means type — depth must not be able to
+ * make a location look like an NPC — so only the strength moves.
+ *
+ * --depth is set on the card from the board's links, and is 0 for anything with
+ * no links at all, so an untidied or unlinked board looks exactly as it did.
+ */
 .card {
+  --depth: 0;
+  --depth-strength: calc(100% - var(--depth) * 19%);
   position: absolute; display: flex; flex-direction: column;
   background: var(--card); border: 1px solid var(--border);
-  border-top: 2px solid var(--tint); border-radius: var(--r-lg);
+  border-top: 3px solid color-mix(in srgb, var(--tint) var(--depth-strength), var(--border));
+  border-radius: var(--r-lg);
   box-shadow: var(--shadow-card); cursor: grab; user-select: none; overflow: visible;
 }
+
 .card--selected {
   background: var(--card-selected); border-color: var(--accent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), var(--shadow-card-selected);
 }
-.card__head { display: flex; align-items: center; gap: 6px; padding: 8px 9px 6px; }
+/* The head carries the faintest wash of the card's colour, strongest at the top of
+   the hierarchy — which is what makes the roots of a tidied board findable at a
+   zoom where the bar above them is a hairline. */
+.card__head {
+  display: flex; align-items: center; gap: 6px; padding: 8px 9px 6px;
+  background: color-mix(in srgb, var(--tint) calc(var(--depth-strength) / 12), transparent);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+}
 .card__title { font: 600 12.5px var(--font-ui); color: var(--text-strong); }
 .card__banner {
   flex: none; height: 42px; margin: 0 9px 5px; overflow: hidden;

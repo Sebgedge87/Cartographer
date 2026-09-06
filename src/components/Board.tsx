@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { blockType, creatableTypeKeys, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { edgePath, fitCamera, ghostStart } from '../state/graph';
+import { edgePath, fitCamera, ghostStart, hierarchyDepth } from '../state/graph';
 import { boardRect, promptNew, registerBoard, suggestPageName } from '../state/actions';
 import { PageCard } from './PageCard';
 
@@ -71,6 +71,21 @@ export function Board() {
 
   const boardPages = useMemo(() => doc.pages.filter((p) => p.boardId === boardId), [doc.pages, boardId]);
   const onBoard = useMemo(() => new Map(boardPages.map((p) => [p.id, p])), [boardPages]);
+
+  /*
+   * How deep each card sits in the board's hierarchy, so a top-level region reads
+   * differently from a landmark three levels under it. Derived from the links
+   * rather than from where the cards happen to sit, so it is right whether or not
+   * the board has ever been tidied, and it survives dragging one somewhere else.
+   */
+  const depth = useMemo(() => {
+    const order = schema.typeOrder;
+    const rank = (type: string) => {
+      const i = order.indexOf(type);
+      return i === -1 ? order.length : i;
+    };
+    return hierarchyDepth(boardPages, doc.edges, rank);
+  }, [boardPages, doc.edges, schema.typeOrder]);
 
   const counts = useMemo(() => {
     const map = new Map<string, { out: number; in: number; off: number }>();
@@ -300,6 +315,7 @@ export function Board() {
               type={blockType(schema, page.type)}
               fields={pageFields(doc, page)}
               selected={page.id === sel}
+              depth={depth.get(page.id) ?? 0}
               outCount={c?.out ?? 0}
               inCount={c?.in ?? 0}
               offBoard={c?.off ?? 0}

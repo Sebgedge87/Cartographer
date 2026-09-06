@@ -9,6 +9,8 @@ interface Props {
   type: BlockType;
   fields: Field[];
   selected: boolean;
+  /** How far below a top-level page this one sits, from the board's link hierarchy. */
+  depth: number;
   outCount: number;
   inCount: number;
   /** Links whose other endpoint sits in a different area, so no edge is drawn for them. */
@@ -27,7 +29,7 @@ function statChips(page: Page, fields: Field[], limit: number) {
 }
 
 export const PageCard = memo(function PageCard({
-  page, type, fields, selected, outCount, inCount, offBoard, onEdit,
+  page, type, fields, selected, depth, outCount, inCount, offBoard, onEdit,
 }: Props) {
   useAssets(page.header ? [page.header] : [], 'thumb');
   const banner = page.header ? assetUrl(page.header, 'thumb') : null;
@@ -42,6 +44,10 @@ export const PageCard = memo(function PageCard({
       style={{
         left: page.x, top: page.y, width: page.w, height: page.h,
         ['--tint' as string]: type.color,
+        /* Depth drives how strongly the card wears its colour. Capped at four,
+           because past that the steps stop being tellable apart and a deep tree
+           would fade its own leaves out entirely. */
+        ['--depth' as string]: Math.min(depth, 4),
       }}
     >
       <div className="card__head">

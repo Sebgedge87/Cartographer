@@ -240,11 +240,29 @@ const TREE_GAP = 1;
  * Deterministic throughout — every tie breaks on type order, then title, then id —
  * so a board tidies to the same picture every time, and tidying twice does nothing.
  */
-export function arrangeLayout(
-  pages: Page[],
-  edges: Edge[],
-  rank: (type: string) => number,
-): Map<string, { x: number; y: number }> {
+export interface Hierarchy {
+  /** How far below its root each page sits. A page with no links at all is 0. */
+  depth: Map<string, number>;
+  /** One entry per tree, in the order they should be laid out left to right. */
+  trees: { root: string; order: string[]; kids: Map<string, string[]> }[];
+  /** Pages with no links in either direction, which cannot belong to a tree. */
+  loose: Page[];
+}
+
+/**
+ * Read the board as a hierarchy: what contains what, according to which way the
+ * links were written.
+ *
+ * A page that links out to a thing is almost always the thing that contains it —
+ * a region lists its sub-regions, a city its districts — so whatever nothing
+ * points at is a top, and following the arrows down gives the levels beneath it.
+ * Where a cluster is a ring, with everything pointed at by something, there is no
+ * top and the page that holds the most stands in for one.
+ *
+ * Shared by the tidy layout and by the colouring on the cards, so the two can
+ * never disagree about which pages are top-level.
+ */
+export function hierarchy(pages: Page[], edges: Edge[], rank: (type: string) => number): Hierarchy {
   const byId = new Map(pages.map((p) => [p.id, p]));
   const out = new Map<string, Set<string>>(pages.map((p) => [p.id, new Set<string>()]));
   const into = new Map<string, Set<string>>(pages.map((p) => [p.id, new Set<string>()]));
@@ -260,7 +278,7 @@ export function arrangeLayout(
   }
 
   const children = (id: string) => out.get(id) ?? new Set<string>();
-  /** How much a page contains, which is what decides who leads a cluster. */
+  /** How much a page holds, which is what decides who leads a cluster. */
   const compare = (a: Page, b: Page) =>
     children(b.id).size - children(a.id).size
     || rank(a.type) - rank(b.type)
@@ -269,33 +287,31 @@ export function arrangeLayout(
     || a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })
     || a.id.localeCompare(b.id);
 
-  /**
-   * A page nothing links to is the top of its hierarchy. Where a cluster is a ring
-   * — everything pointed at by something — there is no top, so the page that holds
-   * the most stands in for one.
-   */
   const roots = [...pages].sort((a, b) => {
     const rootish = (p: Page) => (into.get(p.id)!.size === 0 ? 0 : 1);
     return rootish(a) - rootish(b) || compare(a, b);
   });
 
   const seen = new Set<string>();
-  const placed = new Map<string, { x: number; y: number }>();
-  /** Columns the trees have used so far, counted in card widths. */
-  let usedColumns = 0;
-  let deepestRow = 0;
+  const depth = new Map<string, number>();
+  const trees: Hierarchy['trees'] = [];
   const loose: Page[] = [];
 
   for (const root of roots) {
     if (seen.has(root.id)) continue;
     seen.add(root.id);
+    if (near.get(root.id)!.size === 0) {
+      depth.set(root.id, 0);
+      loose.push(root);
+      continue;
+    }
 
-    // Down the links first. Anything in the cluster the arrows never reach is
-    // picked up afterwards, hung off whichever placed page it touches.
-    const depth = new Map<string, number>([[root.id, 0]]);
+    // Down the links first. Anything the arrows never reach is picked up in a
+    // second pass, hung off whichever placed page it touches.
+    depth.set(root.id, 0);
     const kids = new Map<string, string[]>();
     const order: string[] = [];
-    const queue = [root.id];
+    let queue = [root.id];
     for (let pass = 0; pass < 2; pass++) {
       while (queue.length) {
         const id = queue.shift()!;
@@ -311,36 +327,54 @@ export function arrangeLayout(
           queue.push(child.id);
         }
       }
-      // Second pass only where the arrows left something behind.
       const stranded = order.filter((id) => [...(near.get(id) ?? [])].some((n) => !seen.has(n)));
       if (!stranded.length) break;
-      queue.push(...stranded);
-      order.length = 0;
-      const revisit = new Set(stranded);
-      for (const id of revisit) depth.set(id, depth.get(id)!);
+      queue = stranded;
     }
+    trees.push({ root: root.id, order, kids });
+  }
 
-    if (order.length === 1 && children(root.id).size === 0 && near.get(root.id)!.size === 0) {
-      loose.push(root);
-      continue;
-    }
+  loose.sort(compare);
+  return { depth, trees, loose };
+}
 
+/** How deep each page sits in its hierarchy, for anything that wants to show it. */
+export function hierarchyDepth(
+  pages: Page[],
+  edges: Edge[],
+  rank: (type: string) => number,
+): Map<string, number> {
+  return hierarchy(pages, edges, rank).depth;
+}
+
+export function arrangeLayout(
+  pages: Page[],
+  edges: Edge[],
+  rank: (type: string) => number,
+): Map<string, { x: number; y: number }> {
+  const { depth, trees, loose } = hierarchy(pages, edges, rank);
+  const placed = new Map<string, { x: number; y: number }>();
+  /** Columns the trees have used so far, counted in card widths. */
+  let usedColumns = 0;
+  let deepestRow = 0;
+
+  for (const tree of trees) {
     /*
-     * Columns, depth first: walk down the left edge of the tree, give each page
-     * with no children the next free column, and centre every parent over the
-     * children it just placed.
+     * Columns, depth first: walk down the left edge, give each page with no
+     * children the next free column, and centre every parent over the children it
+     * just placed.
      *
-     * Depth first is what keeps a family together. Sorting by depth instead —
-     * every leaf in the tree before every parent — sends a childless page to the
-     * far right of the whole board, past its own siblings' grandchildren, and
-     * leaves a hole where it should have been.
+     * Depth first is what keeps a family together. Taking every leaf in the tree
+     * before every parent instead sends a childless page to the far right of the
+     * whole board, past its own siblings' grandchildren, and leaves a hole where
+     * it should have been.
      */
     const column = new Map<string, number>();
     let nextLeaf = 0;
-    const stack: { id: string; entered: boolean }[] = [{ id: root.id, entered: false }];
+    const stack: { id: string; entered: boolean }[] = [{ id: tree.root, entered: false }];
     while (stack.length) {
       const frame = stack[stack.length - 1]!;
-      const mine = kids.get(frame.id) ?? [];
+      const mine = tree.kids.get(frame.id) ?? [];
       if (!frame.entered) {
         frame.entered = true;
         if (mine.length === 0) {
@@ -352,16 +386,16 @@ export function arrangeLayout(
         for (let i = mine.length - 1; i >= 0; i--) stack.push({ id: mine[i]!, entered: false });
         continue;
       }
-      const xs = mine.map((k) => column.get(k)!).filter((n) => n !== undefined);
+      const xs = mine.map((k) => column.get(k)).filter((n): n is number => n !== undefined);
       column.set(frame.id, xs.length ? (Math.min(...xs) + Math.max(...xs)) / 2 : nextLeaf++);
       stack.pop();
     }
 
-    for (const id of depth.keys()) {
-      const row = depth.get(id)!;
+    for (const id of tree.order) {
+      const row = depth.get(id) ?? 0;
       deepestRow = Math.max(deepestRow, row);
       placed.set(id, {
-        x: Math.round(ORIGIN + (usedColumns + column.get(id)!) * PITCH_X),
+        x: Math.round(ORIGIN + (usedColumns + (column.get(id) ?? 0)) * PITCH_X),
         y: ORIGIN + row * PITCH_Y,
       });
     }
@@ -373,7 +407,7 @@ export function arrangeLayout(
     // stretch the canvas much further than the trees they sit beneath.
     const cols = Math.max(1, Math.ceil(Math.sqrt(loose.length)));
     const top = ORIGIN + (placed.size ? deepestRow + 1 : 0) * PITCH_Y;
-    loose.sort(compare).forEach((page, i) => {
+    loose.forEach((page, i) => {
       placed.set(page.id, {
         x: ORIGIN + (i % cols) * PITCH_X,
         y: top + Math.floor(i / cols) * PITCH_Y,
