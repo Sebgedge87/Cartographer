@@ -992,6 +992,8 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 }
 .prompt__hint { margin: 0 0 15px; font: 400 12.5px/1.5 var(--font-ui); color: var(--muted); }
 .prompt__input { padding: 9px 11px; font-size: 14px; }
+/* A second question in the same dialogue, set off from the field above it. */
+.prompt__hint--second { margin-top: 14px; }
 .prompt__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
 
 /* ---------- project switcher ---------- */

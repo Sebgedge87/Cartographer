@@ -268,10 +268,10 @@ export function deleteProject(id: string): void {
   ui.showToast(`Deleted “${name}”`);
 }
 
-export function createArea(name?: string): void {
+export function createArea(name?: string, boardName?: string): void {
   const ui = useUI.getState();
   if (!ui.projectId) return;
-  const id = useDoc.getState().addArea(ui.projectId, name);
+  const id = useDoc.getState().addArea(ui.projectId, name, boardName);
   const board = useDoc.getState().boards.find((b) => b.areaId === id);
   ui.set({ areaId: id, boardId: board?.id ?? null, mode: 'area', sel: null });
 }

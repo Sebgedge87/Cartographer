@@ -21,12 +21,18 @@ export function NamePrompt() {
   const prompt = useUI((s) => s.prompt);
   const set = useUI((s) => s.set);
   const [name, setName] = useState('');
+  /** An area brings a board with it, so the same dialogue asks for that name too. */
+  const [board, setBoard] = useState('');
+  /** Once the board field has been edited it stops following the area's name. */
+  const [boardEdited, setBoardEdited] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   // Start from the suggestion, selected, so Enter accepts it and typing replaces it.
   useEffect(() => {
     if (!prompt) return;
     setName(prompt.initial);
+    setBoard(prompt.initial);
+    setBoardEdited(false);
     requestAnimationFrame(() => input.current?.select());
   }, [prompt]);
 
@@ -38,7 +44,7 @@ export function NamePrompt() {
     const title = name.trim() || prompt.initial;
     close();
     if (prompt.kind === 'project') createProject(title);
-    else if (prompt.kind === 'area') createArea(title);
+    else if (prompt.kind === 'area') createArea(title, board.trim() || title);
     else if (prompt.kind === 'board') createBoard(prompt.areaId, title);
     else if (prompt.boardId) {
       createPage({
@@ -60,7 +66,13 @@ export function NamePrompt() {
           className="field prompt__input"
           autoFocus
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            // The board trails the area until you say otherwise: most areas open
+            // onto one board of the same subject, and typing the name twice is a
+            // chore. Touch the field and it is yours.
+            if (!boardEdited) setBoard(e.target.value);
+          }}
           onKeyDown={(e) => {
             if (e.key === 'Escape') {
               e.preventDefault();
@@ -69,6 +81,31 @@ export function NamePrompt() {
             }
           }}
         />
+
+        {prompt.kind === 'area' && (
+          <>
+            <p className="prompt__hint prompt__hint--second">
+              It opens with one board. Name that too — an area with no board has
+              nowhere to put a page.
+            </p>
+            <input
+              className="field prompt__input"
+              value={board}
+              placeholder={name || 'First board'}
+              onChange={(e) => {
+                setBoard(e.target.value);
+                setBoardEdited(true);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  close();
+                }
+              }}
+            />
+          </>
+        )}
         <div className="prompt__actions">
           <button type="button" className="btn btn--sm" onClick={close}>CANCEL</button>
           <button type="submit" className="btn btn--sm btn--fill">CREATE</button>

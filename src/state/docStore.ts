@@ -29,7 +29,7 @@ interface DocActions {
   deleteProject: (id: string) => void;
   importProject: (file: ProjectFile) => Project;
 
-  addArea: (projectId: string, name?: string) => string;
+  addArea: (projectId: string, name?: string, boardName?: string) => string;
   renameArea: (id: string, name: string) => void;
   setAreaDefaultType: (id: string, type: string) => void;
   deleteArea: (id: string) => void;
@@ -197,10 +197,13 @@ export const useDoc = create<DocStore>()(
       },
 
       /* ---------- areas ---------- */
-      addArea: (projectId, name) => {
+      addArea: (projectId, name, boardName) => {
         const id = uid('a');
-        const area: Area = { id, projectId, name: name ?? 'New area', defaultType: 'note' };
-        const board: Board = { id: uid('b'), projectId, areaId: id, name: 'First board' };
+        const title = name?.trim() || 'New area';
+        // An area with no board has nowhere to put a page, so one comes with it —
+        // named, because the prompt asked for both rather than inventing one.
+        const area: Area = { id, projectId, name: title, defaultType: 'note' };
+        const board: Board = { id: uid('b'), projectId, areaId: id, name: boardName?.trim() || title };
         set((s) => ({ areas: [...s.areas, area], boards: [...s.boards, board] }));
         return id;
       },
