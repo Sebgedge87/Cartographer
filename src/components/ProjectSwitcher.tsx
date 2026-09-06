@@ -25,14 +25,14 @@ export function ProjectSwitcher() {
   useDismiss(open, wrap, close);
 
 
-  if (renaming && project) {
+  if (project && renaming === project.id) {
     return (
       <input
         className="field topbar__rename"
         autoFocus
         value={project.name}
         onChange={(e) => renameProject(project.id, e.target.value)}
-        onBlur={() => set({ renamingProject: false })}
+        onBlur={() => set({ renamingProject: null })}
         onKeyDown={(e) => {
           if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur();
         }}

@@ -17,6 +17,9 @@ function initials(name: string): string {
 
 export function Home() {
   const projects = useDoc((s) => s.projects);
+  const renameProject = useDoc((s) => s.renameProject);
+  const renaming = useUI((s) => s.renamingProject);
+  const set = useUI((s) => s.set);
   const areas = useDoc((s) => s.areas);
   const pages = useDoc((s) => s.pages);
   const edges = useDoc((s) => s.edges);
@@ -60,22 +63,46 @@ export function Home() {
 
         <div className="tiles">
           {tiles.map(({ project, areas: projectAreas, pageCount, areaCount, linkCount }) => (
-            <button
+            <div
               key={project.id}
               className="tile"
-              onClick={() => openProject(project.id)}
+              role="button"
+              tabIndex={0}
+              // A div rather than a button because the name becomes a text field in
+              // place, and an input inside a button is neither valid nor clickable.
+              onClick={() => renaming !== project.id && openProject(project.id)}
+              onKeyDown={(e) => {
+                if (renaming === project.id) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  openProject(project.id);
+                }
+              }}
               onContextMenu={(e) => {
                 e.preventDefault();
-                useUI.getState().set({
-                  context: { x: e.clientX, y: e.clientY, target: { kind: 'project', id: project.id } },
-                });
+                set({ context: { x: e.clientX, y: e.clientY, target: { kind: 'project', id: project.id } } });
               }}
               style={{ ['--tint' as string]: project.accent }}
             >
               <span className="tile__grid" />
               <div className="tile__head">
                 <div style={{ minWidth: 0 }}>
-                  <div className="tile__name truncate">{project.name}</div>
+                  {renaming === project.id ? (
+                    <input
+                      className="field tile__rename"
+                      autoFocus
+                      value={project.name}
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => renameProject(project.id, e.target.value)}
+                      onBlur={() => set({ renamingProject: null })}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === 'Enter' || e.key === 'Escape') e.currentTarget.blur();
+                      }}
+                    />
+                  ) : (
+                    <div className="tile__name truncate">{project.name}</div>
+                  )}
                   <div className="tile__system truncate">{project.system}</div>
                 </div>
                 <div className="spacer" />
@@ -91,7 +118,7 @@ export function Home() {
                 <span>{linkCount} LINKS</span>
                 <span>{areaCount} AREAS</span>
               </div>
-            </button>
+            </div>
           ))}
           <button className="tile tile--new" onClick={newProject}>+ BLANK PROJECT</button>
         </div>

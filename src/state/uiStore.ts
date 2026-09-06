@@ -99,7 +99,8 @@ interface UIState {
   fieldsOpen: boolean;
   renamingArea: string | null;
   renamingBoard: string | null;
-  renamingProject: boolean;
+  /** Project whose name is being edited in place, or null — as for areas and boards. */
+  renamingProject: string | null;
   /** Project the delete confirmation is open for, or null. */
   deletingProject: string | null;
 
@@ -162,7 +163,7 @@ export const useUI = create<UIStore>()((set, get) => ({
   fieldsOpen: true,
   renamingArea: null,
   renamingBoard: null,
-  renamingProject: false,
+  renamingProject: null,
   deletingProject: null,
   grid: 'blueprint',
   density: 'dense',

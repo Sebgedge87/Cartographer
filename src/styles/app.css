@@ -100,6 +100,8 @@ select.field option { background: var(--popover); }
 .tile__head { position: relative; display: flex; align-items: flex-start; gap: 10px; }
 .tile__name { font: 600 19px/1.2 var(--font-ui); color: var(--text-strong); }
 .tile__system { margin-top: 4px; font: 400 11px var(--font-mono); color: var(--dim); }
+/* The name field, sized to sit exactly where the name was. */
+.tile__rename { position: relative; width: 100%; font: 600 17px var(--font-ui); }
 .tile__badge {
   flex: none; width: 34px; height: 34px; border-radius: var(--r-lg);
   display: grid; place-items: center;

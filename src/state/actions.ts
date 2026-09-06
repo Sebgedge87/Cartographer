@@ -236,6 +236,22 @@ export function createProject(name?: string): void {
  * rather than always going home keeps you where you were working when the one you
  * deleted was not it.
  */
+/**
+ * Open the file dialogue and import whatever is chosen. Built here rather than
+ * reaching for the hidden input on the home screen, so the context menu can offer
+ * this from anywhere without Home having to be mounted to lend it one.
+ */
+export function pickProjectFile(): void {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json,.json';
+  input.onchange = () => {
+    const file = input.files?.[0];
+    if (file) void importProjectFile(file);
+  };
+  input.click();
+}
+
 export function deleteProject(id: string): void {
   const doc = useDoc.getState();
   const name = doc.projects.find((p) => p.id === id)?.name ?? 'Project';

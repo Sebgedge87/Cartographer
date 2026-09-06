@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { exportCurrentProject, openProject, promptNew, suggestPageName } from '../state/actions';
+import {
+  exportCurrentProject, openProject, pickProjectFile, promptNew, suggestPageName,
+} from '../state/actions';
 
 interface Item {
   label: string;
@@ -68,20 +70,28 @@ export function ContextMenu() {
     const project = doc.projects.find((p) => p.id === id);
     if (!project) return null;
     title = project.name;
-    // Renaming happens in the top bar and exporting works on whatever is open, so
-    // neither is offered for a project you are looking at from the home screen.
-    // The test is the view, not the id: going home leaves projectId set, so the
-    // last project open would otherwise offer a Rename with nothing to rename in.
-    items = view !== 'home' && id === projectId
-      ? [
-          { label: 'Rename', run: act(() => set({ renamingProject: true })) },
+    const rename = { label: 'Rename', run: act(() => set({ renamingProject: id })) };
+    const remove = {
+      label: 'Delete project',
+      danger: true,
+      run: act(() => set({ deletingProject: id })),
+    };
+    /*
+     * A tile on the home screen is a project you are looking at rather than one you
+     * are in, so the menu is only what you can do to it from outside: open it, name
+     * it, throw it away. Exporting and adding an area both act on whatever project
+     * is current, which from here is not necessarily this one.
+     *
+     * The test is the view, not the id: goHome() leaves projectId set, so the last
+     * project open would otherwise get the in-project menu on its tile.
+     */
+    items = view === 'home'
+      ? [{ label: 'Open project', run: act(() => openProject(id)) }, rename, remove]
+      : [
+          rename,
           { label: 'Export as JSON', run: act(exportCurrentProject) },
           { label: 'New area', run: act(() => promptNew({ kind: 'area', initial: 'New area' })) },
-          { label: 'Delete project', danger: true, run: act(() => set({ deletingProject: id })) },
-        ]
-      : [
-          { label: 'Open project', run: act(() => openProject(id)) },
-          { label: 'Delete project', danger: true, run: act(() => set({ deletingProject: id })) },
+          remove,
         ];
   }
 
@@ -181,20 +191,30 @@ export function ContextMenu() {
    * are rather than what is true of a thing you clicked.
    */
   if (kind === 'app') {
+    const newProject = {
+      label: 'New project',
+      run: act(() => promptNew({ kind: 'project', initial: 'New project' })),
+    };
     const project = doc.projects.find((p) => p.id === projectId);
-    title = project?.name ?? 'Cartographer';
-    items = project
-      ? [
-          { label: 'New area', run: act(() => promptNew({ kind: 'area', initial: 'New area' })) },
-          { label: 'Timeline', run: act(() => set({ mode: 'timeline' })) },
-          { label: 'Calendar', run: act(() => set({ mode: 'calendar' })) },
-          { label: 'Export as JSON', run: act(exportCurrentProject) },
-          { label: 'All projects', run: act(goHome) },
-        ]
-      : [{
-          label: 'New project',
-          run: act(() => promptNew({ kind: 'project', initial: 'New project' })),
-        }];
+
+    if (view === 'home') {
+      // Nothing here acts on a current project, whatever projectId still says: the
+      // only things true on the home screen are making a project and bringing one in.
+      title = 'Cartographer';
+      items = [newProject, { label: 'Import JSON', run: act(pickProjectFile) }];
+    } else if (project) {
+      title = project.name;
+      items = [
+        { label: 'New area', run: act(() => promptNew({ kind: 'area', initial: 'New area' })) },
+        { label: 'Timeline', run: act(() => set({ mode: 'timeline' })) },
+        { label: 'Calendar', run: act(() => set({ mode: 'calendar' })) },
+        { label: 'Export as JSON', run: act(exportCurrentProject) },
+        { label: 'All projects', run: act(goHome) },
+      ];
+    } else {
+      title = 'Cartographer';
+      items = [newProject];
+    }
   }
 
   return (
