@@ -231,6 +231,27 @@ export function createProject(name?: string): void {
   openProject(id);
 }
 
+/**
+ * Delete a project and go somewhere that still exists. Opening the next project
+ * rather than always going home keeps you where you were working when the one you
+ * deleted was not it.
+ */
+export function deleteProject(id: string): void {
+  const doc = useDoc.getState();
+  const name = doc.projects.find((p) => p.id === id)?.name ?? 'Project';
+  const wasOpen = useUI.getState().projectId === id;
+  doc.deleteProject(id);
+
+  const ui = useUI.getState();
+  ui.set({ deletingProject: null, sel: null, editing: null });
+  if (wasOpen) {
+    const next = useDoc.getState().projects[0];
+    if (next) openProject(next.id);
+    else ui.goHome();
+  }
+  ui.showToast(`Deleted “${name}”`);
+}
+
 export function createArea(name?: string): void {
   const ui = useUI.getState();
   if (!ui.projectId) return;

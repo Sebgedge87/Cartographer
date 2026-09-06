@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
-import { exportCurrentProject, promptNew, suggestPageName } from '../state/actions';
+import { exportCurrentProject, openProject, promptNew, suggestPageName } from '../state/actions';
 
 interface Item {
   label: string;
@@ -24,6 +24,7 @@ export function ContextMenu() {
   const openPage = useUI((s) => s.openPage);
   const showToast = useUI((s) => s.showToast);
   const projectId = useUI((s) => s.projectId);
+  const view = useUI((s) => s.view);
   const goHome = useUI((s) => s.goHome);
 
   const panel = useRef<HTMLDivElement>(null);
@@ -67,11 +68,21 @@ export function ContextMenu() {
     const project = doc.projects.find((p) => p.id === id);
     if (!project) return null;
     title = project.name;
-    items = [
-      { label: 'Rename', run: act(() => set({ renamingProject: true })) },
-      { label: 'Export as JSON', run: act(exportCurrentProject) },
-      { label: 'New area', run: act(() => promptNew({ kind: 'area', initial: 'New area' })) },
-    ];
+    // Renaming happens in the top bar and exporting works on whatever is open, so
+    // neither is offered for a project you are looking at from the home screen.
+    // The test is the view, not the id: going home leaves projectId set, so the
+    // last project open would otherwise offer a Rename with nothing to rename in.
+    items = view !== 'home' && id === projectId
+      ? [
+          { label: 'Rename', run: act(() => set({ renamingProject: true })) },
+          { label: 'Export as JSON', run: act(exportCurrentProject) },
+          { label: 'New area', run: act(() => promptNew({ kind: 'area', initial: 'New area' })) },
+          { label: 'Delete project', danger: true, run: act(() => set({ deletingProject: id })) },
+        ]
+      : [
+          { label: 'Open project', run: act(() => openProject(id)) },
+          { label: 'Delete project', danger: true, run: act(() => set({ deletingProject: id })) },
+        ];
   }
 
   if (kind === 'area') {

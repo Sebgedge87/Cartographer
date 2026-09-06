@@ -275,6 +275,14 @@ export function SettingsMenu() {
               <button className="settings__item" onClick={() => { close(); goHome(); }}>
                 All projects
               </button>
+              {projectId && (
+                <button
+                  className="settings__item settings__item--danger"
+                  onClick={() => { close(); set({ deletingProject: projectId }); }}
+                >
+                  Delete project
+                </button>
+              )}
             </div>
 
             <div className="settings__group settings__group--last">

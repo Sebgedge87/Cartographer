@@ -25,6 +25,8 @@ interface DocActions {
 
   addProject: (name?: string) => string;
   renameProject: (id: string, name: string) => void;
+  /** The project and everything under it: areas, boards, pages, links, schema. */
+  deleteProject: (id: string) => void;
   importProject: (file: ProjectFile) => Project;
 
   addArea: (projectId: string, name?: string) => string;
@@ -143,6 +145,27 @@ export const useDoc = create<DocStore>()(
 
       renameProject: (id, name) =>
         set((s) => ({ projects: s.projects.map((p) => (p.id === id ? { ...p, name } : p)) })),
+
+      /*
+       * Everything the project owns goes with it. Pages are filtered by their own
+       * projectId rather than through their boards: a page whose board went missing
+       * in some earlier version would otherwise survive its project and haunt the
+       * document with no way to reach it.
+       */
+      deleteProject: (id) =>
+        set((s) => {
+          const doomed = new Set(s.pages.filter((p) => p.projectId === id).map((p) => p.id));
+          const schemas = { ...s.schemas };
+          delete schemas[id];
+          return {
+            projects: s.projects.filter((p) => p.id !== id),
+            areas: s.areas.filter((a) => a.projectId !== id),
+            boards: s.boards.filter((b) => b.projectId !== id),
+            pages: s.pages.filter((p) => p.projectId !== id),
+            edges: s.edges.filter((e) => !doomed.has(e.from) && !doomed.has(e.to)),
+            schemas,
+          };
+        }),
 
       importProject: (file) => {
         const project: Project = file.project ?? {

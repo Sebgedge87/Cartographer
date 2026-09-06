@@ -1,5 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { useDoc } from '../state/docStore';
+import { useUI } from '../state/uiStore';
 import { importProjectFile, openProject, promptNew } from '../state/actions';
 
 /** A project is named before it exists, like everything else in the app. */
@@ -63,6 +64,12 @@ export function Home() {
               key={project.id}
               className="tile"
               onClick={() => openProject(project.id)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                useUI.getState().set({
+                  context: { x: e.clientX, y: e.clientY, target: { kind: 'project', id: project.id } },
+                });
+              }}
               style={{ ['--tint' as string]: project.accent }}
             >
               <span className="tile__grid" />

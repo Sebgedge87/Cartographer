@@ -18,6 +18,7 @@ import { Toast } from './components/Toast';
 import { DiceTray } from './components/DiceTray';
 import { ContextMenu } from './components/ContextMenu';
 import { NamePrompt } from './components/NamePrompt';
+import { DeleteProject } from './components/DeleteProject';
 import { SignIn } from './components/SignIn';
 import { useSync } from './state/syncStore';
 
@@ -126,6 +127,7 @@ export function App() {
       )}
       <ContextMenu />
       <NamePrompt />
+      <DeleteProject />
       <Toast />
       <DiceTray />
     </>

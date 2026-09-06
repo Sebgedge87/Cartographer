@@ -815,6 +815,8 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   font: 400 12.5px var(--font-ui); color: var(--text); cursor: pointer;
 }
 .settings__item:hover { background: var(--wash-3); }
+.settings__item--danger { color: var(--danger-text); }
+.settings__item--danger:hover { background: color-mix(in srgb, var(--danger) 12%, transparent); }
 
 .settings__status {
   display: flex; align-items: center; gap: 7px; padding: 2px 8px 0;

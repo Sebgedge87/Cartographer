@@ -100,6 +100,8 @@ interface UIState {
   renamingArea: string | null;
   renamingBoard: string | null;
   renamingProject: boolean;
+  /** Project the delete confirmation is open for, or null. */
+  deletingProject: string | null;
 
   grid: GridStyle;
   density: Density;
@@ -161,6 +163,7 @@ export const useUI = create<UIStore>()((set, get) => ({
   renamingArea: null,
   renamingBoard: null,
   renamingProject: false,
+  deletingProject: null,
   grid: 'blueprint',
   density: 'dense',
   showInspector: true,
