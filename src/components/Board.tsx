@@ -6,19 +6,24 @@ import { boardRect, promptNew, registerBoard, suggestPageName } from '../state/a
 import { PageCard } from './PageCard';
 
 /** Grid underlay: the pattern scrolls with the camera by offsetting its background. */
+/**
+ * The canvas grid. Its colours come from the theme rather than from here: these
+ * were white at low alpha, which is a grid on the dark ground and nothing at all
+ * on the light and parchment ones.
+ */
 function gridStyle(kind: string, x: number, y: number, z: number): React.CSSProperties {
   const g = 24 * z;
   const pos = `${x % g}px ${y % g}px`;
   if (kind === 'none') return { background: 'var(--canvas)' };
   if (kind === 'dots') {
     return {
-      backgroundImage: 'radial-gradient(rgba(255,255,255,.10) 1px, transparent 1px)',
+      backgroundImage: 'radial-gradient(var(--grid-dot) 1px, transparent 1px)',
       backgroundSize: `${g}px ${g}px`,
       backgroundPosition: pos,
     };
   }
-  const major = 'rgba(255,255,255,.045)';
-  const minor = 'rgba(255,255,255,.022)';
+  const major = 'var(--grid-major)';
+  const minor = 'var(--grid-minor)';
   return {
     backgroundImage:
       `linear-gradient(${major} 1px,transparent 1px),linear-gradient(90deg,${major} 1px,transparent 1px),` +

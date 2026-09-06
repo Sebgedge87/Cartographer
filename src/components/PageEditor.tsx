@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import type { Field, FieldKind, PageImage } from '../state/types';
 import { blockType, creatableTypeKeys, isCustomPage, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
@@ -662,7 +662,9 @@ export function PageEditor() {
             <span className="editor__sizer" ref={titleSizer} aria-hidden>{page.title || ' '}</span>
             <span className="chip chip--lg" style={{ ['--chip' as string]: type.color }}>{type.code}</span>
           </div>
-          <button className="editor__close" onClick={closeEditor}>×</button>
+          <button className="editor__close" title="Close" onClick={closeEditor}>
+            <X size={17} strokeWidth={2.25} aria-hidden />
+          </button>
         </div>
 
         {/* 2. format bar */}

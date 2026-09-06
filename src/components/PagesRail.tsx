@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { promptNew } from '../state/actions';
-import { ChevronRight, Search } from 'lucide-react';
+import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Search } from 'lucide-react';
 import { SettingsMenu } from './SettingsMenu';
 
 /**
@@ -97,7 +97,9 @@ export function PagesRail() {
           title={anyOpen ? 'Collapse everything' : 'Expand everything'}
           onClick={() => setAllCollapsed(everyRowId, anyOpen)}
         >
-          <span className="rail__all-glyph">{anyOpen ? '⤡' : '⤢'}</span>
+          {anyOpen
+            ? <ChevronsDownUp size={13} strokeWidth={2.25} aria-hidden />
+            : <ChevronsUpDown size={13} strokeWidth={2.25} aria-hidden />}
           {anyOpen ? 'COLLAPSE ALL' : 'EXPAND ALL'}
         </button>
       </div>

@@ -9,6 +9,7 @@ import { syncNow } from '../state/sync/engine';
 import { importImage } from '../lib/assets';
 import { useDoc } from '../state/docStore';
 import type { Theme } from '../lib/theme';
+import { X } from 'lucide-react';
 
 const GRIDS: { value: GridStyle; label: string }[] = [
   { value: 'blueprint', label: 'BLUEPRINT' },
@@ -259,7 +260,7 @@ export function SettingsMenu() {
                       title="Forget this word"
                       onClick={() => projectId && doc.removeWord(projectId, word)}
                     >
-                      {word}<span>×</span>
+                      {word}<X size={11} strokeWidth={2.5} aria-hidden />
                     </button>
                   ))}
                 </div>

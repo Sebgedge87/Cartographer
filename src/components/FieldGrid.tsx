@@ -1,6 +1,7 @@
 import type { Field, FieldKind, Page } from '../state/types';
 import { schemaFor, useDoc } from '../state/docStore';
 import { DateField } from './DateField';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const ELEMENT_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'text', label: 'text' },
@@ -102,8 +103,8 @@ export function FieldGrid({ page, fields, editable, cols }: Props) {
                 >
                   ↔
                 </button>
-                <button className="icon-btn" title="Move up" onClick={() => moveElement(page.id, index, -1)}>▴</button>
-                <button className="icon-btn" title="Move down" onClick={() => moveElement(page.id, index, 1)}>▾</button>
+                <button className="icon-btn" title="Move up" onClick={() => moveElement(page.id, index, -1)}><ChevronUp size={15} strokeWidth={2.25} aria-hidden /></button>
+                <button className="icon-btn" title="Move down" onClick={() => moveElement(page.id, index, 1)}><ChevronDown size={15} strokeWidth={2.25} aria-hidden /></button>
                 <button
                   className="icon-btn"
                   title="Remove element"

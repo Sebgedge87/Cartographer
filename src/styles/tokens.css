@@ -29,6 +29,11 @@
   --wash-2: rgba(255, 255, 255, .05);
   --wash-3: rgba(255, 255, 255, .07);
   --grid-line: rgba(255, 255, 255, .035);
+  /* The board canvas: a five-square major line, a minor one between, and the dot
+     variant. Separate from --grid-line, which is for the small tile decorations. */
+  --grid-major: rgba(255, 255, 255, .045);
+  --grid-minor: rgba(255, 255, 255, .022);
+  --grid-dot: rgba(255, 255, 255, .10);
 
   /* -- borders -- */
   --border: rgba(255, 255, 255, .09);
@@ -120,6 +125,9 @@
   --wash-2: rgba(0, 0, 0, .05);
   --wash-3: rgba(0, 0, 0, .075);
   --grid-line: rgba(0, 0, 0, .085);
+  --grid-major: rgba(0, 0, 0, .10);
+  --grid-minor: rgba(0, 0, 0, .045);
+  --grid-dot: rgba(0, 0, 0, .18);
 
   --border: rgba(0, 0, 0, .13);
   --border-soft: rgba(0, 0, 0, .08);
@@ -190,6 +198,9 @@
   --wash-2: rgba(90, 62, 22, .08);
   --wash-3: rgba(90, 62, 22, .12);
   --grid-line: rgba(90, 62, 22, .07);
+  --grid-major: rgba(90, 62, 22, .11);
+  --grid-minor: rgba(90, 62, 22, .05);
+  --grid-dot: rgba(90, 62, 22, .20);
 
   --border: rgba(84, 58, 22, .22);
   --border-soft: rgba(84, 58, 22, .13);

@@ -4,6 +4,7 @@ import { LIMITS, assetUrl } from '../lib/assets';
 import { useAssets } from '../lib/useAssets';
 import { useDoc } from '../state/docStore';
 import { attachImages } from '../state/actions';
+import { Star } from 'lucide-react';
 
 interface Props {
   page: Page;
@@ -78,7 +79,7 @@ export function ImageStrip({ page, onInsert }: Props) {
                   title={isHeader ? 'This is the header image' : 'Use as the header image'}
                   onClick={() => doc.setHeaderImage(page.id, isHeader ? null : image.id)}
                 >
-                  {isHeader ? '★' : '☆'}
+                  <Star size={13} strokeWidth={2} fill={isHeader ? 'currentColor' : 'none'} aria-hidden />
                 </button>
                 <button className="shot__act" title="Place in the body" onClick={() => onInsert(image)}>
                   ↵

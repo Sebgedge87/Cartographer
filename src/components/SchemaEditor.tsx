@@ -2,6 +2,7 @@ import type { FieldKind } from '../state/types';
 import type { ReactNode } from 'react';
 import { blockType, schemaFor, typeOptions, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const FIELD_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'text', label: 'text' },
@@ -185,8 +186,8 @@ export function SchemaEditor() {
                         {type.hidden ? 'HIDDEN' : 'SHOWN'}
                       </button>
                       <span className="spacer" />
-                      <button className="icon-btn" title="Move earlier" onClick={() => doc.moveType(projectId, key, -1)}>▴</button>
-                      <button className="icon-btn" title="Move later" onClick={() => doc.moveType(projectId, key, 1)}>▾</button>
+                      <button className="icon-btn" title="Move earlier" onClick={() => doc.moveType(projectId, key, -1)}><ChevronUp size={15} strokeWidth={2.25} aria-hidden /></button>
+                      <button className="icon-btn" title="Move later" onClick={() => doc.moveType(projectId, key, 1)}><ChevronDown size={15} strokeWidth={2.25} aria-hidden /></button>
                       <button
                         className="icon-btn"
                         disabled={used > 0}

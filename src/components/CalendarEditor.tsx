@@ -2,6 +2,7 @@ import type { CalendarMonth, Moon, WorldCalendar } from '../state/types';
 import { useDoc } from '../state/docStore';
 import { daysInYear, moonIllumination, moonPhase, parseDate, serialiseDate } from '../lib/calendar';
 import { DateField } from './DateField';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const MOON_COLORS = ['#d8dde6', '#e0684f', '#6fb0e0', '#9b8ce0', '#66c39a', '#e0a44a'];
 
@@ -125,8 +126,8 @@ export function CalendarEditor({ projectId, calendar }: Props) {
               value={month.days}
               onChange={(e) => setMonth(i, { days: Math.max(1, Number(e.target.value)) })}
             />
-            <button className="icon-btn" title="Move earlier" onClick={() => moveMonth(i, -1)}>▴</button>
-            <button className="icon-btn" title="Move later" onClick={() => moveMonth(i, 1)}>▾</button>
+            <button className="icon-btn" title="Move earlier" onClick={() => moveMonth(i, -1)}><ChevronUp size={15} strokeWidth={2.25} aria-hidden /></button>
+            <button className="icon-btn" title="Move later" onClick={() => moveMonth(i, 1)}><ChevronDown size={15} strokeWidth={2.25} aria-hidden /></button>
             <button
               className="icon-btn"
               disabled={calendar.months.length <= 1}

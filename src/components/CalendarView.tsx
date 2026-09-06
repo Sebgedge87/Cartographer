@@ -6,6 +6,7 @@ import {
   daysInMonth, formatDate, moonPhase, occursOn, parseDate, weekdayIndex,
 } from '../lib/calendar';
 import { CalendarEditor } from './CalendarEditor';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface Marked {
   page: Page;
@@ -70,12 +71,12 @@ export function CalendarView() {
   return (
     <div className="calview">
       <div className="calview__head">
-        <button className="icon-btn" title="Previous month" onClick={() => step(-1)}>‹</button>
+        <button className="icon-btn" title="Previous month" onClick={() => step(-1)}><ChevronLeft size={17} strokeWidth={2.25} aria-hidden /></button>
         <span className="calview__title">
           {monthName} <b>{at.year}</b>
           {calendar.era && <span className="calview__era">{calendar.era}</span>}
         </span>
-        <button className="icon-btn" title="Next month" onClick={() => step(1)}>›</button>
+        <button className="icon-btn" title="Next month" onClick={() => step(1)}><ChevronRight size={17} strokeWidth={2.25} aria-hidden /></button>
         <button
           className="btn btn--sm"
           onClick={() => setAt({ year: today.year, month: today.month })}
