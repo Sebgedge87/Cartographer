@@ -260,7 +260,7 @@ export function PagesRail() {
         </button>
         <SettingsMenu />
         <div className="rail__hint">
-          DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK · SHIFT-DRAG TO SELECT
+          DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK · SHIFT-DRAG TO SELECT · F FOR FULL SCREEN
         </div>
       </div>
     </div>

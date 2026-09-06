@@ -20,15 +20,19 @@ export function useDismiss(
       e.stopPropagation();
       close();
     };
+    // Capture, for the same reason as the keydown above: a click inside something
+    // that stops pointerdown propagating — the page editor does, so its scrim does
+    // not close behind it — would otherwise never reach a bubble-phase listener,
+    // and the popover would stay open until you picked something off it.
     const onDown = (e: PointerEvent) => {
       if (!ref.current?.contains(e.target as Node)) close();
     };
 
     window.addEventListener('keydown', onKey, true);
-    document.addEventListener('pointerdown', onDown);
+    window.addEventListener('pointerdown', onDown, true);
     return () => {
       window.removeEventListener('keydown', onKey, true);
-      document.removeEventListener('pointerdown', onDown);
+      window.removeEventListener('pointerdown', onDown, true);
     };
   }, [open, ref, close]);
 }

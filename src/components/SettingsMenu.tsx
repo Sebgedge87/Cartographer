@@ -56,6 +56,8 @@ export function SettingsMenu() {
   const grid = useUI((s) => s.grid);
   const density = useUI((s) => s.density);
   const showInspector = useUI((s) => s.showInspector);
+  const focus = useUI((s) => s.focus);
+  const setFocus = useUI((s) => s.setFocus);
   const theme = useUI((s) => s.theme);
   const sheet = useUI((s) => s.sheet);
   const setTheme = useUI((s) => s.setTheme);
@@ -211,6 +213,18 @@ export function SettingsMenu() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div className="settings__row">
+                <span>Full screen</span>
+                <div className="segments">
+                  <button className="segment" aria-pressed={focus} onClick={() => setFocus(true)}>ON</button>
+                  <button className="segment" aria-pressed={!focus} onClick={() => setFocus(false)}>OFF</button>
+                </div>
+              </div>
+              <div className="settings__hint">
+                Hides the rail, the top bar and the inspector, and asks the browser for
+                the whole screen. <b>F</b> toggles it, <b>Esc</b> leaves.
               </div>
 
               <div className="settings__row">

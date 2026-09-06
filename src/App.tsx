@@ -48,9 +48,16 @@ function useGlobalKeys() {
         if (ui.newMenu) return ui.set({ newMenu: null });
         if (ui.menu) return ui.set({ menu: null });
         if (ui.editing) return ui.closeEditor();
+        // Last, so Escape closes what is on top of the work before leaving focus.
+        if (ui.focus) return ui.setFocus(false);
         return;
       }
       if (isTyping(e.target)) return;
+      if (ui.view === 'project' && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        ui.setFocus(!ui.focus);
+        return;
+      }
       if (ui.view === 'project' && !ui.editing && !ui.prompt && ui.boardId && (e.key === 'n' || e.key === 'N')) {
         e.preventDefault();
         promptNew({ kind: 'page', initial: suggestPageName(), boardId: ui.boardId });
@@ -92,6 +99,7 @@ export function App() {
   const view = useUI((s) => s.view);
   const mode = useUI((s) => s.mode);
   const showInspector = useUI((s) => s.showInspector);
+  const focus = useUI((s) => s.focus);
   const syncStatus = useSync((s) => s.status);
   const offlineChosen = useSync((s) => s.offlineChosen);
   const chooseOffline = useSync((s) => s.chooseOffline);
@@ -107,10 +115,10 @@ export function App() {
       {view === 'home' ? (
         <Home />
       ) : (
-        <div className="shell">
-          <TopBar />
+        <div className={'shell' + (focus ? ' shell--focus' : '')}>
+          {!focus && <TopBar />}
           <div className="shell__body">
-            <PagesRail />
+            {!focus && <PagesRail />}
             <div className="shell__main">
               {mode === 'area' && <AreaView />}
               {mode === 'board' && <Board />}
@@ -119,7 +127,7 @@ export function App() {
               {mode === 'calendar' && <CalendarView />}
               {mode === 'schema' && <SchemaEditor />}
             </div>
-            {showInspector && mode !== 'schema' && mode !== 'area' && mode !== 'timeline' && mode !== 'calendar' && <Inspector />}
+            {!focus && showInspector && mode !== 'schema' && mode !== 'area' && mode !== 'timeline' && mode !== 'calendar' && <Inspector />}
           </div>
           <PageEditor />
           <NewPageMenu />

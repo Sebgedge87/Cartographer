@@ -144,6 +144,12 @@ interface UIState {
   grid: GridStyle;
   density: Density;
   showInspector: boolean;
+  /**
+   * Everything but the work hidden: no rail, no top bar, no inspector. The page
+   * editor is already a full-window overlay, so this is about the board and the
+   * other views.
+   */
+  focus: boolean;
   theme: Theme;
   /** Asset id of a supplied parchment sheet, or null for the drawn one. */
   sheet: string | null;
@@ -170,6 +176,8 @@ interface UIActions {
   zoomAt: (px: number, py: number, factor: number) => void;
   setCam: (cam: Camera) => void;
   toggleArea: (areaId: string) => void;
+  /** Show or hide everything around the work, taking the window with it. */
+  setFocus: (on: boolean) => void;
   /** Shut or open every row in the rail at once. */
   setAllCollapsed: (ids: string[], collapsed: boolean) => void;
   showToast: (message: string) => void;
@@ -209,6 +217,7 @@ export const useUI = create<UIStore>()((set, get) => ({
   grid: 'blueprint',
   density: 'dense',
   showInspector: true,
+  focus: false,
   // Read from storage rather than defaulted: the theme is applied before the first
   // paint in main.tsx, and the store has to agree with what is already on screen.
   theme: storedTheme(),
@@ -267,6 +276,19 @@ export const useUI = create<UIStore>()((set, get) => ({
     }),
 
   setCam: (cam) => set({ cam }),
+
+  setFocus: (on) => {
+    // The chrome goes either way; the browser's own fullscreen is asked for on
+    // top of that and is allowed to refuse, since it needs a user gesture and
+    // some browsers and embeds decline it outright.
+    try {
+      if (on && !document.fullscreenElement) void document.documentElement.requestFullscreen?.().catch(() => {});
+      if (!on && document.fullscreenElement) void document.exitFullscreen?.().catch(() => {});
+    } catch {
+      /* hiding the chrome is the part that matters */
+    }
+    set({ focus: on });
+  },
 
   toggleArea: (areaId) =>
     set((s) => {

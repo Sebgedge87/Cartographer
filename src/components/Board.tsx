@@ -3,6 +3,7 @@ import { blockType, creatableTypeKeys, pageFields, schemaFor, useDoc } from '../
 import { useUI } from '../state/uiStore';
 import { edgePath, fitCamera, ghostStart, hierarchyDepth } from '../state/graph';
 import { boardRect, promptNew, registerBoard, suggestPageName } from '../state/actions';
+import { Maximize, Minimize } from 'lucide-react';
 import { PageCard } from './PageCard';
 
 /** Grid underlay: the pattern scrolls with the camera by offsetting its background. */
@@ -42,6 +43,8 @@ export function Board() {
   const marquee = useUI((s) => s.marquee);
   const cam = useUI((s) => s.cam);
   const grid = useUI((s) => s.grid);
+  const focus = useUI((s) => s.focus);
+  const setFocus = useUI((s) => s.setFocus);
   const ghost = useUI((s) => s.ghost);
   const link = useUI((s) => s.link);
   const set = useUI((s) => s.set);
@@ -444,6 +447,13 @@ export function Board() {
       </div>
 
       <div className="board__overlay-br zoom" onPointerDown={(e) => e.stopPropagation()}>
+        <button
+          className="overlay-btn"
+          title={focus ? 'Leave full screen (Esc)' : 'Full screen — hide the rail and inspector (F)'}
+          onClick={() => setFocus(!focus)}
+        >
+          {focus ? <Minimize size={13} strokeWidth={2.25} aria-hidden /> : <Maximize size={13} strokeWidth={2.25} aria-hidden />}
+        </button>
         <button
           className="overlay-btn"
           title="Lay every card out in a grid, grouped by type"

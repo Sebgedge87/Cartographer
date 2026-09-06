@@ -49,12 +49,24 @@ export function ContextMenu() {
     if (!context) return;
     const close = () => set({ context: null });
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close();
+    /*
+     * Capture phase, and the containment test that requires.
+     *
+     * On the bubble this never fired for a click inside the page editor: that
+     * component stops pointerdown propagating so the scrim behind it does not
+     * close, and the event therefore never reached the window. The menu could
+     * then only be dismissed by picking something off it.
+     */
+    const onDown = (e: PointerEvent) => {
+      if (panel.current?.contains(e.target as Node)) return;
+      close();
+    };
     window.addEventListener('keydown', onKey);
-    window.addEventListener('pointerdown', close);
+    window.addEventListener('pointerdown', onDown, true);
     window.addEventListener('blur', close);
     return () => {
       window.removeEventListener('keydown', onKey);
-      window.removeEventListener('pointerdown', close);
+      window.removeEventListener('pointerdown', onDown, true);
       window.removeEventListener('blur', close);
     };
   }, [context, set]);
