@@ -73,7 +73,6 @@ export function SettingsMenu() {
   const status = useSync((s) => s.status);
   const email = useSync((s) => s.email);
   const error = useSync((s) => s.error);
-  const setSync = useSync((s) => s.set);
 
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -296,7 +295,7 @@ export function SettingsMenu() {
               {status === 'signed-out' && (
                 <button
                   className="settings__item"
-                  onClick={() => { close(); setSync({ offlineChosen: false }); }}
+                  onClick={() => { close(); useSync.getState().chooseOffline(false); }}
                 >
                   Sign in to sync
                 </button>

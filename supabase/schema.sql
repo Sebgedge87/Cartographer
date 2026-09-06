@@ -192,11 +192,13 @@ end $$;
 -- rule as every table above: a file is filed under the owner's uid, and the policy
 -- is what stops one account reaching another's.
 --
--- The client re-encodes everything to WebP under 1.5 MB before it uploads, and the
--- bucket says so too — a limit only the client enforces is not a limit.
+-- The client re-encodes everything to WebP under 8 MB before it uploads, and the
+-- bucket says so too — a limit only the client enforces is not a limit. The ceiling
+-- is set by maps: an ordinary picture lands far under it, but the one image in a
+-- setting people zoom into needs the room.
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('assets', 'assets', false, 2000000, array['image/webp'])
+values ('assets', 'assets', false, 10485760, array['image/webp'])
 on conflict (id) do update
   set public = false,
       file_size_limit = excluded.file_size_limit,

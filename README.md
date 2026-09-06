@@ -136,8 +136,15 @@ For the **deployed** build, put the same two values in
 them the published app builds local-only, which is a supported mode rather than a
 broken one.
 
-You will now be asked to sign in — email and password, no other provider to
-configure, and no redirect URLs to register. Sign up once on the first machine and sign in with the same account
+You will now be asked to sign in — or not: **Work offline on this device** is
+remembered, and the app is fully usable without an account. Projects just stay in
+that browser.
+
+Email and password work with no further setup. To offer **Continue with Google**
+as well, enable it in *Supabase → Authentication → Providers → Google*: it asks
+for a Google OAuth client id and secret, and gives you the redirect URI to paste
+into Google Cloud. Only sign-in scopes are involved, and the secret lives in
+Supabase rather than in the bundle, so nothing about it reaches the browser. Sign up once on the first machine and sign in with the same account
 everywhere else. The status chip in the top bar shows `SYNCED`; click it to force a
 round trip, double-click to sign out.
 

@@ -63,6 +63,29 @@ export async function signUp(email: string, password: string): Promise<string | 
   }
 }
 
+/**
+ * Hand off to Google and come back signed in.
+ *
+ * The redirect returns to whatever page started it, which is the app's own URL
+ * rather than a route it has to own — Supabase puts the session in the URL and its
+ * client picks it up on load, so `watchAuth` sees a session and starts syncing with
+ * nothing else to arrange.
+ *
+ * Nothing here needs a Google client id: the id and secret live in the Supabase
+ * project, and the browser only ever talks to Supabase.
+ */
+export async function signInWithGoogle(): Promise<string | null> {
+  try {
+    const { error } = await supabase().auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href.split('#')[0] },
+    });
+    return error ? readable(error.message) : null;
+  } catch (e) {
+    return readable(e instanceof Error ? e.message : String(e));
+  }
+}
+
 export async function signOut(): Promise<void> {
   await supabase().auth.signOut();
 }

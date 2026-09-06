@@ -28,7 +28,7 @@ export function SyncBadge() {
       className={`sync sync--${status}`}
       title={title}
       onClick={() => {
-        if (status === 'signed-out') { useSync.getState().set({ offlineChosen: false }); return; }
+        if (status === 'signed-out') { useSync.getState().chooseOffline(false); return; }
         if (status === 'synced' || status === 'error') void syncNow();
       }}
       onDoubleClick={() => { if (email) void signOut(); }}

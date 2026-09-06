@@ -726,6 +726,21 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   letter-spacing: -.03em; color: var(--text-strong);
 }
 .signin__desc { margin: 0 0 22px; font: 400 13.5px/1.6 var(--font-ui); color: var(--muted); }
+/* Google first, then the rule, then email — the order people expect, and the
+   provider button reads as the primary way in without being the accent colour. */
+.signin__google {
+  width: 100%; justify-content: center; gap: 9px; padding: 10px 12px;
+  border-color: var(--border-strong);
+}
+.signin__google:hover:not(:disabled) { border-color: var(--accent); }
+.signin__or {
+  display: flex; align-items: center; gap: 10px;
+  margin: 14px 0 4px;
+  font: 700 8.5px var(--font-mono); letter-spacing: .2em; color: var(--ghost);
+}
+.signin__or::before, .signin__or::after {
+  content: ''; flex: 1 1 auto; height: 1px; background: var(--border);
+}
 .signin__form { display: flex; flex-direction: column; gap: 12px; }
 .signin__label {
   display: flex; flex-direction: column; gap: 5px;

@@ -14,19 +14,23 @@ import { downloadAsset, remoteAssetIds, uploadAsset } from './remoteAssets';
 export const ASSET_STORE = 'assets';
 
 /**
- * Limits, all enforced on import rather than trusted. A design tool wants pictures
- * that look right on a 244px card and a half-screen preview — not originals off a
- * camera — so everything is re-encoded down on the way in.
+ * Limits, all enforced on import rather than trusted. They are ceilings rather than
+ * targets: an image is only ever scaled *down*, and only re-encoded until it fits,
+ * so raising them costs a screenshot nothing and lets a map through.
+ *
+ * Maps are why they are as high as they are. A battle map or a region map is the
+ * one picture in a setting you actually zoom into, and 1600px across was legible on
+ * a card and useless for anything else.
  */
 export const LIMITS = {
   /** Refused before we decode anything: a guard against a file that would blow the tab up. */
-  maxInputBytes: 25 * 1024 * 1024,
-  /** Longest edge of the stored full-size copy. */
-  maxEdge: 1600,
+  maxInputBytes: 40 * 1024 * 1024,
+  /** Longest edge of the stored full-size copy. 4096 is safe on every GPU we care about. */
+  maxEdge: 4096,
   /** Longest edge of the copy used on cards and in the strip. */
   thumbEdge: 320,
   /** A stored image is re-encoded at falling quality until it fits, then refused. */
-  maxStoredBytes: 1_500_000,
+  maxStoredBytes: 8 * 1024 * 1024,
   /** Per page, so one page cannot grow without bound. */
   maxPerPage: 12,
 };

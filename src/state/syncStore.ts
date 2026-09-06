@@ -9,6 +9,21 @@ export type SyncStatus =
   | 'synced'
   | 'error';
 
+/**
+ * "Work offline on this device" is a decision about this browser, so it is kept in
+ * this browser. In memory it lasted until the next reload, which made a choice the
+ * button describes as lasting look like it had been ignored.
+ */
+const OFFLINE_KEY = 'cartographer.offline';
+
+function storedOffline(): boolean {
+  try {
+    return localStorage.getItem(OFFLINE_KEY) === 'yes';
+  } catch {
+    return false;
+  }
+}
+
 interface SyncState {
   status: SyncStatus;
   email: string | null;
@@ -18,6 +33,8 @@ interface SyncState {
   /** The user chose to work on this device without signing in. */
   offlineChosen: boolean;
   set: (patch: Partial<SyncState>) => void;
+  /** Take or give back the offline choice, remembering it for next time. */
+  chooseOffline: (offline: boolean) => void;
 }
 
 export const useSync = create<SyncState>()((set) => ({
@@ -25,6 +42,16 @@ export const useSync = create<SyncState>()((set) => ({
   email: null,
   error: null,
   lastSyncedAt: null,
-  offlineChosen: false,
+  offlineChosen: storedOffline(),
   set: (patch) => set(patch),
+
+  chooseOffline: (offline) => {
+    try {
+      if (offline) localStorage.setItem(OFFLINE_KEY, 'yes');
+      else localStorage.removeItem(OFFLINE_KEY);
+    } catch {
+      /* private mode; the choice just will not survive a reload */
+    }
+    set({ offlineChosen: offline });
+  },
 }));

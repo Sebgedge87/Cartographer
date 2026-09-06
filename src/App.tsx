@@ -94,12 +94,12 @@ export function App() {
   const showInspector = useUI((s) => s.showInspector);
   const syncStatus = useSync((s) => s.status);
   const offlineChosen = useSync((s) => s.offlineChosen);
-  const setSync = useSync((s) => s.set);
+  const chooseOffline = useSync((s) => s.chooseOffline);
   useGlobalKeys();
   useGlobalContextMenu();
 
   if (syncStatus === 'signed-out' && !offlineChosen) {
-    return <SignIn onSkip={() => setSync({ offlineChosen: true })} />;
+    return <SignIn onSkip={() => chooseOffline(true)} />;
   }
 
   return (
