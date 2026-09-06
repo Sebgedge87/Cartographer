@@ -46,12 +46,16 @@ jobs:
       - run: npm test
       - run: npm run build
 
-      # enablement, so the first run turns Pages on rather than failing with
-      # "Get Pages site failed" until someone flips the switch by hand. The job
-      # already holds `pages: write`, which is what the API call needs.
+      # Pages has to be turned on by hand, once, at Settings -> Pages -> Build and
+      # deployment -> Source: GitHub Actions. Until it is, this step fails with
+      # "Get Pages site failed" and the deploy never runs.
+      #
+      # `enablement: true` looks like it would save that trip and does not: creating
+      # a Pages site needs admin rights on the repository, which GITHUB_TOKEN does
+      # not have however the job's permissions are declared. It was tried here and
+      # returned "Create Pages site failed. Error: Resource not accessible by
+      # integration".
       - uses: actions/configure-pages@v5
-        with:
-          enablement: true
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
