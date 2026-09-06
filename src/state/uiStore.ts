@@ -108,8 +108,16 @@ interface UIState {
   editing: string | null;
   cam: Camera;
 
-  /** Page id being dragged, or '__pan' while panning the board. */
+  /** Page id being dragged, '__pan' while panning, '__marquee' while band-selecting. */
   drag: string | null;
+  /**
+   * Pages picked out by a marquee or by ctrl-clicking, in world coordinates. `sel`
+   * stays the one the inspector talks about; this is everything an action applies
+   * to, and is empty whenever only one thing is chosen.
+   */
+  multi: string[];
+  /** The band being dragged, in world coordinates, or null. */
+  marquee: { x0: number; y0: number; x1: number; y1: number } | null;
   /** Source page id of an in-progress port drag. */
   link: string | null;
   /** World point the in-progress link is following. */
@@ -181,6 +189,8 @@ export const useUI = create<UIStore>()((set, get) => ({
   editing: null,
   cam: DEFAULT_CAM,
   drag: null,
+  multi: [],
+  marquee: null,
   link: null,
   ghost: null,
   menu: null,
@@ -240,7 +250,7 @@ export const useUI = create<UIStore>()((set, get) => ({
 
   goHome: () => set({ view: 'home', editing: null, sel: null, menu: null, search: '' }),
 
-  select: (sel) => set({ sel }),
+  select: (sel) => set({ sel, multi: [] }),
 
   openPage: (pageId, boardId) =>
     set({ editing: pageId, sel: pageId, boardId, mode: 'board', fieldsOpen: true, menu: null }),

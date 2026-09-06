@@ -38,6 +38,8 @@ export function Board() {
   const projectId = useUI((s) => s.projectId);
   const boardId = useUI((s) => s.boardId);
   const sel = useUI((s) => s.sel);
+  const multi = useUI((s) => s.multi);
+  const marquee = useUI((s) => s.marquee);
   const cam = useUI((s) => s.cam);
   const grid = useUI((s) => s.grid);
   const ghost = useUI((s) => s.ghost);
@@ -149,9 +151,46 @@ export function Board() {
         return;
       }
       const card = target.closest('[data-pid]')?.getAttribute('data-pid');
-      set(card ? { drag: card, sel: card } : { drag: '__pan', sel: null });
+      const world = () => {
+        const r = boardRect();
+        const ui = useUI.getState();
+        return {
+          x: (e.clientX - r.left - ui.cam.x) / ui.cam.z,
+          y: (e.clientY - r.top - ui.cam.y) / ui.cam.z,
+        };
+      };
+
+      if (card) {
+        // Ctrl or ⌘ adds and removes one card without disturbing the rest.
+        if (e.metaKey || e.ctrlKey) {
+          const held = useUI.getState().multi;
+          const dropping = held.includes(card);
+          const next = dropping ? held.filter((id) => id !== card) : [...held, card];
+          // Taking a card out must not leave it as `sel`, or it goes on looking
+          // selected while no longer being part of the group.
+          set({ sel: dropping ? null : card, multi: next });
+          return;
+        }
+        // Dragging a card that is already in the group moves the whole group;
+        // grabbing one outside it starts again from that card.
+        const held = useUI.getState().multi;
+        set({ drag: card, sel: card, multi: held.includes(card) ? held : [] });
+        return;
+      }
+
+      // Shift-drag bands, plain drag pans. Panning cannot move to a modifier: the
+      // wheel zooms here, so dragging is the only way to get around the board.
+      if (e.shiftKey) {
+        // Belt and braces with the CSS: drop anything already selected, so a
+        // selection made before this board was opened cannot be dragged either.
+        window.getSelection()?.removeAllRanges();
+        const at = world();
+        set({ drag: '__marquee', marquee: { x0: at.x, y0: at.y, x1: at.x, y1: at.y }, sel: null, multi: [] });
+        return;
+      }
+      set({ drag: '__pan', sel: null, multi: [] });
     },
-    [set],
+    [boardRect, set],
   );
 
   const onPointerMove = useCallback(
@@ -176,13 +215,36 @@ export function Board() {
         panBy(dx, dy);
         return;
       }
+      if (ui.drag === '__marquee' && ui.marquee) {
+        const r = boardRect();
+        const x1 = (e.clientX - r.left - ui.cam.x) / ui.cam.z;
+        const y1 = (e.clientY - r.top - ui.cam.y) / ui.cam.z;
+        const band = { ...ui.marquee, x1, y1 };
+        // Touched, not enclosed: catching a card by clipping its corner is what
+        // people expect from a band, and demanding full containment on a 244px
+        // card means a lot of very careful dragging.
+        const left = Math.min(band.x0, band.x1);
+        const right = Math.max(band.x0, band.x1);
+        const top = Math.min(band.y0, band.y1);
+        const bottom = Math.max(band.y0, band.y1);
+        const hit = useDoc.getState().pages
+          .filter((p) => p.boardId === ui.boardId)
+          .filter((p) => p.x < right && p.x + p.w > left && p.y < bottom && p.y + p.h > top)
+          .map((p) => p.id);
+        set({ marquee: band, multi: hit, sel: hit.length === 1 ? hit[0]! : null });
+        return;
+      }
       // Deltas divided by zoom, so the card stays under the cursor at any scale.
       const wx = dx / ui.cam.z + residual.current.x;
       const wy = dy / ui.cam.z + residual.current.y;
       const stepX = Math.round(wx);
       const stepY = Math.round(wy);
       residual.current = { x: wx - stepX, y: wy - stepY };
-      useDoc.getState().movePage(ui.drag!, stepX, stepY);
+      if (ui.multi.length > 1 && ui.multi.includes(ui.drag!)) {
+        useDoc.getState().movePages(ui.multi, stepX, stepY);
+      } else {
+        useDoc.getState().movePage(ui.drag!, stepX, stepY);
+      }
     },
     [panBy, set],
   );
@@ -200,7 +262,8 @@ export function Board() {
         set({ link: null, ghost: null, drag: null });
         return;
       }
-      set({ drag: null });
+      // The band goes; what it caught stays.
+      set({ drag: null, marquee: null });
     },
     [set, showToast],
   );
@@ -213,7 +276,12 @@ export function Board() {
       const under = document.elementFromPoint(e.clientX, e.clientY) as HTMLElement | null;
       const card = under?.closest('[data-pid]')?.getAttribute('data-pid');
       if (card) {
-        set({ sel: card, context: { x: e.clientX, y: e.clientY, target: { kind: 'page', id: card } } });
+        const held = useUI.getState().multi;
+        set({
+          sel: card,
+          multi: held.includes(card) ? held : [],
+          context: { x: e.clientX, y: e.clientY, target: { kind: 'page', id: card } },
+        });
         return;
       }
       const r = boardRect();
@@ -282,6 +350,18 @@ export function Board() {
         className="board__world"
         style={{ transform: `translate(${cam.x}px,${cam.y}px) scale(${cam.z})` }}
       >
+        {marquee && (
+          <div
+            className="board__marquee"
+            style={{
+              left: Math.min(marquee.x0, marquee.x1),
+              top: Math.min(marquee.y0, marquee.y1),
+              width: Math.abs(marquee.x1 - marquee.x0),
+              height: Math.abs(marquee.y1 - marquee.y0),
+            }}
+          />
+        )}
+
         {/* One oversized SVG offset by half its size so negative world coordinates draw. */}
         <svg className="board__svg" viewBox="0 0 12000 12000">
           <g transform="translate(6000,6000)">
@@ -319,7 +399,7 @@ export function Board() {
               page={page}
               type={blockType(schema, page.type)}
               fields={pageFields(doc, page)}
-              selected={page.id === sel}
+              selected={page.id === sel || multi.includes(page.id)}
               depth={depth.get(page.id) ?? 0}
               outCount={c?.out ?? 0}
               inCount={c?.in ?? 0}

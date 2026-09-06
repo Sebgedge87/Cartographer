@@ -259,7 +259,9 @@ export function PagesRail() {
           + AREA
         </button>
         <SettingsMenu />
-        <div className="rail__hint">DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK</div>
+        <div className="rail__hint">
+          DBL-CLICK CARD TO EDIT · DRAG PORT TO LINK · SHIFT-DRAG TO SELECT
+        </div>
       </div>
     </div>
   );

@@ -271,9 +271,27 @@ select.field option { background: var(--popover); }
 
 /* ---------- board ---------- */
 
-.board { position: relative; flex: 1 1 auto; overflow: hidden; touch-action: none; background: var(--canvas); }
+/*
+ * user-select: none is load-bearing, not cosmetic. Shift-dragging to band-select
+ * otherwise starts a document text selection across the canvas, and the *next*
+ * drag makes Chromium try to drag that selection — which fires pointercancel,
+ * which ends the pan after a single frame. A canvas has no text to select anyway.
+ */
+.board {
+  position: relative; flex: 1 1 auto; overflow: hidden; touch-action: none;
+  user-select: none; background: var(--canvas);
+}
 .board__grid { position: absolute; inset: 0; pointer-events: none; }
 .board__world { position: absolute; left: 0; top: 0; width: 0; height: 0; transform-origin: 0 0; }
+/* The selection band. Drawn inside the world layer so it pans and scales with the
+   cards it is measuring against, which keeps the maths in world coordinates. */
+.board__marquee {
+  position: absolute; pointer-events: none; z-index: 1;
+  border: 1px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-radius: 2px;
+}
+
 .board__svg { position: absolute; left: -6000px; top: -6000px; width: 12000px; height: 12000px; pointer-events: none; overflow: visible; }
 .board__empty {
   position: absolute; inset: 0; display: grid; place-content: center; justify-items: center;

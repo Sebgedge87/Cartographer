@@ -47,6 +47,8 @@ interface DocActions {
   }) => string;
   patchPage: (id: string, patch: Partial<Page>) => void;
   movePage: (id: string, dx: number, dy: number) => void;
+  /** Move several pages by the same delta, as one edit so undo takes them together. */
+  movePages: (ids: string[], dx: number, dy: number) => void;
   setPageField: (pageId: string, field: Field, value: string) => void;
   deletePage: (id: string) => void;
   /** Copy a page onto the same board, offset so it does not land under the original. */
@@ -376,6 +378,15 @@ export const useDoc = create<DocStore>()(
             p.id === id ? { ...p, x: Math.round(p.x + dx), y: Math.round(p.y + dy) } : p,
           ),
         })),
+
+      movePages: (ids, dx, dy) => {
+        if (!dx && !dy) return;
+        const moving = new Set(ids);
+        set((s) => ({
+          pages: s.pages.map((p) =>
+            moving.has(p.id) ? { ...p, x: p.x + dx, y: p.y + dy, updated: Date.now() } : p),
+        }));
+      },
 
       setPageField: (pageId, field, value) =>
         set((s) => {

@@ -27,6 +27,7 @@ export function ContextMenu() {
   const showToast = useUI((s) => s.showToast);
   const projectId = useUI((s) => s.projectId);
   const view = useUI((s) => s.view);
+  const multi = useUI((s) => s.multi);
   const goHome = useUI((s) => s.goHome);
 
   const panel = useRef<HTMLDivElement>(null);
@@ -147,8 +148,24 @@ export function ContextMenu() {
   if (kind === 'page') {
     const page = doc.pages.find((p) => p.id === id);
     if (!page) return null;
-    title = page.title;
-    items = [
+    // A band selection acts as one thing: the menu is about the group when the
+    // page clicked is part of it, and about that page alone otherwise.
+    const group = multi.length > 1 && multi.includes(id) ? multi : null;
+    title = group ? `${group.length} pages` : page.title;
+    items = group
+      ? [
+          {
+            label: `Delete ${group.length} pages`,
+            danger: true,
+            run: act(() => {
+              for (const pid of group) doc.deletePage(pid);
+              set({ sel: null, multi: [], editing: null });
+              showToast(`Deleted ${group.length} pages`);
+            }),
+          },
+          { label: 'Clear selection', run: act(() => set({ multi: [], sel: null })) },
+        ]
+      : [
       { label: 'Open', run: act(() => openPage(id, page.boardId)) },
       {
         label: 'Duplicate',
