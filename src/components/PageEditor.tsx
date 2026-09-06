@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import type { Field, FieldKind, PageImage } from '../state/types';
 import { blockType, creatableTypeKeys, isCustomPage, pageFields, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
@@ -677,7 +678,10 @@ export function PageEditor() {
         <div className="stats">
           <div className="stats__head">
             <button className="stats__toggle" onClick={() => set({ fieldsOpen: !fieldsOpen })}>
-              <span className="stats__caret">{fieldsOpen ? '▾' : '▸'}</span>
+              <ChevronRight
+                className={'stats__caret' + (fieldsOpen ? ' chevron--open' : '')}
+                size={15} strokeWidth={2.25} aria-hidden
+              />
               <span className="label">{custom ? 'Elements' : 'Stat block'}</span>
               <span className="area-row__count">{fields.length}</span>
             </button>

@@ -2,27 +2,8 @@ import { useMemo } from 'react';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { promptNew } from '../state/actions';
+import { ChevronRight, Search } from 'lucide-react';
 import { SettingsMenu } from './SettingsMenu';
-
-/**
- * Drawn rather than typed. A `▸` is a small glyph inside a large em box, so it
- * reads far smaller than its font size claims and cannot be made bigger without
- * pushing the row apart. A stroked chevron is the size it looks.
- */
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      className={'chevron' + (open ? ' chevron--open' : '')}
-      viewBox="0 0 16 16" width="16" height="16" aria-hidden focusable="false"
-    >
-      <path
-        d="M6 3.5 L11 8 L6 12.5"
-        fill="none" stroke="currentColor" strokeWidth="2.25"
-        strokeLinecap="round" strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
 
 /**
  * The navigation tree: area -> board -> page.
@@ -98,7 +79,7 @@ export function PagesRail() {
   return (
     <div className={'rail' + (dense ? '' : ' rail--comfortable')}>
       <div className="rail__search">
-        <span className="search__glyph">⌕</span>
+        <Search className="search__glyph" size={14} strokeWidth={2} aria-hidden />
         <input
           className="field"
           placeholder="Search"
@@ -144,7 +125,7 @@ export function PagesRail() {
                   onClick={(e) => { e.stopPropagation(); toggleArea(area.id); }}
                   title={areaOpen ? 'Collapse' : 'Expand'}
                 >
-                  <Chevron open={areaOpen} />
+                  <ChevronRight className={'chevron' + (areaOpen ? ' chevron--open' : '')} size={17} strokeWidth={2.25} aria-hidden />
                 </button>
                 <span className="area-row__dot" />
                 {renamingArea === area.id ? (
@@ -191,7 +172,7 @@ export function PagesRail() {
                         onClick={(e) => { e.stopPropagation(); toggleArea(board.id); }}
                         title={boardOpen ? 'Collapse' : 'Expand'}
                       >
-                        <Chevron open={boardOpen} />
+                        <ChevronRight className={'chevron' + (boardOpen ? ' chevron--open' : '')} size={17} strokeWidth={2.25} aria-hidden />
                       </button>
                       {renamingBoard === board.id ? (
                         <input

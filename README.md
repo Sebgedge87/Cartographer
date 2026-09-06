@@ -65,6 +65,7 @@ src/
     supabase.ts         client, created only when credentials are configured
   components/           home, top bar, rail, board, table, schema, inspector, editor,
                         new-page menu, command palette, toast
+                        (icons from lucide-react; everything else is hand-built)
   styles/               tokens.css (design tokens) + app.css (components)
 templates/              import templates, and the format described field by field
 design/                 SPEC.md, cartographer-standalone.html

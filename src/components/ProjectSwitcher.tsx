@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { useDismiss } from '../lib/useDismiss';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
@@ -55,7 +56,7 @@ export function ProjectSwitcher() {
         }}
       >
         <span className="truncate">{project?.name ?? 'Project'}</span>
-        <span className="switcher__caret">▾</span>
+        <ChevronDown className="switcher__caret" size={14} strokeWidth={2.25} aria-hidden />
       </button>
 
       {open && (

@@ -172,7 +172,7 @@ select.field option { background: var(--popover); }
   flex: none; position: relative; display: flex; align-items: center; gap: 7px;
   padding: 7px 9px; border-bottom: 1px solid var(--border);
 }
-.rail__search .search__glyph { position: static; transform: none; }
+.rail__search .search__glyph { position: static; transform: none; flex: none; color: var(--faint); }
 .rail__search .field {
   flex: 1 1 auto; min-width: 0; padding: 4px 2px;
   border: none; background: transparent;
@@ -551,7 +551,7 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   display: flex; align-items: center; gap: 8px; width: 100%;
   padding: 8px 14px; border: none; background: transparent; cursor: pointer; text-align: left;
 }
-.stats__caret { font-size: 9px; color: var(--faint); }
+.stats__caret { flex: none; color: var(--faint); transition: transform .12s ease; }
 /* Tall enough for a date row, which carries a weekday and a line of moons under
    its inputs and so stands about twice a text field. */
 .stats__body { padding: 0 14px 12px; max-height: 330px; overflow: auto; }
@@ -1101,7 +1101,7 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 .switcher__button:hover, .switcher__button--open {
   border-color: var(--border); background: var(--wash-2);
 }
-.switcher__caret { flex: none; font-size: 9px; color: var(--faint); }
+.switcher__caret { flex: none; color: var(--faint); }
 
 .switcher__panel {
   position: absolute; left: 0; top: calc(100% + 7px); z-index: 60;
