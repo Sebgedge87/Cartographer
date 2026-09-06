@@ -214,14 +214,36 @@ select.field option { background: var(--popover); }
  * A hit target, not a glyph. This was 14px wide with a 9px arrow in it, which is
  * about half what a pointer can be expected to find and well under a finger.
  */
+/*
+ * The toggle is a column, not a button in a row.
+ *
+ * It stretches the full height of its row and is always the same width at every
+ * level, so it forms one continuous strip down the left edge of the rail that you
+ * can aim at without looking. Widening a 14px box to 22 and then 26 did not fix
+ * this; being a target the size of the row is what fixes it.
+ */
 .area-row__caret, .board-row__caret {
-  width: 26px; height: 26px; flex: none; display: grid; place-items: center;
-  border: none; border-radius: var(--r-sm); background: transparent;
-  /* The glyph as well as the box: a big target around a 10px arrow still reads
-     as a 10px arrow, and looking small is most of what made it feel unclickable. */
+  width: 28px; flex: none; align-self: stretch; display: grid; place-items: center;
+  margin: calc(var(--row-pad) * -1) 0; border: none; border-radius: var(--r-sm);
+  background: transparent;
   font-size: 13px; line-height: 1; color: var(--dim); cursor: pointer; padding: 0;
 }
 .area-row__caret:hover, .board-row__caret:hover { background: var(--wash-3); color: var(--text); }
+/* Collapse/expand everything. Sits under the search so it reads as a control on
+   the tree below it rather than as the first row of that tree. */
+.rail__bar {
+  flex: none; display: flex; padding: 2px 8px 4px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.rail__all {
+  display: flex; align-items: center; gap: 6px; width: 100%;
+  padding: 5px 6px; border: none; border-radius: var(--r-sm); background: transparent;
+  font: 700 8.5px var(--font-mono); letter-spacing: .16em; color: var(--faint);
+  cursor: pointer; text-align: left;
+}
+.rail__all:hover { background: var(--wash-2); color: var(--text); }
+.rail__all-glyph { font-size: 11px; letter-spacing: 0; }
+
 .area-row__dot { width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--tint); }
 .area-row__name { font: 600 var(--row-name) var(--font-ui); }
 .area-row__count { margin-left: auto; font: 400 var(--row-sub) var(--font-mono); color: var(--faint); }

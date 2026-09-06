@@ -51,6 +51,35 @@ export interface NewMenu {
   top: number;
 }
 
+/**
+ * Which areas and boards are shut. Kept in this browser: a rail that re-opens
+ * every area on every reload is a rail you have to tidy again each time you sit
+ * down, and a project with a hundred pages makes that a real chore.
+ */
+const COLLAPSED_KEY = 'cartographer.collapsed';
+
+function storedCollapsed(): Record<string, boolean> {
+  try {
+    const parsed: unknown = JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? 'null');
+    if (!parsed || typeof parsed !== 'object') return {};
+    // Only the shut ones are worth keeping; open is the default.
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>).filter(([, v]) => v === true),
+    ) as Record<string, boolean>;
+  } catch {
+    return {};
+  }
+}
+
+function rememberCollapsed(collapsed: Record<string, boolean>): void {
+  try {
+    const shut = Object.fromEntries(Object.entries(collapsed).filter(([, v]) => v));
+    localStorage.setItem(COLLAPSED_KEY, JSON.stringify(shut));
+  } catch {
+    /* private mode; the rail just opens up again next time */
+  }
+}
+
 const DEFAULT_CAM: Camera = { x: 260, y: 180, z: 1 };
 
 /** One throw of the dice, handed to the tray to simulate. */
@@ -133,6 +162,8 @@ interface UIActions {
   zoomAt: (px: number, py: number, factor: number) => void;
   setCam: (cam: Camera) => void;
   toggleArea: (areaId: string) => void;
+  /** Shut or open every row in the rail at once. */
+  setAllCollapsed: (ids: string[], collapsed: boolean) => void;
   showToast: (message: string) => void;
 }
 
@@ -159,7 +190,7 @@ export const useUI = create<UIStore>()((set, get) => ({
   toast: null,
   tray: null,
   search: '',
-  collapsed: {},
+  collapsed: storedCollapsed(),
   fieldsOpen: true,
   renamingArea: null,
   renamingBoard: null,
@@ -228,7 +259,19 @@ export const useUI = create<UIStore>()((set, get) => ({
   setCam: (cam) => set({ cam }),
 
   toggleArea: (areaId) =>
-    set((s) => ({ collapsed: { ...s.collapsed, [areaId]: !s.collapsed[areaId] } })),
+    set((s) => {
+      const collapsed = { ...s.collapsed, [areaId]: !s.collapsed[areaId] };
+      rememberCollapsed(collapsed);
+      return { collapsed };
+    }),
+
+  setAllCollapsed: (ids, shut) =>
+    set((s) => {
+      const collapsed = { ...s.collapsed };
+      for (const id of ids) collapsed[id] = shut;
+      rememberCollapsed(collapsed);
+      return { collapsed };
+    }),
 
   showToast: (message) => {
     if (toastTimer) clearTimeout(toastTimer);

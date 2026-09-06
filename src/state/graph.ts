@@ -326,21 +326,35 @@ export function arrangeLayout(
     }
 
     /*
-     * Columns, bottom up: a page with no children takes the next free column, and
-     * a page with children sits over the middle of them. Walking the visit order
-     * backwards is a post-order walk, because a parent is always reached first.
+     * Columns, depth first: walk down the left edge of the tree, give each page
+     * with no children the next free column, and centre every parent over the
+     * children it just placed.
+     *
+     * Depth first is what keeps a family together. Sorting by depth instead —
+     * every leaf in the tree before every parent — sends a childless page to the
+     * far right of the whole board, past its own siblings' grandchildren, and
+     * leaves a hole where it should have been.
      */
     const column = new Map<string, number>();
     let nextLeaf = 0;
-    const visited = [...depth.keys()].sort((a, b) => depth.get(b)! - depth.get(a)!);
-    for (const id of visited) {
-      const mine = (kids.get(id) ?? []).filter((k) => column.has(k));
-      if (mine.length === 0) {
-        column.set(id, nextLeaf++);
+    const stack: { id: string; entered: boolean }[] = [{ id: root.id, entered: false }];
+    while (stack.length) {
+      const frame = stack[stack.length - 1]!;
+      const mine = kids.get(frame.id) ?? [];
+      if (!frame.entered) {
+        frame.entered = true;
+        if (mine.length === 0) {
+          column.set(frame.id, nextLeaf++);
+          stack.pop();
+          continue;
+        }
+        // Reversed, because a stack hands them back in the opposite order.
+        for (let i = mine.length - 1; i >= 0; i--) stack.push({ id: mine[i]!, entered: false });
         continue;
       }
-      const xs = mine.map((k) => column.get(k)!);
-      column.set(id, (Math.min(...xs) + Math.max(...xs)) / 2);
+      const xs = mine.map((k) => column.get(k)!).filter((n) => n !== undefined);
+      column.set(frame.id, xs.length ? (Math.min(...xs) + Math.max(...xs)) / 2 : nextLeaf++);
+      stack.pop();
     }
 
     for (const id of depth.keys()) {
@@ -358,7 +372,7 @@ export function arrangeLayout(
     // A block rather than a row: thirty-eight unlinked pages in a line would
     // stretch the canvas much further than the trees they sit beneath.
     const cols = Math.max(1, Math.ceil(Math.sqrt(loose.length)));
-    const top = ORIGIN + (placed.size ? deepestRow + 2 : 0) * PITCH_Y;
+    const top = ORIGIN + (placed.size ? deepestRow + 1 : 0) * PITCH_Y;
     loose.sort(compare).forEach((page, i) => {
       placed.set(page.id, {
         x: ORIGIN + (i % cols) * PITCH_X,

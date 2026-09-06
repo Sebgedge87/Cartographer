@@ -27,6 +27,7 @@ export function PagesRail() {
   const openBoard = useUI((s) => s.openBoard);
   const openPage = useUI((s) => s.openPage);
   const toggleArea = useUI((s) => s.toggleArea);
+  const setAllCollapsed = useUI((s) => s.setAllCollapsed);
 
   const onContext = (kind: 'area' | 'board' | 'page', id: string) => (e: React.MouseEvent) => {
     e.preventDefault();
@@ -67,6 +68,12 @@ export function PagesRail() {
   }, [doc, projectId, query]);
 
   const total = doc.pages.filter((p) => p.projectId === projectId).length;
+  /** Every row that can be shut, and whether any of them currently is not. */
+  const everyRowId = useMemo(
+    () => tree.flatMap(({ area, boards }) => [area.id, ...boards.map((b) => b.board.id)]),
+    [tree],
+  );
+  const anyOpen = everyRowId.some((id) => !collapsed[id]);
 
   return (
     <div className={'rail' + (dense ? '' : ' rail--comfortable')}>
@@ -81,6 +88,19 @@ export function PagesRail() {
         <span className="rail__count">{total}</span>
       </div>
 
+      {/* One press for the whole tree. With seven areas and a hundred pages,
+          shutting them one at a time is the chore this replaces. */}
+      <div className="rail__bar">
+        <button
+          className="rail__all"
+          title={anyOpen ? 'Collapse everything' : 'Expand everything'}
+          onClick={() => setAllCollapsed(everyRowId, anyOpen)}
+        >
+          <span className="rail__all-glyph">{anyOpen ? '⤡' : '⤢'}</span>
+          {anyOpen ? 'COLLAPSE ALL' : 'EXPAND ALL'}
+        </button>
+      </div>
+
       <div className="rail__tree">
         {tree.map(({ area, color, boards, pageCount }) => {
           const areaOpen = !collapsed[area.id] || !!query;
@@ -93,7 +113,10 @@ export function PagesRail() {
                 }
                 style={{ ['--tint' as string]: color }}
                 onClick={() => openArea(area.id)}
-                onDoubleClick={() => set({ renamingArea: area.id })}
+                // Double-click toggles, the way a folder does everywhere else.
+                // Renaming moved to the right-click menu, where it is not competing
+                // with the thing people actually do to a row twice in a row.
+                onDoubleClick={() => toggleArea(area.id)}
                 onContextMenu={onContext('area', area.id)}
               >
                 <button
@@ -140,7 +163,7 @@ export function PagesRail() {
                         (board.id === boardId ? ' board-row--active' : '')
                       }
                       onClick={() => openBoard(board.id, area.id)}
-                      onDoubleClick={() => set({ renamingBoard: board.id })}
+                      onDoubleClick={() => toggleArea(board.id)}
                       onContextMenu={onContext('board', board.id)}
                     >
                       <button

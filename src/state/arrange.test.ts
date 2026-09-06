@@ -59,6 +59,26 @@ test('unlinked pages are packed below rather than strung out in a row', () => {
   assert.ok(new Set(loose.map((p) => p.y)).size > 1);
 });
 
+test('a childless page stays with its siblings, not pushed past their children', () => {
+  //          keep
+  //        /  |   \
+  //     yard hall  well        — hall has children, yard and well do not
+  //           |  \
+  //        pantry cellar
+  const pages = ['keep', 'hall', 'yard', 'well', 'pantry', 'cellar'].map((id) => page(id));
+  const at = lay(pages, [
+    link('keep', 'hall'), link('keep', 'yard'), link('keep', 'well'),
+    link('hall', 'pantry'), link('hall', 'cellar'),
+  ]);
+  // hall sits centred over its own two children, so it is not evenly spaced from
+  // the others — that is the hierarchy. What matters is that the two childless
+  // siblings are side by side rather than stranded past hall's grandchildren.
+  const gap = Math.abs(at.get('well')!.x - at.get('yard')!.x);
+  const pitch = Math.abs(at.get('cellar')!.x - at.get('pantry')!.x);
+  assert.equal(gap, pitch);
+  assert.ok(at.get('yard')!.x > at.get('cellar')!.x);
+});
+
 test('links to pages on another board are ignored', () => {
   const at = lay([page('a'), page('b')], [link('a', 'elsewhere'), link('b', 'elsewhere')]);
   assert.equal(rows(at)('a'), 0);
