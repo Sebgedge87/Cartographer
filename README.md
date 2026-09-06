@@ -150,6 +150,11 @@ round trip, double-click to sign out.
   pages both survive; the same page at the same moment does not. That is the right
   trade for one person on several machines and the wrong one for a team — see
   *Limits*.
+- **Image bytes sync too**, in their own Storage bucket rather than in a row. A
+  picture is uploaded when it is imported, and downloaded by the other device the
+  first time that page is looked at — not on sign-in, so a project full of
+  pictures does not cost a download you did not ask for. Anything that failed to
+  upload is caught by a pass after each pull.
 - Only `manual` edges are stored. Wiki and field edges are derived from page bodies
   and ref values, so syncing them would mean writing rows on every keystroke.
 - Signing out is not required to keep working. If the server is unreachable, or you

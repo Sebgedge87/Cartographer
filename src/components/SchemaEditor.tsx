@@ -38,7 +38,8 @@ const EXTENSIONS: { name: string; on: boolean; desc: string; how: ReactNode }[] 
         <b>Settings → Export as JSON</b> writes this project to a file: pages, boards, areas, the
         links you drew by hand, and the schema above. <b>Home → IMPORT</b> reads one back as a new
         project. Image references travel with it, but the picture files themselves do not — they
-        live outside the document.
+        live outside the document, and reach another machine through sync rather than through
+        the file. See <code>templates/</code> for the format written out field by field.
       </>
     ),
   },

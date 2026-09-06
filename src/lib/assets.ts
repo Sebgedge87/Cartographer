@@ -9,6 +9,7 @@
 
 import type { PageImage } from '../state/types';
 import { openDb } from './persist';
+import { downloadAsset, remoteAssetIds, uploadAsset } from './remoteAssets';
 
 export const ASSET_STORE = 'assets';
 
@@ -106,7 +107,7 @@ export async function loadAssets(ids: string[], variant: 'full' | 'thumb' = 'ful
       if (!job) {
         job = (async () => {
           try {
-            const rec = await get(id);
+            const rec = (await get(id)) ?? (await pullAsset(id));
             if (rec) urls.set(key, URL.createObjectURL(variant === 'thumb' ? rec.thumb : rec.full));
           } catch {
             /* a missing asset renders as a placeholder rather than breaking the page */
@@ -123,6 +124,62 @@ export async function loadAssets(ids: string[], variant: 'full' | 'thumb' = 'ful
   return added;
 }
 
+/**
+ * Fetch an asset this device has never held and keep it. This is what a page
+ * written on another machine does when its picture is first looked at: the ref
+ * arrived with the document, the bytes arrive now, and only once.
+ */
+async function pullAsset(id: string): Promise<AssetRecord | null> {
+  const remote = await downloadAsset(id);
+  if (!remote) return null;
+  const rec: AssetRecord = {
+    id,
+    // The name and dimensions live on the page's ref, which has already synced;
+    // what the bucket holds is bytes. Nothing here is shown to anyone.
+    name: id,
+    mime: 'image/webp',
+    w: 0,
+    h: 0,
+    bytes: remote.full.size,
+    full: remote.full,
+    thumb: remote.thumb,
+    created: Date.now(),
+  };
+  try {
+    await put(rec);
+  } catch {
+    /* keeping it was the optimisation; the URL below still works this session */
+  }
+  return rec;
+}
+
+/**
+ * Upload every asset this device holds that the bucket is missing.
+ *
+ * Covers the cases a single upload-on-import cannot: images added before sync was
+ * configured, an upload that failed while offline, and a device that had a project
+ * before it had an account. Called after a pull, when the document is current
+ * enough to say which assets are still referenced.
+ */
+export async function syncAssets(live: Iterable<string>): Promise<number> {
+  const remote = await remoteAssetIds();
+  if (!remote) return 0;
+  let sent = 0;
+  for (const id of new Set(live)) {
+    if (remote.has(id)) continue;
+    const rec = await get(id).catch(() => null);
+    if (!rec) continue;
+    if (await uploadAsset(id, rec.full, rec.thumb)) sent++;
+  }
+  return sent;
+}
+
+/**
+ * Local only. The bucket is deliberately left alone: this is called by the boot
+ * sweep, whose idea of what is still referenced comes from the last document this
+ * device happened to have, and deleting another machine's picture on the strength
+ * of that is not a trade worth making. Orphaned objects are small and rare.
+ */
 export async function deleteAsset(id: string): Promise<void> {
   for (const variant of ['full', 'thumb'] as const) {
     const key = `${variant}:${id}`;
@@ -217,6 +274,9 @@ export async function importImage(file: File): Promise<ImportResult> {
       w: size.w, h: size.h, bytes: full.size,
       full, thumb, created: Date.now(),
     });
+    // Sent, not awaited: the picture is already on this device and in the page, and
+    // an upload that fails is caught by syncAssets on the next pull.
+    void uploadAsset(id, full, thumb);
     return { ok: true, image: { id, name, w: size.w, h: size.h, bytes: full.size } };
   } catch {
     return { ok: false, reason: 'That image could not be processed' };

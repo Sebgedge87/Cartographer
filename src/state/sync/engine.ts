@@ -3,6 +3,8 @@ import { useDoc } from '../docStore';
 import { useSync } from '../syncStore';
 import { mergeDoc, type MergeMeta } from './merge';
 import { supabase } from '../../lib/supabase';
+import { syncAssets } from '../../lib/assets';
+import { assetRefs } from '../../lib/markdown';
 import { SYNC_KEY, debounce, loadKey, saveKey } from '../../lib/persist';
 import {
   TABLES, type AreaRow, type BoardRow, type EdgeRow, type PageRow, type ProjectRow, type Table,
@@ -222,6 +224,10 @@ export async function startSync(): Promise<void> {
 
   try {
     await pull();
+    // After the pull, because only then does this device know which images the
+    // other one is waiting for. Never awaited: uploading a backlog of pictures
+    // must not hold up the document arriving.
+    void catchUpAssets();
   } catch (e) {
     useSync.getState().set({ status: 'error', error: describe(e) });
   }
@@ -237,6 +243,19 @@ export async function startSync(): Promise<void> {
       schedulePull();
     })
     .subscribe();
+}
+
+/** Send any image this device holds that the bucket has not got. */
+async function catchUpAssets(): Promise<void> {
+  const live = useDoc.getState().pages.flatMap((p) => [
+    ...p.images.map((i) => i.id),
+    ...assetRefs(p.body),
+  ]);
+  try {
+    await syncAssets(live);
+  } catch {
+    /* best effort; the next pull tries again */
+  }
 }
 
 export async function stopSync(): Promise<void> {

@@ -186,3 +186,35 @@ exception
   when undefined_object then
     raise notice 'publication supabase_realtime not found — skipping realtime setup';
 end $$;
+
+/* ---------- image storage ---------- */
+-- Page rows carry image *references*; the bytes live in a bucket. Same ownership
+-- rule as every table above: a file is filed under the owner's uid, and the policy
+-- is what stops one account reaching another's.
+--
+-- The client re-encodes everything to WebP under 1.5 MB before it uploads, and the
+-- bucket says so too — a limit only the client enforces is not a limit.
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('assets', 'assets', false, 2000000, array['image/webp'])
+on conflict (id) do update
+  set public = false,
+      file_size_limit = excluded.file_size_limit,
+      allowed_mime_types = excluded.allowed_mime_types;
+
+-- Creating a policy on storage.objects needs ownership of that table, which the
+-- SQL editor normally has. If this block only raises a notice, add the same rule by
+-- hand: Storage -> Policies -> assets -> "For full customization", using
+-- (bucket_id = 'assets' and (storage.foldername(name))[1] = auth.uid()::text).
+do $$
+begin
+  drop policy if exists owner_assets on storage.objects;
+  create policy owner_assets on storage.objects
+    for all
+    to authenticated
+    using (bucket_id = 'assets' and (storage.foldername(name))[1] = auth.uid()::text)
+    with check (bucket_id = 'assets' and (storage.foldername(name))[1] = auth.uid()::text);
+exception
+  when insufficient_privilege then
+    raise notice 'could not create the storage policy here — add it in Storage -> Policies';
+end $$;
