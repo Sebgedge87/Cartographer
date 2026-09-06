@@ -12,6 +12,8 @@ import { serialiseDate } from '../lib/calendar';
 
 export const CARD_W = 244;
 export const CARD_H = 116;
+/** Where a tidied board starts, clear of the canvas origin. */
+const ORIGIN = 120;
 
 export function uid(prefix: string): string {
   return prefix + Math.random().toString(36).slice(2, 8);
@@ -81,6 +83,12 @@ interface DocActions {
   deleteTypeField: (projectId: string, key: string, index: number) => void;
 
   addManualEdge: (from: string, to: string) => boolean;
+
+  /**
+   * Lay every page on a board out in a grid, grouped by block type. Returns how
+   * many moved.
+   */
+  arrangeBoard: (boardId: string) => number;
 }
 
 export type DocStore = Doc & DocActions;
@@ -264,6 +272,64 @@ export const useDoc = create<DocStore>()(
             edges: s.edges.filter((e) => !doomed.has(e.from) && !doomed.has(e.to)),
           };
         }),
+
+      /*
+       * Tidy a board.
+       *
+       * Cards accumulate wherever they were dropped, and an imported project has
+       * never been arranged at all — which is how a board ends up needing 23% zoom
+       * to see, at which point none of it is readable.
+       *
+       * Ordered by block type, in the project's own type order, then by title: like
+       * sits with like, and the same board tidies to the same layout every time
+       * rather than shuffling on each press. Written in one `set`, so it is one step
+       * to undo rather than one per card.
+       */
+      arrangeBoard: (boardId) => {
+        const s = get();
+        const board = s.boards.find((b) => b.id === boardId);
+        if (!board) return 0;
+        const order = s.schemas[board.projectId]?.typeOrder ?? [];
+        const rank = (type: string) => {
+          const i = order.indexOf(type);
+          return i === -1 ? order.length : i;
+        };
+
+        const pages = s.pages
+          .filter((p) => p.boardId === boardId)
+          .sort((a, b) =>
+            rank(a.type) - rank(b.type)
+            // Numeric, so "Session 2" comes before "Session 10" rather than after
+            // it — titles in a setting are numbered far more often than not.
+            || a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })
+            || a.id.localeCompare(b.id));
+        if (pages.length === 0) return 0;
+
+        // Columns chosen so the block comes out roughly as wide as a screen is:
+        // the pitch is wider than it is tall, so the square-root count lands near
+        // 16:9 without having to know the viewport.
+        const cols = Math.max(1, Math.round(Math.sqrt(pages.length)));
+        const pitchX = CARD_W + 56;
+        const pitchY = CARD_H + 84;
+
+        const placed = new Map<string, { x: number; y: number }>();
+        pages.forEach((page, i) => {
+          placed.set(page.id, {
+            x: ORIGIN + (i % cols) * pitchX,
+            y: ORIGIN + Math.floor(i / cols) * pitchY,
+          });
+        });
+
+        let moved = 0;
+        const next = s.pages.map((page) => {
+          const at = placed.get(page.id);
+          if (!at || (page.x === at.x && page.y === at.y)) return page;
+          moved++;
+          return { ...page, x: at.x, y: at.y, updated: Date.now() };
+        });
+        if (moved) set({ pages: next });
+        return moved;
+      },
 
       /* ---------- boards ---------- */
 

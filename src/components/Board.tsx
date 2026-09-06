@@ -343,6 +343,22 @@ export function Board() {
       </div>
 
       <div className="board__overlay-br zoom" onPointerDown={(e) => e.stopPropagation()}>
+        <button
+          className="overlay-btn"
+          title="Lay every card out in a grid, grouped by type"
+          onClick={() => {
+            if (!boardId) return;
+            const moved = doc.arrangeBoard(boardId);
+            // Fit afterwards from the store rather than from `boardPages`, which is
+            // this render's copy and still holds the positions we just replaced.
+            const r = boardRect();
+            const after = useDoc.getState().pages.filter((p) => p.boardId === boardId);
+            setCam(fitCamera(after, r.width, r.height));
+            showToast(moved ? `Tidied ${moved} card${moved === 1 ? '' : 's'}` : 'Already tidy');
+          }}
+        >
+          TIDY
+        </button>
         <button className="overlay-btn" onClick={() => zoomAt(boardRect().width / 2, boardRect().height / 2, 0.85)}>–</button>
         <span className="overlay-btn zoom__value">{Math.round(cam.z * 100)}%</span>
         <button className="overlay-btn" onClick={() => zoomAt(boardRect().width / 2, boardRect().height / 2, 1.18)}>+</button>

@@ -182,6 +182,13 @@ export function ContextMenu() {
         label: 'New board',
         run: act(() => board && promptNew({ kind: 'board', initial: 'New board', areaId: board.areaId })),
       },
+      {
+        label: 'Tidy this board',
+        run: act(() => {
+          const moved = doc.arrangeBoard(id);
+          showToast(moved ? `Tidied ${moved} card${moved === 1 ? '' : 's'}` : 'Already tidy');
+        }),
+      },
     ];
   }
 

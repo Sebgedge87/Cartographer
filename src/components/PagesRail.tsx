@@ -69,7 +69,7 @@ export function PagesRail() {
   const total = doc.pages.filter((p) => p.projectId === projectId).length;
 
   return (
-    <div className="rail">
+    <div className={'rail' + (dense ? '' : ' rail--comfortable')}>
       <div className="rail__search">
         <span className="search__glyph">⌕</span>
         <input
@@ -89,8 +89,7 @@ export function PagesRail() {
             <div key={area.id}>
               <div
                 className={
-                  'area-row' + (dense ? '' : ' area-row--comfortable') +
-                  (areaActive ? ' area-row--active' : '')
+                  'area-row' + (areaActive ? ' area-row--active' : '')
                 }
                 style={{ ['--tint' as string]: color }}
                 onClick={() => openArea(area.id)}
@@ -137,7 +136,7 @@ export function PagesRail() {
                   <div key={board.id}>
                     <div
                       className={
-                        'board-row' + (dense ? '' : ' board-row--comfortable') +
+                        'board-row' +
                         (board.id === boardId ? ' board-row--active' : '')
                       }
                       onClick={() => openBoard(board.id, area.id)}
@@ -145,7 +144,7 @@ export function PagesRail() {
                       onContextMenu={onContext('board', board.id)}
                     >
                       <button
-                        className="area-row__caret"
+                        className="board-row__caret"
                         onClick={(e) => { e.stopPropagation(); toggleArea(board.id); }}
                         title={boardOpen ? 'Collapse' : 'Expand'}
                       >
@@ -182,7 +181,7 @@ export function PagesRail() {
                       <button
                         key={page.id}
                         className={
-                          'page-row' + (dense ? '' : ' page-row--comfortable') +
+                          'page-row' +
                           (page.id === sel ? ' page-row--selected' : '')
                         }
                         style={{ ['--tint' as string]: type.color }}
