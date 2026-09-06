@@ -28,9 +28,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # 22, not 20: `npm test` passes a glob to node's own test runner, and only
+      # Node 22 and above expand it. On 20 the glob is taken as a literal path and
+      # every run dies with "Could not find src/**/*.test.ts" before it can build.
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       # `npm ci` runs postinstall, which copies the runtime assets out of
