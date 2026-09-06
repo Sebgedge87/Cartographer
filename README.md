@@ -122,15 +122,21 @@ rather than the only copy.
 Sync is off until you configure it. Setup is one service and two values.
 
 1. Create a project at [supabase.com](https://supabase.com) (the free tier is enough).
-2. Open the SQL editor and run **`supabase/schema.sql`** once. It creates the four
+2. Open the SQL editor and run **`supabase/schema.sql`** once. It creates the five
    tables, the row-level-security policies and the realtime publication, and it is
    safe to re-run.
 3. In *Project Settings → Data API*, copy the **Project URL** and the **anon /
    publishable key**.
 4. `cp .env.example .env.local` and paste them in. Restart `npm run dev`.
 
+For the **deployed** build, put the same two values in
+*Settings → Secrets and variables → Actions* as `VITE_SUPABASE_URL` and
+`VITE_SUPABASE_ANON_KEY`. The Pages workflow reads them at build time; without
+them the published app builds local-only, which is a supported mode rather than a
+broken one.
+
 You will now be asked to sign in — email and password, no other provider to
-configure. Sign up once on the first machine and sign in with the same account
+configure, and no redirect URLs to register. Sign up once on the first machine and sign in with the same account
 everywhere else. The status chip in the top bar shows `SYNCED`; click it to force a
 round trip, double-click to sign out.
 

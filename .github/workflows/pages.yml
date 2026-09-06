@@ -1,9 +1,19 @@
 # Build the app and publish it to GitHub Pages, so there is always a URL to open
 # on a device that cannot run the dev server — a phone, or someone else's machine.
 #
-# The build is the local-only one: no Supabase keys are provided, so the published
-# app keeps everything in that browser's own storage. It is for looking at and
-# trying, not for carrying work between devices.
+# Sync is opt-in at build time. Set the two repository secrets below and the
+# published app offers an account and syncs between devices; leave them unset and
+# it builds local-only, keeping everything in that browser's own storage. Both are
+# supported modes, so a missing secret is not a failure.
+#
+#   Settings -> Secrets and variables -> Actions -> New repository secret
+#     VITE_SUPABASE_URL       Supabase -> Project Settings -> Data API -> Project URL
+#     VITE_SUPABASE_ANON_KEY  the anon / publishable key beside it
+#
+# The anon key is publishable and ships inside the bundle either way; it is only a
+# secret here to keep it out of the build log. What actually protects the data is
+# the row level security in supabase/schema.sql, which is why that file is not
+# optional.
 name: Pages
 
 on:
@@ -44,7 +54,11 @@ jobs:
 
       - run: npm run typecheck
       - run: npm test
+
       - run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
 
       # Pages has to be turned on by hand, once, at Settings -> Pages -> Build and
       # deployment -> Source: GitHub Actions. Until it is, this step fails with
