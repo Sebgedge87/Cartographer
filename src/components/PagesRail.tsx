@@ -5,6 +5,26 @@ import { promptNew } from '../state/actions';
 import { SettingsMenu } from './SettingsMenu';
 
 /**
+ * Drawn rather than typed. A `▸` is a small glyph inside a large em box, so it
+ * reads far smaller than its font size claims and cannot be made bigger without
+ * pushing the row apart. A stroked chevron is the size it looks.
+ */
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={'chevron' + (open ? ' chevron--open' : '')}
+      viewBox="0 0 16 16" width="16" height="16" aria-hidden focusable="false"
+    >
+      <path
+        d="M6 3.5 L11 8 L6 12.5"
+        fill="none" stroke="currentColor" strokeWidth="2.25"
+        strokeLinecap="round" strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+/**
  * The navigation tree: area -> board -> page.
  *
  * An area is a category and has no canvas; a board is one subject and holds the
@@ -124,7 +144,7 @@ export function PagesRail() {
                   onClick={(e) => { e.stopPropagation(); toggleArea(area.id); }}
                   title={areaOpen ? 'Collapse' : 'Expand'}
                 >
-                  {areaOpen ? '▾' : '▸'}
+                  <Chevron open={areaOpen} />
                 </button>
                 <span className="area-row__dot" />
                 {renamingArea === area.id ? (
@@ -171,7 +191,7 @@ export function PagesRail() {
                         onClick={(e) => { e.stopPropagation(); toggleArea(board.id); }}
                         title={boardOpen ? 'Collapse' : 'Expand'}
                       >
-                        {boardOpen ? '▾' : '▸'}
+                        <Chevron open={boardOpen} />
                       </button>
                       {renamingBoard === board.id ? (
                         <input

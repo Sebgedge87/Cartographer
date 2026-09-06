@@ -223,11 +223,12 @@ select.field option { background: var(--popover); }
  * this; being a target the size of the row is what fixes it.
  */
 .area-row__caret, .board-row__caret {
-  width: 28px; flex: none; align-self: stretch; display: grid; place-items: center;
+  width: 30px; flex: none; align-self: stretch; display: grid; place-items: center;
   margin: calc(var(--row-pad) * -1) 0; border: none; border-radius: var(--r-sm);
-  background: transparent;
-  font-size: 13px; line-height: 1; color: var(--dim); cursor: pointer; padding: 0;
+  background: transparent; color: var(--dim); cursor: pointer; padding: 0;
 }
+.chevron { transition: transform .12s ease; }
+.chevron--open { transform: rotate(90deg); }
 .area-row__caret:hover, .board-row__caret:hover { background: var(--wash-3); color: var(--text); }
 /* Collapse/expand everything. Sits under the search so it reads as a control on
    the tree below it rather than as the first row of that tree. */
@@ -306,15 +307,21 @@ select.field option { background: var(--popover); }
 .card {
   --depth: 0;
   --depth-strength: calc(100% - var(--depth) * 19%);
+  /* The whole card is tinted, not just a bar on it: at the zoom a tidied board
+     sits at, an edge is a hairline and the fill is the only thing readable. The
+     head goes a step further so it still reads as a head. */
+  --card-tint: color-mix(in srgb, var(--tint) calc(var(--depth-strength) / 5), var(--card));
   position: absolute; display: flex; flex-direction: column;
-  background: var(--card); border: 1px solid var(--border);
+  background: var(--card-tint);
+  border: 1px solid color-mix(in srgb, var(--tint) calc(var(--depth-strength) / 2), var(--border));
   border-top: 3px solid color-mix(in srgb, var(--tint) var(--depth-strength), var(--border));
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-card); cursor: grab; user-select: none; overflow: visible;
 }
 
 .card--selected {
-  background: var(--card-selected); border-color: var(--accent);
+  background: color-mix(in srgb, var(--tint) calc(var(--depth-strength) / 6), var(--card-selected));
+  border-color: var(--accent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 34%, transparent), var(--shadow-card-selected);
 }
 /* The head carries the faintest wash of the card's colour, strongest at the top of
@@ -322,7 +329,7 @@ select.field option { background: var(--popover); }
    zoom where the bar above them is a hairline. */
 .card__head {
   display: flex; align-items: center; gap: 6px; padding: 8px 9px 6px;
-  background: color-mix(in srgb, var(--tint) calc(var(--depth-strength) / 12), transparent);
+  background: color-mix(in srgb, var(--tint) calc(var(--depth-strength) / 9), transparent);
   border-radius: var(--r-lg) var(--r-lg) 0 0;
 }
 .card__title { font: 600 12.5px var(--font-ui); color: var(--text-strong); }
@@ -335,8 +342,11 @@ select.field option { background: var(--popover); }
 .card__body { flex: 1 1 auto; padding: 0 9px; display: flex; flex-wrap: wrap; gap: 3px 10px; align-content: flex-start; overflow: hidden; }
 .card__stat { display: flex; gap: 5px; font: 400 9.5px var(--font-mono); }
 .card__stat b { font-weight: 500; color: var(--text-mono); }
-.card__stat span { color: var(--dim); }
-.card__snippet { font: 400 9.5px/1.5 var(--font-mono); color: var(--dim); overflow: hidden; }
+/* A step brighter than --dim, because the card now carries a tint that lifts its
+   background toward that grey: measured at 2.65:1 against a top-level card in the
+   dark theme before this, which is not readable at any zoom. */
+.card__stat span { color: var(--text-soft); }
+.card__snippet { font: 400 9.5px/1.5 var(--font-mono); color: var(--text-soft); overflow: hidden; }
 .card__foot {
   display: flex; align-items: center; gap: 8px; margin: 0 9px; padding: 5px 0 6px;
   border-top: 1px solid var(--border); font: 500 9px var(--font-mono); letter-spacing: .06em; color: var(--faint);
