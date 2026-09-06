@@ -1,0 +1,116 @@
+{
+  "format": "cartographer/v1",
+
+  "project": {
+    "id": "p-example",
+    "name": "Example Setting",
+    "system": "TTRPG · system-agnostic",
+    "accent": "#c9a26b"
+  },
+
+  "areas": [
+    { "id": "a-lore", "name": "Lore", "defaultType": "note" },
+    { "id": "a-cast", "name": "Cast", "defaultType": "npc" }
+  ],
+
+  "boards": [
+    { "id": "b-overview", "areaId": "a-lore", "name": "Overview" },
+    { "id": "b-people", "areaId": "a-cast", "name": "People" }
+  ],
+
+  "types": {
+    "note": { "label": "Note", "code": "NTE", "color": "#8a919e", "fields": [] },
+    "npc": {
+      "label": "NPC",
+      "code": "NPC",
+      "color": "#d98cc0",
+      "fields": [
+        { "key": "role", "label": "Role", "kind": "text" },
+        { "key": "faction", "label": "Faction", "kind": "ref" },
+        { "key": "attitude", "label": "Attitude", "kind": "text" },
+        { "key": "notes", "label": "Notes", "kind": "long" }
+      ]
+    },
+    "event": {
+      "label": "Event",
+      "code": "EVT",
+      "color": "#c98fd0",
+      "fields": [
+        { "key": "when", "label": "When", "kind": "date" },
+        { "key": "outcome", "label": "Outcome", "kind": "long" }
+      ]
+    },
+    "blank": { "label": "Blank", "code": "BLK", "color": "#8a919e", "fields": [] }
+  },
+  "typeOrder": ["note", "npc", "event", "blank"],
+
+  "calendar": {
+    "name": "Common Reckoning",
+    "months": [
+      { "name": "Frostwane", "days": 31 },
+      { "name": "Thawing", "days": 28 },
+      { "name": "Seedfall", "days": 31 }
+    ],
+    "weekdays": ["Sunsday", "Moonsday", "Forgeday", "Wardsday", "Thornsday", "Farsday", "Restday"],
+    "hoursPerDay": 24,
+    "era": "CR",
+    "leap": { "every": 4, "skipEvery": 100, "keepEvery": 400, "monthIndex": 1 },
+    "moons": [
+      { "id": "moon1", "name": "The Pale", "cycle": 29.5, "newMoonOn": 1, "color": "#d8dde6" }
+    ],
+    "today": { "year": 1147, "month": 2, "day": 12 }
+  },
+
+  "dictionary": ["Ashcoat", "Mirrorwalker"],
+
+  "pages": [
+    {
+      "id": "n-veil",
+      "boardId": "b-overview",
+      "type": "note",
+      "title": "The Veil",
+      "body": "The membrane between the seen and the reflected.\n\n## Signs\n\n- Mirrors fog from the inside\n- A [[Mirrorwalker]] casts two shadows\n\nRoll 2d6+3 when someone looks too long."
+    },
+    {
+      "id": "n-mirrorwalker",
+      "boardId": "b-people",
+      "type": "npc",
+      "title": "Mirrorwalker",
+      "fields": {
+        "role": "Guide, of a sort",
+        "faction": "The Nine Sightless",
+        "attitude": "Curious, unhurried",
+        "notes": "Answers three questions, then asks one."
+      },
+      "body": "Met at the edge of [[The Hollow Arcade]]."
+    },
+    {
+      "id": "n-arcade",
+      "boardId": "b-overview",
+      "type": "note",
+      "title": "The Hollow Arcade",
+      "x": 620,
+      "y": 120,
+      "body": "A shuttered mall the Veil bleeds into. Stat line: @Mirrorwalker.role"
+    },
+    {
+      "id": "n-sightless",
+      "boardId": "b-people",
+      "type": "note",
+      "title": "The Nine Sightless",
+      "body": "A faction. Named here so the Mirrorwalker's **Faction** field has a page to point at — a `ref` value is a page title, and one that matches nothing shows as empty."
+    },
+    {
+      "id": "n-breach",
+      "boardId": "b-overview",
+      "type": "event",
+      "title": "The First Breach",
+      "fields": { "when": "1102-2-9", "outcome": "Nine went in. Two came back." },
+      "body": "Appears on the timeline, and on the calendar if the date is set to repeat."
+    }
+  ],
+
+  "links": [
+    { "id": "e-1", "from": "n-mirrorwalker", "to": "n-arcade", "kind": "manual" }
+  ]
+}

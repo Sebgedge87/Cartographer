@@ -60,12 +60,13 @@ src/
     dictionary.ts       a project's own vocabulary, harvested from what it names
     spell.worker.ts     the spellchecker: Hunspell, off the main thread
     spell.ts            its client, plus the on/off preference
-    io.ts               project file build / parse / download
+    io.ts               project file build / parse / download; completes hand-written files
     persist.ts          IndexedDB local storage (localStorage fallback)
     supabase.ts         client, created only when credentials are configured
   components/           home, top bar, rail, board, table, schema, inspector, editor,
                         new-page menu, command palette, toast
   styles/               tokens.css (design tokens) + app.css (components)
+templates/              import templates, and the format described field by field
 design/                 SPEC.md, cartographer-standalone.html
 supabase/               schema.sql — run once in the Supabase SQL editor
 ```

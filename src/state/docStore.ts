@@ -168,9 +168,47 @@ export const useDoc = create<DocStore>()(
         }),
 
       importProject: (file) => {
-        const project: Project = file.project ?? {
+        /*
+         * Ids in the file are kept unless the document already has them, and given
+         * fresh ones when it does. Two files written from the same template both
+         * say a1 and b1, and importing the second would otherwise silently graft
+         * its pages onto the first one's boards.
+         */
+        const s0 = get();
+        const taken = new Set<string>([
+          ...s0.projects.map((p) => p.id), ...s0.areas.map((a) => a.id),
+          ...s0.boards.map((b) => b.id), ...s0.pages.map((p) => p.id),
+          ...s0.edges.map((e) => e.id),
+        ]);
+        const remap = new Map<string, string>();
+        const claim = (id: string, prefix: string): string => {
+          if (id && !taken.has(id)) {
+            taken.add(id);
+            return id;
+          }
+          const fresh = uid(prefix);
+          if (id) remap.set(id, fresh);
+          taken.add(fresh);
+          return fresh;
+        };
+        /** A reference follows whatever its target was renamed to. */
+        const ref = (id: string) => remap.get(id) ?? id;
+
+        const incoming = file.project ?? {
           id: uid('p'), name: 'Imported', system: 'Imported', accent: '#8fa5c9',
         };
+        const project: Project = { ...incoming, id: claim(incoming.id, 'p') };
+        const areas = (file.areas ?? []).map((a) => ({ ...a, id: claim(a.id, 'a') }));
+        const boards = (file.boards ?? []).map((b) => ({ ...b, id: claim(b.id, 'b') }));
+        const filePages = (file.pages ?? []).map((p) => ({ ...p, id: claim(p.id, 'n') }));
+        const links = (file.links ?? []).map((e) => ({ ...e, id: claim(e.id, 'e') }));
+
+        // Second pass: every id is known now, so references can be pointed at them.
+        const areasOut = areas.map((a) => ({ ...a, projectId: project.id }));
+        const boardsOut = boards.map((b) => ({ ...b, projectId: project.id, areaId: ref(b.areaId) }));
+        const pagesOut = filePages.map((p) => ({ ...p, projectId: project.id, boardId: ref(p.boardId) }));
+        const linksOut = links.map((e) => ({ ...e, from: ref(e.from), to: ref(e.to) }));
+
         // The calendar is passed through as-is, missing and all: normaliseSchema
         // fills it in, and uses its absence to tell that the file predates dates.
         const schema = normaliseSchema({
@@ -180,15 +218,15 @@ export const useDoc = create<DocStore>()(
           dictionary: file.dictionary ?? [],
         });
         set((s) => {
-          const pages = [...s.pages, ...(file.pages ?? [])];
+          const pages = [...s.pages, ...pagesOut];
           // A file exported before boards existed carries pages hung off areas, so
           // it goes through the same migration as a stored document.
           const merged = migrate({
             projects: [...s.projects, project],
-            areas: [...s.areas, ...(file.areas ?? [])],
-            boards: [...s.boards, ...(file.boards ?? [])],
+            areas: [...s.areas, ...areasOut],
+            boards: [...s.boards, ...boardsOut],
             pages,
-            edges: deriveWikiEdges(pages, [...s.edges, ...(file.links ?? []).filter((e) => e.kind !== 'wiki')]),
+            edges: deriveWikiEdges(pages, [...s.edges, ...linksOut.filter((e) => e.kind !== 'wiki')]),
             schemas: { ...s.schemas, [project.id]: schema },
           });
           return merged;

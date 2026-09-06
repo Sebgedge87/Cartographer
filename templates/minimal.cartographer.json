@@ -1,0 +1,9 @@
+{
+  "format": "cartographer/v1",
+  "project": { "name": "Imported notes" },
+  "pages": [
+    { "title": "The Hollow Arcade", "body": "A shuttered mall the Veil bleeds into.\n\nSee [[Ashcoat]]." },
+    { "title": "Ashcoat", "body": "Fence. Knows what the arcade used to be." },
+    { "title": "Reflection Checks", "body": "Roll 2d6+3. On a 10+ the mirror answers." }
+  ]
+}
