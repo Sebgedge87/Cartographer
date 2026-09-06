@@ -215,16 +215,18 @@ select.field option { background: var(--popover); }
  * about half what a pointer can be expected to find and well under a finger.
  */
 .area-row__caret, .board-row__caret {
-  width: 22px; height: 22px; flex: none; display: grid; place-items: center;
+  width: 26px; height: 26px; flex: none; display: grid; place-items: center;
   border: none; border-radius: var(--r-sm); background: transparent;
-  font-size: 10px; line-height: 1; color: var(--faint); cursor: pointer; padding: 0;
+  /* The glyph as well as the box: a big target around a 10px arrow still reads
+     as a 10px arrow, and looking small is most of what made it feel unclickable. */
+  font-size: 13px; line-height: 1; color: var(--dim); cursor: pointer; padding: 0;
 }
 .area-row__caret:hover, .board-row__caret:hover { background: var(--wash-3); color: var(--text); }
 .area-row__dot { width: 7px; height: 7px; flex: none; border-radius: 2px; background: var(--tint); }
 .area-row__name { font: 600 var(--row-name) var(--font-ui); }
 .area-row__count { margin-left: auto; font: 400 var(--row-sub) var(--font-mono); color: var(--faint); }
 .area-row__add {
-  flex: none; width: 22px; height: 22px; display: grid; place-items: center;
+  flex: none; width: 26px; height: 26px; display: grid; place-items: center;
   border: none; border-radius: var(--r-sm); background: transparent;
   color: var(--faint); font-size: 15px; line-height: 1; cursor: pointer; padding: 0;
 }

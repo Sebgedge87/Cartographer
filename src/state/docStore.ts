@@ -4,7 +4,7 @@ import type {
   Area, BlockType, Board, Doc, Edge, Field, FieldKind, Page, PageImage, Project, ProjectFile, ProjectSchema,
   WorldCalendar,
 } from './types';
-import { deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
+import { arrangeLayout, deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
 import { codeFor, emptyDoc, normaliseSchema, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
 import { LIMITS, sweepAssets } from '../lib/assets';
@@ -12,8 +12,6 @@ import { serialiseDate } from '../lib/calendar';
 
 export const CARD_W = 244;
 export const CARD_H = 116;
-/** Where a tidied board starts, clear of the canvas origin. */
-const ORIGIN = 120;
 
 export function uid(prefix: string): string {
   return prefix + Math.random().toString(36).slice(2, 8);
@@ -295,30 +293,10 @@ export const useDoc = create<DocStore>()(
           return i === -1 ? order.length : i;
         };
 
-        const pages = s.pages
-          .filter((p) => p.boardId === boardId)
-          .sort((a, b) =>
-            rank(a.type) - rank(b.type)
-            // Numeric, so "Session 2" comes before "Session 10" rather than after
-            // it — titles in a setting are numbered far more often than not.
-            || a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' })
-            || a.id.localeCompare(b.id));
-        if (pages.length === 0) return 0;
+        const onBoard = s.pages.filter((p) => p.boardId === boardId);
+        if (onBoard.length === 0) return 0;
+        const placed = arrangeLayout(onBoard, s.edges, rank);
 
-        // Columns chosen so the block comes out roughly as wide as a screen is:
-        // the pitch is wider than it is tall, so the square-root count lands near
-        // 16:9 without having to know the viewport.
-        const cols = Math.max(1, Math.round(Math.sqrt(pages.length)));
-        const pitchX = CARD_W + 56;
-        const pitchY = CARD_H + 84;
-
-        const placed = new Map<string, { x: number; y: number }>();
-        pages.forEach((page, i) => {
-          placed.set(page.id, {
-            x: ORIGIN + (i % cols) * pitchX,
-            y: ORIGIN + Math.floor(i / cols) * pitchY,
-          });
-        });
 
         let moved = 0;
         const next = s.pages.map((page) => {
