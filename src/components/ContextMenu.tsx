@@ -180,7 +180,10 @@ export function ContextMenu() {
           { label: 'Export as JSON', run: act(exportCurrentProject) },
           { label: 'All projects', run: act(goHome) },
         ]
-      : [{ label: 'New project', run: act(() => doc.addProject()) }];
+      : [{
+          label: 'New project',
+          run: act(() => promptNew({ kind: 'project', initial: 'New project' })),
+        }];
   }
 
   return (

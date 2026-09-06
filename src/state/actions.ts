@@ -226,8 +226,8 @@ export function openProject(projectId: string): void {
   useUI.getState().openProject(projectId, area?.id ?? null, board?.id ?? null);
 }
 
-export function createProject(): void {
-  const id = useDoc.getState().addProject();
+export function createProject(name?: string): void {
+  const id = useDoc.getState().addProject(name);
   openProject(id);
 }
 

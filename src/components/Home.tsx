@@ -1,6 +1,9 @@
 import { useMemo, useRef } from 'react';
 import { useDoc } from '../state/docStore';
-import { createProject, importProjectFile, openProject } from '../state/actions';
+import { importProjectFile, openProject, promptNew } from '../state/actions';
+
+/** A project is named before it exists, like everything else in the app. */
+const newProject = () => promptNew({ kind: 'project', initial: 'New project' });
 
 function initials(name: string): string {
   return name
@@ -50,7 +53,7 @@ export function Home() {
           <div className="spacer" />
           <div className="home__actions">
             <button className="btn" onClick={() => fileInput.current?.click()}>IMPORT JSON</button>
-            <button className="btn btn--fill" onClick={createProject}>+ NEW PROJECT</button>
+            <button className="btn btn--fill" onClick={newProject}>+ NEW PROJECT</button>
           </div>
         </header>
 
@@ -83,7 +86,7 @@ export function Home() {
               </div>
             </button>
           ))}
-          <button className="tile tile--new" onClick={createProject}>+ BLANK PROJECT</button>
+          <button className="tile tile--new" onClick={newProject}>+ BLANK PROJECT</button>
         </div>
       </div>
 

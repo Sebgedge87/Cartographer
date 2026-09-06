@@ -1,20 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import { useUI } from '../state/uiStore';
-import { createArea, createBoard, createPage } from '../state/actions';
+import { createArea, createBoard, createPage, createProject } from '../state/actions';
 
 const HEADING: Record<string, string> = {
+  project: 'New project',
   area: 'New area',
   board: 'New board',
   page: 'New page',
 };
 
 const HINT: Record<string, string> = {
+  project: 'A world, a game, a supplement. It brings its own block types and calendar.',
   area: 'A category — NPCs, Rules, Locations. It holds boards.',
   board: 'One subject, and one canvas. Pages live here.',
   page: 'One document on this board.',
 };
 
-/** Asks for a name before making an area, a board or a page. */
+/** Asks for a name before making a project, an area, a board or a page. */
 export function NamePrompt() {
   const prompt = useUI((s) => s.prompt);
   const set = useUI((s) => s.set);
@@ -35,7 +37,8 @@ export function NamePrompt() {
     e.preventDefault();
     const title = name.trim() || prompt.initial;
     close();
-    if (prompt.kind === 'area') createArea(title);
+    if (prompt.kind === 'project') createProject(title);
+    else if (prompt.kind === 'area') createArea(title);
     else if (prompt.kind === 'board') createBoard(prompt.areaId, title);
     else if (prompt.boardId) {
       createPage({

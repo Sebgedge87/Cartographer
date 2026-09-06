@@ -34,9 +34,9 @@ export interface ContextMenu {
 
 /** An in-flight "name this thing" modal. Everything needed to make it on submit. */
 export interface NamePrompt {
-  kind: 'area' | 'board' | 'page';
+  kind: 'project' | 'area' | 'board' | 'page';
   initial: string;
-  /** Where it goes. Areas need neither; boards need an area; pages need a board. */
+  /** Where it goes. Projects and areas need neither; boards need an area; pages need a board. */
   areaId?: string;
   boardId?: string;
   /** Block type for a page. */

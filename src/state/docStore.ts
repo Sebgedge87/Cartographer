@@ -23,7 +23,7 @@ interface DocActions {
   hydrate: (doc: Doc) => void;
   applyRemote: (doc: Doc) => void;
 
-  addProject: () => string;
+  addProject: (name?: string) => string;
   renameProject: (id: string, name: string) => void;
   importProject: (file: ProjectFile) => Project;
 
@@ -123,12 +123,15 @@ export const useDoc = create<DocStore>()(
       },
 
       /* ---------- projects ---------- */
-      addProject: () => {
+      addProject: (name) => {
         const id = uid('p');
         const areaId = uid('a');
         const boardId = uid('b');
         set((s) => ({
-          projects: [...s.projects, { id, name: 'New project', system: 'Untitled', accent: '#8fa5c9' }],
+          projects: [
+            ...s.projects,
+            { id, name: name?.trim() || 'New project', system: 'Untitled', accent: '#8fa5c9' },
+          ],
           areas: [...s.areas, { id: areaId, projectId: id, name: 'Notes', defaultType: 'note' }],
           // A page needs a board and a board needs an area, so a new project comes
           // with one of each rather than an empty shell you cannot add to.
