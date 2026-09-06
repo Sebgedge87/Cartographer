@@ -166,7 +166,27 @@ export function edgePath(a: Page, b: Page, seed = ''): string {
   // spans get a real arc so they still read as drawn rather than ruled. Without the
   // ramp a short link between two stacked cards balloons into a lens shape.
   const ramp = 0.45 + 0.55 * Math.min(1, len / 500);
-  const bow = Math.min(len * (0.11 + r * 0.07) * ramp, 132) * direction;
+
+  /*
+   * And it ramps in with how far off-axis the two cards sit. A card squarely above
+   * or beside another is joined by a straight line, because that is the honest
+   * drawing of it; drag it out of line and the link bows, most at a true diagonal.
+   *
+   * The point is that this is continuous. The path is recomputed as the card moves,
+   * so the connector eases between ruled and drawn under the cursor rather than
+   * switching between two states — a tidied board reads as a spine with curved
+   * branches, and pulling a card off the spine bends its link as it goes.
+   */
+  const long = Math.max(Math.abs(dx), Math.abs(dy));
+  const short = Math.min(Math.abs(dx), Math.abs(dy));
+  // 0 when one card is squarely above or beside the other, 1 at 45 degrees.
+  const skew = long < 1 ? 0 : short / long;
+  // Smoothstep to full bow by about 27 degrees off the axis, so the first few
+  // pixels of a nudge do almost nothing and the curve arrives without a kink.
+  const t = Math.min(1, skew / 0.5);
+  const align = t * t * (3 - 2 * t);
+
+  const bow = Math.min(len * (0.11 + r * 0.07) * ramp, 132) * direction * align;
 
   // Asymmetric control points: the belly sits slightly past the midpoint.
   const c1x = start.x + dx * 0.32 + px * bow;
