@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
+import { effectiveFields } from '../state/graph';
+import { matchPage, type PageMatch } from '../lib/search';
 import { useUI } from '../state/uiStore';
 import { promptNew } from '../state/actions';
 import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Search } from 'lucide-react';
@@ -52,8 +54,15 @@ export function PagesRail() {
           .map((board) => ({
             board,
             pages: doc.pages
-              .filter((p) => p.boardId === board.id && (!query || p.title.toLowerCase().includes(query)))
-              .map((p) => ({ page: p, type: blockType(schema, p.type), links: outCount.get(p.id) ?? 0 })),
+              .filter((p) => p.boardId === board.id)
+              .map((p) => {
+                const type = blockType(schema, p.type);
+                // Titles, field values and the body — all three, so a name you can
+                // only half remember is findable wherever you wrote it down.
+                const match = query ? matchPage(p, query, effectiveFields(p, type.fields)) : null;
+                return { page: p, type, links: outCount.get(p.id) ?? 0, match };
+              })
+              .filter((row) => !query || row.match !== null),
           }))
           // While filtering, a board with no matching pages is just noise.
           .filter((b) => !query || b.pages.length > 0);
@@ -203,7 +212,7 @@ export function PagesRail() {
                       </button>
                     </div>
 
-                    {boardOpen && pages.map(({ page, type, links }) => (
+                    {boardOpen && pages.map(({ page, type, links, match }) => (
                       <button
                         key={page.id}
                         className={
@@ -218,6 +227,7 @@ export function PagesRail() {
                         <span className="page-row__code">{type.code}</span>
                         <span className="page-row__title truncate">{page.title}</span>
                         {links > 0 && <span className="page-row__links">{links}↗</span>}
+                        {match && match.where !== 'title' && <Hit match={match} />}
                       </button>
                     ))}
                   </div>
@@ -264,5 +274,23 @@ export function PagesRail() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * Why this row matched, when it was not the title. Without it a search through
+ * bodies returns a list of names with no indication of what they have in common,
+ * which is worse than no result at all.
+ */
+function Hit({ match }: { match: PageMatch }) {
+  return (
+    <span className="page-row__hit">
+      {match.label && <span className="page-row__hit-label">{match.label}</span>}
+      <span className="truncate">
+        {match.excerpt.before}
+        <mark>{match.excerpt.hit}</mark>
+        {match.excerpt.after}
+      </span>
+    </span>
   );
 }

@@ -282,6 +282,26 @@ select.field option { background: var(--popover); }
 .page-row__title { font: 400 var(--row-name) var(--font-ui); }
 .page-row__links { margin-left: auto; font: 400 var(--row-sub) var(--font-mono); color: var(--faint); }
 
+/*
+ * While searching, a row grows a second line saying where the query was found.
+ * It wraps under the title rather than beside it — an excerpt squeezed into what
+ * is left of a 288px rail would be too short to recognise anything by.
+ */
+.page-row:has(.page-row__hit) { flex-wrap: wrap; align-items: baseline; }
+.page-row__hit {
+  display: flex; align-items: baseline; gap: 5px;
+  flex: 1 0 100%; min-width: 0; padding-left: 28px;
+  font: 400 var(--row-sub) var(--font-ui); color: var(--muted);
+}
+.page-row__hit-label {
+  flex: none; font: 600 8.5px var(--font-mono); letter-spacing: .07em;
+  text-transform: uppercase; color: var(--faint);
+}
+.page-row__hit mark {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: var(--text-strong); border-radius: 2px; padding: 0 1px;
+}
+
 /* ---------- board ---------- */
 
 /*
