@@ -236,10 +236,10 @@ export function rollDice(expr: string): { rolls: number[]; sides: number; mod: n
 /** Card size and the gaps between, so a tidied board has room for its links. */
 const CARD_W = 244;
 const CARD_H = 116;
-const PITCH_X = CARD_W + 56;
-const PITCH_Y = CARD_H + 84;
+export const PITCH_X = CARD_W + 56;
+export const PITCH_Y = CARD_H + 84;
 /** Clear of the canvas origin, and the gap between one tree and the next. */
-const ORIGIN = 120;
+export const ORIGIN = 120;
 const TREE_GAP = 1;
 
 /**

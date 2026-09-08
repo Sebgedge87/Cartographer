@@ -4,7 +4,7 @@ import type {
   Area, BlockType, Board, Doc, Edge, Field, FieldKind, Page, PageImage, Project, ProjectFile, ProjectSchema,
   WorldCalendar,
 } from './types';
-import { arrangeLayout, deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
+import { ORIGIN, PITCH_X, PITCH_Y, arrangeLayout, deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
 import { codeFor, emptyDoc, normaliseSchema, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
 import { LIMITS, sweepAssets } from '../lib/assets';
@@ -53,6 +53,12 @@ interface DocActions {
    * keystroke would be nonsense — this runs once, when the field is left.
    */
   retitlePage: (id: string, previousTitle: string) => { refs: number; pages: number; skipped: number };
+  /**
+   * Send pages to another board, laying them out below whatever is already there.
+   * Pages could only ever be created on a board, never moved off one, so putting a
+   * location on the wrong board meant deleting it and typing it again.
+   */
+  movePagesToBoard: (ids: string[], boardId: string) => number;
   movePage: (id: string, dx: number, dy: number) => void;
   /** Move several pages by the same delta, as one edit so undo takes them together. */
   movePages: (ids: string[], dx: number, dy: number) => void;
@@ -411,6 +417,33 @@ export const useDoc = create<DocStore>()(
         if (!refs) return { refs: 0, pages: 0, skipped };
         set({ pages, edges: deriveWikiEdges(pages, s.edges) });
         return { refs, pages: touched, skipped };
+      },
+
+      movePagesToBoard: (ids, boardId) => {
+        const s = get();
+        const board = s.boards.find((b) => b.id === boardId);
+        if (!board) return 0;
+        const moving = s.pages.filter((p) => ids.includes(p.id) && p.boardId !== boardId);
+        if (!moving.length) return 0;
+
+        // Land them in a row under the destination's existing cards rather than on
+        // top of them — arriving hidden behind another page reads as losing them.
+        const settled = s.pages.filter((p) => p.boardId === boardId);
+        const top = settled.length
+          ? Math.max(...settled.map((p) => p.y + (p.h || CARD_H))) + PITCH_Y - CARD_H
+          : ORIGIN;
+        const place = new Map(moving.map((p, i) => [p.id, { x: ORIGIN + i * PITCH_X, y: top }]));
+
+        const now = Date.now();
+        set({
+          pages: s.pages.map((p) => {
+            const at = place.get(p.id);
+            return at
+              ? { ...p, boardId, projectId: board.projectId, x: at.x, y: at.y, updated: now }
+              : p;
+          }),
+        });
+        return moving.length;
       },
 
       /** Drag deltas only — never absolute positions, so a drag stays locked at any zoom. */

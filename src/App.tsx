@@ -21,6 +21,7 @@ import { NamePrompt } from './components/NamePrompt';
 import { DeleteProject } from './components/DeleteProject';
 import { SignIn } from './components/SignIn';
 import { useSync } from './state/syncStore';
+import { MoveToBoard } from './components/MoveToBoard';
 
 function isTyping(target: EventTarget | null): boolean {
   const tag = (target as HTMLElement | null)?.tagName?.toLowerCase();
@@ -135,6 +136,7 @@ export function App() {
       )}
       <ContextMenu />
       <NamePrompt />
+      <MoveToBoard />
       <DeleteProject />
       <Toast />
       <DiceTray />

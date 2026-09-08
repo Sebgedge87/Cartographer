@@ -1541,3 +1541,30 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   border-color: var(--accent); color: var(--accent-text);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
+
+/* ---------- board picker ---------- */
+
+/* Tall enough to show a few boards without the dialogue jumping size as you filter. */
+.prompt--tall { display: flex; flex-direction: column; }
+.picker {
+  margin-top: 12px; max-height: 300px; min-height: 120px; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: var(--r-md); background: var(--input);
+}
+.picker__group { padding: 6px 0; border-bottom: 1px solid var(--border-soft); }
+.picker__group:last-child { border-bottom: none; }
+.picker__area {
+  padding: 4px 10px; font: 600 8.5px var(--font-mono); letter-spacing: .12em;
+  text-transform: uppercase; color: var(--faint);
+}
+.picker__board {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 10px; border: none; background: transparent;
+  font: 400 12.5px var(--font-ui); color: var(--text); text-align: left; cursor: pointer;
+}
+.picker__board:hover:not(:disabled) { background: var(--wash-2); }
+.picker__board:disabled { color: var(--faint); cursor: default; }
+.picker__here {
+  margin-left: auto; flex: none;
+  font: 600 8.5px var(--font-mono); letter-spacing: .1em; color: var(--faint);
+}
+.picker__empty { padding: 16px 10px; text-align: center; color: var(--muted); font-size: 12.5px; }

@@ -127,6 +127,8 @@ interface UIState {
   newMenu: NewMenu | null;
   context: ContextMenu | null;
   prompt: NamePrompt | null;
+  /** Pages waiting to be sent to another board, while the picker is open. */
+  movingPages: string[] | null;
   toast: string | null;
   /** An in-flight dice roll, or null. Ephemeral by nature — never persisted. */
   tray: DiceThrow | null;
@@ -205,6 +207,7 @@ export const useUI = create<UIStore>()((set, get) => ({
   newMenu: null,
   context: null,
   prompt: null,
+  movingPages: null,
   toast: null,
   tray: null,
   search: '',

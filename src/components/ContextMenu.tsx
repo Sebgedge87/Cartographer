@@ -175,6 +175,10 @@ export function ContextMenu() {
               showToast(`Deleted ${group.length} pages`);
             }),
           },
+          {
+            label: `Move ${group.length} pages to board…`,
+            run: act(() => set({ movingPages: [...group] })),
+          },
           { label: 'Clear selection', run: act(() => set({ multi: [], sel: null })) },
         ]
       : [
@@ -186,6 +190,7 @@ export function ContextMenu() {
           if (copy) set({ sel: copy });
         }),
       },
+      { label: 'Move to board…', run: act(() => set({ movingPages: [id] })) },
       {
         label: 'Delete page',
         danger: true,
