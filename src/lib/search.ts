@@ -20,10 +20,50 @@ export interface Excerpt {
 
 export interface PageMatch {
   /** Title matches rank first, then tags, then fields, then the body. */
-  where: 'title' | 'tag' | 'field' | 'body';
+  where: 'title' | 'tag' | 'field' | 'body' | 'orphan' | 'recent';
   /** The field's label, when the match was in a field value. */
   label: string | null;
-  excerpt: Excerpt;
+  /** The text the query was found in. Null for the `is:` filters, which match no text. */
+  excerpt: Excerpt | null;
+  /** Why this page is listed, when there is no excerpt to show instead. */
+  note?: string;
+}
+
+/**
+ * What the box is asking for.
+ *
+ * `is:orphan` and `is:recent` answer two questions the tree cannot: what have I
+ * written that connects to nothing, and what was I working on last. They ride on
+ * the search box rather than earning views of their own — one place to type, and
+ * the chips beneath it make them findable.
+ */
+export type Query =
+  | { kind: 'text'; text: string }
+  | { kind: 'orphan' }
+  | { kind: 'recent' };
+
+/** How far back `is:recent` reaches. */
+export const RECENT_MS = 7 * 24 * 60 * 60 * 1000;
+
+export function parseQuery(raw: string): Query | null {
+  const q = raw.trim();
+  if (!q) return null;
+  const lower = q.toLowerCase();
+  if (lower === 'is:orphan') return { kind: 'orphan' };
+  if (lower === 'is:recent') return { kind: 'recent' };
+  return { kind: 'text', text: q };
+}
+
+/** "just now", "3 hours ago", "2 days ago" — enough to recognise your own session. */
+export function ago(then: number, now: number): string {
+  const ms = Math.max(0, now - then);
+  const minutes = Math.floor(ms / 60000);
+  if (minutes < 2) return 'just now';
+  if (minutes < 60) return `${minutes} minutes ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+  const days = Math.floor(hours / 24);
+  return `${days} day${days === 1 ? '' : 's'} ago`;
 }
 
 /**

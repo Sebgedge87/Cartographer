@@ -1601,3 +1601,34 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 }
 .tags__input::placeholder { color: var(--faint); }
 .tags__input:focus { outline: none; border-style: solid; border-color: var(--accent); }
+
+/* ---------- rail filters and cross-project results ---------- */
+
+.rail__filters {
+  display: flex; gap: 5px; padding: 0 10px 8px; border-bottom: 1px solid var(--border-soft);
+}
+.rail__filter {
+  padding: 4px 8px; border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  background: var(--input);
+  font: 600 8.5px var(--font-mono); letter-spacing: .1em; color: var(--muted); cursor: pointer;
+}
+.rail__filter:hover { border-color: var(--border-hover); color: var(--text); }
+.rail__filter--on {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+}
+
+.rail__elsewhere { margin-top: 10px; padding: 8px 10px 10px; border-top: 1px solid var(--border-soft); }
+.rail__elsewhere-head {
+  font: 600 8.5px var(--font-mono); letter-spacing: .12em; text-transform: uppercase;
+  color: var(--faint); margin-bottom: 4px;
+}
+.rail__elsewhere-row {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 5px 4px; border: none; background: transparent; border-radius: var(--r-sm);
+  font: 400 12px var(--font-ui); color: var(--text-soft); text-align: left; cursor: pointer;
+}
+.rail__elsewhere-row:hover { background: var(--wash-1); color: var(--text); }
+.rail__elsewhere-count {
+  margin-left: auto; flex: none;
+  font: 400 var(--row-sub) var(--font-mono); color: var(--faint);
+}

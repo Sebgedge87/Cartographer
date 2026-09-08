@@ -1,11 +1,17 @@
 import { useMemo } from 'react';
+import type { Page } from '../state/types';
 import { blockType, schemaFor, useDoc } from '../state/docStore';
 import { effectiveFields } from '../state/graph';
-import { matchPage, type PageMatch } from '../lib/search';
+import { RECENT_MS, ago, matchPage, parseQuery, type PageMatch } from '../lib/search';
 import { useUI } from '../state/uiStore';
 import { promptNew } from '../state/actions';
 import { ChevronRight, ChevronsDownUp, ChevronsUpDown, Search } from 'lucide-react';
 import { SettingsMenu } from './SettingsMenu';
+
+const FILTERS = [
+  { q: 'is:orphan', label: 'ORPHANS', title: 'Pages that link to nothing and nothing links to' },
+  { q: 'is:recent', label: 'RECENT', title: 'Edited in the last seven days' },
+] as const;
 
 /**
  * The navigation tree: area -> board -> page.
@@ -39,12 +45,33 @@ export function PagesRail() {
   };
 
   const schema = schemaFor(doc, projectId);
-  const query = search.trim().toLowerCase();
+  const query = parseQuery(search);
   const dense = density === 'dense';
 
   const tree = useMemo(() => {
     const outCount = new Map<string, number>();
     for (const e of doc.edges) outCount.set(e.from, (outCount.get(e.from) ?? 0) + 1);
+    // Orphan means connected to nothing at all, in either direction — a page with
+    // only backlinks is not adrift.
+    const linked = new Set<string>();
+    for (const e of doc.edges) { linked.add(e.from); linked.add(e.to); }
+    const now = Date.now();
+
+    const test = (page: Page): PageMatch | null => {
+      if (!query) return null;
+      if (query.kind === 'orphan') {
+        return linked.has(page.id)
+          ? null
+          : { where: 'orphan', label: null, excerpt: null, note: 'links to nothing' };
+      }
+      if (query.kind === 'recent') {
+        return now - page.updated > RECENT_MS
+          ? null
+          : { where: 'recent', label: null, excerpt: null, note: `edited ${ago(page.updated, now)}` };
+      }
+      const type = blockType(schema, page.type);
+      return matchPage(page, query.text, effectiveFields(page, type.fields));
+    };
 
     return doc.areas
       .filter((a) => a.projectId === projectId)
@@ -55,13 +82,11 @@ export function PagesRail() {
             board,
             pages: doc.pages
               .filter((p) => p.boardId === board.id)
-              .map((p) => {
-                const type = blockType(schema, p.type);
-                // Titles, field values and the body — all three, so a name you can
-                // only half remember is findable wherever you wrote it down.
-                const match = query ? matchPage(p, query, effectiveFields(p, type.fields)) : null;
-                return { page: p, type, links: outCount.get(p.id) ?? 0, match };
-              })
+              // Titles, tags, field values and the body — all four, so a name you
+              // can only half remember is findable wherever you wrote it down.
+              .map((p) => ({
+                page: p, type: blockType(schema, p.type), links: outCount.get(p.id) ?? 0, match: test(p),
+              }))
               .filter((row) => !query || row.match !== null),
           }))
           // While filtering, a board with no matching pages is just noise.
@@ -76,6 +101,29 @@ export function PagesRail() {
       .filter((a) => !query || a.boards.length > 0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [doc, projectId, query]);
+
+  /*
+   * Searching used to stop at the edge of the current project, so a name written in
+   * another one simply did not exist. This does not merge the results — a page in
+   * another project is somewhere else and switching to it is a deliberate act — it
+   * just stops the search being a dead end.
+   */
+  const elsewhere = useMemo(() => {
+    if (!query || query.kind !== 'text') return [];
+    return doc.projects
+      .filter((p) => p.id !== projectId)
+      .map((project) => {
+        const schemaThere = schemaFor(doc, project.id);
+        const count = doc.pages.filter((p) => {
+          if (p.projectId !== project.id) return false;
+          const type = blockType(schemaThere, p.type);
+          return matchPage(p, query.text, effectiveFields(p, type.fields)) !== null;
+        }).length;
+        return { project, count };
+      })
+      .filter((r) => r.count > 0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [doc, projectId, search]);
 
   const total = doc.pages.filter((p) => p.projectId === projectId).length;
   /** Every row that can be shut, and whether any of them currently is not. */
@@ -96,6 +144,23 @@ export function PagesRail() {
           onChange={(e) => set({ search: e.target.value })}
         />
         <span className="rail__count">{total}</span>
+      </div>
+
+      {/* The two questions the tree cannot answer, one press each. They fill the
+          search box rather than hiding behind a mode, so what they did is visible
+          and clearing the box undoes it. */}
+      <div className="rail__filters">
+        {FILTERS.map((f) => (
+          <button
+            key={f.q}
+            className={'rail__filter' + (search.trim().toLowerCase() === f.q ? ' rail__filter--on' : '')}
+            aria-pressed={search.trim().toLowerCase() === f.q}
+            title={f.title}
+            onClick={() => set({ search: search.trim().toLowerCase() === f.q ? '' : f.q })}
+          >
+            {f.label}
+          </button>
+        ))}
       </div>
 
       {/* One press for the whole tree. With seven areas and a hundred pages,
@@ -236,6 +301,22 @@ export function PagesRail() {
             </div>
           );
         })}
+
+        {elsewhere.length > 0 && (
+          <div className="rail__elsewhere">
+            <div className="rail__elsewhere-head">Also found in</div>
+            {elsewhere.map(({ project, count }) => (
+              <button
+                key={project.id}
+                className="rail__elsewhere-row"
+                onClick={() => set({ projectId: project.id, areaId: null, boardId: null, sel: null, mode: 'area' })}
+              >
+                <span className="truncate">{project.name}</span>
+                <span className="rail__elsewhere-count">{count}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="rail__foot">
@@ -288,9 +369,15 @@ function Hit({ match }: { match: PageMatch }) {
       {match.where === 'tag' && <span className="page-row__hit-label">tag</span>}
       {match.label && <span className="page-row__hit-label">{match.label}</span>}
       <span className="truncate">
-        {match.excerpt.before}
-        <mark>{match.excerpt.hit}</mark>
-        {match.excerpt.after}
+        {match.excerpt ? (
+          <>
+            {match.excerpt.before}
+            <mark>{match.excerpt.hit}</mark>
+            {match.excerpt.after}
+          </>
+        ) : (
+          match.note
+        )}
       </span>
     </span>
   );
