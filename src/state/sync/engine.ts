@@ -6,6 +6,7 @@ import { supabase } from '../../lib/supabase';
 import { syncAssets } from '../../lib/assets';
 import { assetRefs } from '../../lib/markdown';
 import { SYNC_KEY, debounce, loadKey, saveKey } from '../../lib/persist';
+import { diffTable, rowKey } from './diff';
 import {
   TABLES, type AreaRow, type BoardRow, type EdgeRow, type PageRow, type ProjectRow, type Table,
   areaRow, boardRow, docFromRows, edgeRow, pageRow, projectRow,
@@ -15,10 +16,13 @@ import {
  * Sync model — deliberately the simplest thing that is correct for one person on
  * several machines:
  *
- *   * The local store stays the thing the UI reads and writes, so dragging a card
- *     and typing a body are never waiting on the network.
- *   * Changes are diffed per row and pushed on a debounce, so a drag writes one
- *     page row when it settles rather than one per frame.
+ *   * Supabase holds the document. The local store is what the UI reads and writes,
+ *     so dragging a card and typing a body are never waiting on the network, and it
+ *     doubles as the offline buffer: an edit is safe in IndexedDB the moment it is
+ *     made, whether or not it has reached the server yet.
+ *   * Changes are diffed per row and *held* until they are saved — either by the
+ *     five-minute autosave, by the Save control, or when the tab is hidden. That
+ *     keeps a save an event you can point at rather than a continuous trickle.
  *   * Conflicts resolve last-write-wins per row. Two machines editing *different*
  *     pages both survive; the same page at the same moment does not, and that is an
  *     accepted trade for this use case.
@@ -42,6 +46,13 @@ let running = false;
 let applying = false;
 /** Ignore realtime echoes of our own writes for a moment after pushing. */
 let quietUntil = 0;
+/** The last edit state seen per row, so a change is stamped once, when it happens. */
+let seen: Record<Table, Map<string, string>> = blankBaseline();
+let autosave: ReturnType<typeof setInterval> | null = null;
+let onHide: (() => void) | null = null;
+
+/** How long unsaved work is allowed to sit before it is saved for you. */
+export const AUTOSAVE_MS = 5 * 60 * 1000;
 
 function blankBaseline(): Record<Table, Map<string, string>> {
   return {
@@ -52,21 +63,18 @@ function blankBaseline(): Record<Table, Map<string, string>> {
 /* ---------- building rows out of the current document ---------- */
 
 function currentRows(doc: Doc) {
-  const now = Date.now();
-  const stamp = (table: Table, id: string) => meta.touchedAt[table][id] ?? now;
-
   const projectOf = new Map(doc.pages.map((p) => [p.id, p.projectId]));
 
   return {
-    projects: doc.projects.map((p) => projectRow(p, doc.schemas[p.id], stamp('projects', p.id))),
-    areas: doc.areas.map((a) => areaRow(a, stamp('areas', a.id))),
-    boards: doc.boards.map((b) => boardRow(b, stamp('boards', b.id))),
-    pages: doc.pages.map((p) => pageRow(p, stamp('pages', p.id))),
+    projects: doc.projects.map((p) => projectRow(p, doc.schemas[p.id], 0)),
+    areas: doc.areas.map((a) => areaRow(a, 0)),
+    boards: doc.boards.map((b) => boardRow(b, 0)),
+    pages: doc.pages.map((p) => pageRow(p, 0)),
     edges: doc.edges
       .filter((e) => e.kind === 'manual')
       .map((e) => {
         const projectId = projectOf.get(e.from);
-        return projectId ? edgeRow(e, projectId, stamp('edges', e.id)) : null;
+        return projectId ? edgeRow(e, projectId, 0) : null;
       })
       .filter((r): r is EdgeRow => r !== null),
   } satisfies Record<Table, { id: string }[]>;
@@ -74,35 +82,67 @@ function currentRows(doc: Doc) {
 
 /* ---------- push ---------- */
 
-async function push(): Promise<void> {
-  if (!running || applying) return;
-  const doc = useDoc.getState();
-  const rows = currentRows(doc);
-  const db = supabase();
+interface Scan {
+  upserts: { table: Table; rows: unknown[] }[];
+  deletes: { table: Table; ids: string[] }[];
+  /** The baseline to adopt once these changes have landed on the server. */
+  next: Record<Table, Map<string, string>>;
+  /** How many rows are waiting to be saved. */
+  count: number;
+}
 
+/**
+ * Work out what the server is missing.
+ *
+ * Stamping happens here rather than at save time: with saves deferred, the moment
+ * you *made* the edit is what last-write-wins should be comparing, not the moment
+ * the autosave timer happened to fire. A row is stamped once per distinct edit
+ * state, so a change sitting unsaved for five minutes keeps the time it was typed.
+ */
+function scan(): Scan {
+  const rows = currentRows(useDoc.getState());
+  const now = Date.now();
   const upserts: { table: Table; rows: unknown[] }[] = [];
   const deletes: { table: Table; ids: string[] }[] = [];
-  const now = Date.now();
+  const next = blankBaseline();
+  let count = 0;
 
   for (const table of TABLES) {
-    const next = new Map<string, string>();
-    const changed: unknown[] = [];
-    for (const row of rows[table] as { id: string }[]) {
-      const json = JSON.stringify(row);
-      next.set(row.id, json);
-      if (baseline[table].get(row.id) !== json) {
-        // Stamp the change now so last-write-wins has something local to compare.
-        meta.touchedAt[table][row.id] = now;
-        changed.push({ ...row, updated: now });
-      }
+    const d = diffTable(baseline[table], rows[table] as { id: string }[]);
+    next[table] = d.next;
+    if (d.changed.length) {
+      const stamped = d.changed.map((row) => {
+        const key = rowKey(row);
+        if (seen[table].get(row.id) !== key) {
+          seen[table].set(row.id, key);
+          meta.touchedAt[table][row.id] = now;
+        }
+        return { ...row, updated: meta.touchedAt[table][row.id] ?? now };
+      });
+      upserts.push({ table, rows: stamped });
     }
-    const gone = [...baseline[table].keys()].filter((id) => !next.has(id));
-    if (changed.length) upserts.push({ table, rows: changed });
-    if (gone.length) deletes.push({ table, ids: gone });
-    baseline[table] = next;
+    if (d.gone.length) deletes.push({ table, ids: d.gone });
+    count += d.changed.length + d.gone.length;
   }
+  return { upserts, deletes, next, count };
+}
 
-  if (!upserts.length && !deletes.length) return;
+/** Count what is unsaved and tell the UI, without touching the network. */
+function refreshPending(): void {
+  if (!running) return;
+  useSync.getState().set({ pending: scan().count });
+}
+
+const scheduleScan = debounce(refreshPending, 700);
+
+async function push(): Promise<void> {
+  if (!running || applying) return;
+  const { upserts, deletes, next, count } = scan();
+  if (!count) {
+    useSync.getState().set({ pending: 0 });
+    return;
+  }
+  const db = supabase();
 
   useSync.getState().set({ status: 'syncing' });
   try {
@@ -116,21 +156,23 @@ async function push(): Promise<void> {
       const { error } = await db.from(table).delete().in('id', ids);
       if (error) throw error;
     }
+    baseline = next;
     for (const table of TABLES) {
       meta.syncedIds[table] = [...baseline[table].keys()];
     }
     quietUntil = Date.now() + 1500;
     await saveKey(SYNC_KEY, meta);
-    useSync.getState().set({ status: 'synced', error: null, lastSyncedAt: Date.now() });
+    useSync.getState().set({
+      status: 'synced', error: null, lastSyncedAt: Date.now(), pending: 0,
+    });
   } catch (e) {
-    // Drop the baseline so the next tick retries everything rather than assuming
-    // the failed rows landed.
-    baseline = blankBaseline();
-    useSync.getState().set({ status: 'error', error: describe(e) });
+    // The baseline is deliberately left alone: nothing landed, so these rows are
+    // still unsaved and the next attempt should send exactly the same set. They
+    // keep the timestamps they were stamped with, not the retry's.
+    useSync.getState().set({ status: 'error', error: describe(e), pending: count });
   }
 }
 
-const schedulePush = debounce(() => void push(), 600);
 
 /* ---------- pull + merge ---------- */
 
@@ -181,22 +223,24 @@ async function pull(): Promise<void> {
     applying = false;
   }
 
-  // Baseline is what the server actually has; anything merged in beyond that gets
-  // pushed on the next tick.
+  // Baseline is what the server actually has. Anything the merge kept beyond that
+  // is a local change still waiting to be saved, and is counted as one.
   baseline = blankBaseline();
   for (const table of TABLES) {
     const rows = remoteRows[table] as { id: string }[];
-    const currentByTable = currentRows(useDoc.getState())[table] as { id: string }[];
-    const currentById = new Map(currentByTable.map((r) => [r.id, r]));
+    const current = currentRows(useDoc.getState())[table] as { id: string }[];
+    const currentById = new Map(current.map((r) => [r.id, r]));
     for (const row of rows) {
-      const current = currentById.get(row.id);
-      if (current) baseline[table].set(row.id, JSON.stringify(current));
+      const match = currentById.get(row.id);
+      if (match) baseline[table].set(row.id, rowKey(match));
     }
+    // Rows that came back unchanged must not be re-stamped as fresh edits.
+    seen[table] = new Map(current.map((r) => [r.id, rowKey(r)]));
     meta.syncedIds[table] = rows.map((r) => r.id);
   }
   await saveKey(SYNC_KEY, meta);
   useSync.getState().set({ status: 'synced', error: null, lastSyncedAt: Date.now() });
-  schedulePush();
+  refreshPending();
 }
 
 const schedulePull = debounce(() => {
@@ -221,9 +265,13 @@ export async function startSync(): Promise<void> {
     meta.touchedAt[table] ??= {};
   }
   baseline = blankBaseline();
+  seen = blankBaseline();
 
   try {
     await pull();
+    // Reconciling what this device already had is not a user edit waiting on a
+    // save button, so the first push after signing in goes up straight away.
+    await push();
     // After the pull, because only then does this device know which images the
     // other one is waiting for. Never awaited: uploading a backlog of pictures
     // must not hold up the document arriving.
@@ -233,8 +281,19 @@ export async function startSync(): Promise<void> {
   }
 
   unsubscribeStore = useDoc.subscribe(() => {
-    if (!applying) schedulePush();
+    if (!applying) scheduleScan();
   });
+
+  // Saving on a timer alone would lose the last few minutes of a session that ends
+  // by closing the tab, so hiding it is also a save.
+  onHide = () => {
+    if (document.visibilityState === 'hidden' && useSync.getState().pending > 0) void push();
+  };
+  document.addEventListener('visibilitychange', onHide);
+
+  autosave = setInterval(() => {
+    if (useSync.getState().pending > 0) void push();
+  }, AUTOSAVE_MS);
 
   channel = supabase()
     .channel('cartographer-doc')
@@ -262,16 +321,26 @@ export async function stopSync(): Promise<void> {
   running = false;
   unsubscribeStore?.();
   unsubscribeStore = null;
+  if (autosave) { clearInterval(autosave); autosave = null; }
+  if (onHide) { document.removeEventListener('visibilitychange', onHide); onHide = null; }
   if (channel) {
     await supabase().removeChannel(channel);
     channel = null;
   }
   baseline = blankBaseline();
+  seen = blankBaseline();
   meta = emptyMeta();
+  useSync.getState().set({ pending: 0 });
   await saveKey(SYNC_KEY, meta);
 }
 
-/** Force a round trip — used by the "Sync now" control. */
+/** Save unsaved work now — what the Save control and the autosave timer both call. */
+export async function saveNow(): Promise<void> {
+  if (!running) return;
+  await push();
+}
+
+/** Force a full round trip — save, then take whatever the other devices have sent. */
 export async function syncNow(): Promise<void> {
   if (!running) return;
   await push();

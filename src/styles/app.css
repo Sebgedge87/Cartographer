@@ -149,14 +149,24 @@ select.field option { background: var(--popover); }
 .topbar__back:hover { background: var(--wash-3); color: var(--text); }
 .topbar__rename { flex: 0 1 auto; width: 240px; }
 
-.segments {
-  display: flex; gap: 2px; padding: 2px; border-radius: var(--r-lg); background: var(--input);
-}
+/*
+ * Discrete buttons rather than one filled track: at 100% zoom the old segments read
+ * as a single grey slab with the labels dissolved into it, and there was nothing to
+ * tell you the unselected ones were clickable.
+ */
+.segments { display: flex; flex-wrap: wrap; gap: 5px; }
 .segment {
-  padding: 5px 11px; border: none; border-radius: 5px; background: transparent;
+  padding: 6px 10px; border: 1px solid var(--border-strong); border-radius: var(--r-sm);
+  background: var(--input);
   font: 600 10px var(--font-mono); letter-spacing: .1em; color: var(--muted); cursor: pointer;
+  transition: background 110ms ease, border-color 110ms ease, color 110ms ease;
 }
-.segment[aria-pressed='true'] { background: var(--accent); color: var(--accent-ink); }
+.segment:hover { background: var(--wash-2); border-color: var(--border-hover); color: var(--text); }
+.segment:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.segment[aria-pressed='true'] {
+  background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
+}
+.segment[aria-pressed='true']:hover { background: var(--accent); color: var(--accent-ink); }
 
 .search { position: relative; width: 180px; flex: none; }
 .search__glyph {
@@ -812,6 +822,12 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
 }
 .sync--error { color: var(--danger-text); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
 .sync--error .sync__dot { background: var(--danger); }
+/* Unsaved work reads as an action, not a status, so it takes the accent outright. */
+.sync--unsaved {
+  color: var(--accent-ink); background: var(--accent); border-color: var(--accent);
+}
+.sync--unsaved:hover { border-color: var(--accent); filter: brightness(1.08); }
+.sync--unsaved .sync__dot { background: var(--accent-ink); }
 
 @keyframes cgPulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
 
@@ -912,17 +928,16 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   color: var(--faint); text-transform: uppercase; margin-bottom: 9px;
 }
 .settings__row {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 7px;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 9px;
   font: 400 12.5px var(--font-ui); color: var(--muted);
 }
 .settings__row:last-child { margin-bottom: 0; }
-.settings__row .segments { margin-left: auto; flex: none; }
+.settings__row .segments { margin-left: auto; flex: none; justify-content: flex-end; }
 /* A row whose control is too wide to sit beside its label. */
 .settings__row--stack { display: block; }
 .settings__row--stack > span { display: block; margin-bottom: 6px; }
-.settings__row--stack .segments { margin-left: 0; }
-.segments--wrap { flex-wrap: wrap; }
-.settings__row .segment { padding: 4px 7px; font-size: 8.5px; letter-spacing: .08em; }
+.settings__row--stack .segments { margin-left: 0; justify-content: flex-start; }
+.settings__row .segment { padding: 5px 8px; font-size: 9px; letter-spacing: .07em; }
 
 .settings__item {
   display: block; width: 100%; text-align: left;

@@ -30,6 +30,11 @@ interface SyncState {
   error: string | null;
   /** When the last successful push or pull completed. */
   lastSyncedAt: number | null;
+  /**
+   * Rows edited on this device that the server has not got yet. They are already
+   * safe in local storage; this is how many are waiting for the next save.
+   */
+  pending: number;
   /** The user chose to work on this device without signing in. */
   offlineChosen: boolean;
   set: (patch: Partial<SyncState>) => void;
@@ -42,6 +47,7 @@ export const useSync = create<SyncState>()((set) => ({
   email: null,
   error: null,
   lastSyncedAt: null,
+  pending: 0,
   offlineChosen: storedOffline(),
   set: (patch) => set(patch),
 

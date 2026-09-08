@@ -5,7 +5,7 @@ import { useUI, type Density, type GridStyle } from '../state/uiStore';
 import { useSync } from '../state/syncStore';
 import { exportCurrentProject } from '../state/actions';
 import { signOut } from '../state/sync/auth';
-import { syncNow } from '../state/sync/engine';
+import { saveNow, syncNow } from '../state/sync/engine';
 import { importImage } from '../lib/assets';
 import { useDoc } from '../state/docStore';
 import type { Theme } from '../lib/theme';
@@ -76,6 +76,7 @@ export function SettingsMenu() {
   const status = useSync((s) => s.status);
   const email = useSync((s) => s.email);
   const error = useSync((s) => s.error);
+  const pending = useSync((s) => s.pending);
 
   const wrap = useRef<HTMLDivElement>(null);
 
@@ -106,7 +107,7 @@ export function SettingsMenu() {
                   288px panel, and the last one was being clipped off the edge. */}
               <div className="settings__row settings__row--stack">
                 <span>Showing</span>
-                <div className="segments segments--wrap">
+                <div className="segments">
                   {VIEWS.map((v) => (
                     <button
                       key={v.value}
@@ -306,6 +307,20 @@ export function SettingsMenu() {
                 <span>{status === 'error' ? (error ?? 'Sync failed') : SYNC_LABEL[status] ?? 'Local only'}</span>
               </div>
               {email && <div className="settings__email">{email}</div>}
+
+              {status !== 'off' && status !== 'signed-out' && (
+                <div className="settings__hint">
+                  {pending > 0
+                    ? `${pending} change${pending === 1 ? '' : 's'} held on this device. Saved automatically every 5 minutes.`
+                    : 'Everything on this device is saved. Autosaves every 5 minutes.'}
+                </div>
+              )}
+
+              {pending > 0 && (
+                <button className="settings__item" onClick={() => { close(); void saveNow(); }}>
+                  Save now
+                </button>
+              )}
 
               {status === 'signed-out' && (
                 <button
