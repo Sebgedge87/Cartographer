@@ -9,6 +9,7 @@ import { codeFor, emptyDoc, normaliseSchema, starterSchema } from './defaults';
 import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
 import { LIMITS, sweepAssets } from '../lib/assets';
 import { serialiseDate } from '../lib/calendar';
+import { retitleBody } from '../lib/retitle';
 
 export const CARD_W = 244;
 export const CARD_H = 116;
@@ -46,6 +47,12 @@ interface DocActions {
     title?: string;
   }) => string;
   patchPage: (id: string, patch: Partial<Page>) => void;
+  /**
+   * Point every reference at this page's new title, now that a title edit has been
+   * committed. Separate from patchPage because rewriting other pages on every
+   * keystroke would be nonsense — this runs once, when the field is left.
+   */
+  retitlePage: (id: string, previousTitle: string) => { refs: number; pages: number; skipped: number };
   movePage: (id: string, dx: number, dy: number) => void;
   /** Move several pages by the same delta, as one edit so undo takes them together. */
   movePages: (ids: string[], dx: number, dy: number) => void;
@@ -370,6 +377,41 @@ export const useDoc = create<DocStore>()(
           const pages = s.pages.map((p) => (p.id === id ? { ...p, ...patch, updated: Date.now() } : p));
           return { pages, edges: deriveWikiEdges(pages, s.edges) };
         }),
+
+      retitlePage: (id, previousTitle) => {
+        const none = { refs: 0, pages: 0, skipped: 0 };
+        const s = get();
+        const page = s.pages.find((p) => p.id === id);
+        if (!page) return none;
+        const from = previousTitle.trim();
+        const to = page.title.trim();
+        if (!from || !to || from.toLowerCase() === to.toLowerCase()) return none;
+
+        // Titles as they stood *before* the rename: what the undelimited `@@Page`
+        // form was resolving against when the reference was written.
+        const before = new Set<string>();
+        for (const p of s.pages) {
+          if (p.projectId === page.projectId) before.add((p.id === id ? from : p.title).toLowerCase());
+        }
+
+        let refs = 0;
+        let skipped = 0;
+        let touched = 0;
+        const now = Date.now();
+        const pages = s.pages.map((p) => {
+          if (p.projectId !== page.projectId) return p;
+          const result = retitleBody(p.body, from, to, before);
+          skipped += result.skipped;
+          if (!result.changed) return p;
+          refs += result.changed;
+          touched++;
+          return { ...p, body: result.body, updated: now };
+        });
+
+        if (!refs) return { refs: 0, pages: 0, skipped };
+        set({ pages, edges: deriveWikiEdges(pages, s.edges) });
+        return { refs, pages: touched, skipped };
+      },
 
       /** Drag deltas only — never absolute positions, so a drag stays locked at any zoom. */
       movePage: (id, dx, dy) =>

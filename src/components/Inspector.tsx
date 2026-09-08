@@ -3,6 +3,7 @@ import { useUI } from '../state/uiStore';
 import { FieldGrid } from './FieldGrid';
 import { assetUrl } from '../lib/assets';
 import { useAssets } from '../lib/useAssets';
+import { useRetitle } from '../lib/useRetitle';
 
 export function Inspector() {
   const doc = useDoc();
@@ -17,6 +18,7 @@ export function Inspector() {
   const header = page?.header ?? null;
   useAssets(header ? [header] : []);
   const headerUrl = header ? assetUrl(header) : null;
+  const retitle = useRetitle(page?.id ?? '');
 
   if (!page) {
     return (
@@ -76,6 +78,7 @@ export function Inspector() {
           className="field"
           value={page.title}
           onChange={(e) => doc.patchPage(page.id, { title: e.target.value })}
+          {...retitle}
         />
       </div>
 

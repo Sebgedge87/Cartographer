@@ -19,6 +19,7 @@ import { FieldGrid } from './FieldGrid';
 import { SpellUnderlay } from './SpellUnderlay';
 import { FieldsMenu } from './FieldsMenu';
 import { ImageStrip } from './ImageStrip';
+import { useRetitle } from '../lib/useRetitle';
 
 /** An underlined word the suggestions are open for, and what to offer for it. */
 interface Misspelt {
@@ -95,6 +96,7 @@ export function PageEditor() {
   /** Last point hit-tested, so a pointer that has barely moved is not re-tested. */
   const lastMove = useRef({ x: -1, y: -1 });
   const page = doc.pages.find((p) => p.id === editing);
+  const retitle = useRetitle(page?.id ?? '');
   const schema = schemaFor(doc, projectId);
 
   /* ---------- text primitives ---------- */
@@ -656,6 +658,7 @@ export function PageEditor() {
               className="editor__title"
               value={page.title}
               onChange={(e) => doc.patchPage(page.id, { title: e.target.value })}
+              {...retitle}
             />
             {/* Measures the title so the input can hug it and the tag sit beside the
                 name rather than drifting off to the far edge of the bar. */}
