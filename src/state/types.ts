@@ -1,6 +1,6 @@
 /** Cartographer document model. This is the on-disk format: `cartographer/v1`. */
 
-export type FieldKind = 'text' | 'number' | 'long' | 'ref' | 'heading' | 'date';
+export type FieldKind = 'text' | 'number' | 'long' | 'ref' | 'heading' | 'date' | 'select';
 
 export interface Field {
   key: string;
@@ -8,6 +8,12 @@ export interface Field {
   kind: FieldKind;
   /** Span the full width of the field grid. Implied for 'long' and 'heading'. */
   wide?: boolean;
+  /**
+   * The choices a 'select' field offers. Anything enumerable — Status, Allegiance,
+   * Threat level — was free text before, so it could be spelled three ways across
+   * three pages and no filter could ever group them.
+   */
+  options?: string[];
 }
 
 /** A block type — creature, weapon, rule… User-defined, scoped to one project. */

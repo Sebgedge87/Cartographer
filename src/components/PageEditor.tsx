@@ -63,6 +63,7 @@ const ELEMENT_ADDERS: { kind: FieldKind; label: string }[] = [
   { kind: 'ref', label: 'LINK' },
   { kind: 'heading', label: 'SECTION' },
   { kind: 'date', label: 'DATE' },
+  { kind: 'select', label: 'CHOICE' },
 ];
 
 export function PageEditor() {

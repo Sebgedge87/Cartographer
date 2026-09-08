@@ -457,8 +457,11 @@ select.field option { background: var(--popover); }
 }
 .type-card__used { margin-left: auto; flex: none; font: 500 9px var(--font-mono); letter-spacing: .08em; color: var(--faint); }
 .type-card__body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 6px; }
-.type-field { display: flex; align-items: center; gap: 6px; }
+.type-field { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .type-field select { width: 84px; flex: none; }
+/* The choice list needs the whole width to be readable, so it wraps under the row. */
+.type-field__options { flex: 1 0 100%; }
+.field-cell__options { margin-bottom: 5px; }
 .icon-btn {
   flex: none; width: 20px; height: 20px; display: grid; place-items: center;
   border: none; background: transparent; border-radius: var(--r-xs);

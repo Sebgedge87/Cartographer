@@ -9,6 +9,9 @@ const FIELD_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'number', label: 'number' },
   { value: 'long', label: 'long' },
   { value: 'ref', label: 'link' },
+  { value: 'heading', label: 'section' },
+  { value: 'date', label: 'date' },
+  { value: 'select', label: 'choice' },
 ];
 
 /**
@@ -223,6 +226,18 @@ export function SchemaEditor() {
                               <option key={k.value} value={k.value}>{k.label}</option>
                             ))}
                           </select>
+                          {field.kind === 'select' && (
+                            <input
+                              className="field field--mono type-field__options"
+                              placeholder="Choices, comma separated"
+                              value={(field.options ?? []).join(', ')}
+                              onChange={(e) =>
+                                doc.patchTypeField(projectId, key, index, {
+                                  options: e.target.value.split(',').map((o) => o.trim()).filter(Boolean),
+                                })
+                              }
+                            />
+                          )}
                           <button
                             className="icon-btn"
                             title="Remove field"

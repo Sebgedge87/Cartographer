@@ -10,7 +10,12 @@ const ELEMENT_KINDS: { value: FieldKind; label: string }[] = [
   { value: 'ref', label: 'link' },
   { value: 'heading', label: 'sect' },
   { value: 'date', label: 'date' },
+  { value: 'select', label: 'pick' },
 ];
+
+/** The options of a 'select' are written as one comma-separated line. */
+const parseOptions = (raw: string) =>
+  raw.split(',').map((o) => o.trim()).filter(Boolean);
 
 interface Props {
   page: Page;
@@ -117,6 +122,22 @@ export function FieldGrid({ page, fields, editable, cols }: Props) {
               <span className="field-cell__label">{field.label}</span>
             )}
 
+            {editable && field.kind === 'select' && (
+              <input
+                className="field field--mono field-cell__options"
+                placeholder="Choices, comma separated"
+                value={(field.options ?? []).join(', ')}
+                onChange={(e) =>
+                  setCustom(page.id, (list) => {
+                    const next = list.slice();
+                    const f = next[index];
+                    if (f) next[index] = { ...f, options: parseOptions(e.target.value) };
+                    return next;
+                  })
+                }
+              />
+            )}
+
             {field.kind === 'heading' ? null : field.kind === 'date' ? (
               <DateField
                 calendar={calendar}
@@ -132,6 +153,19 @@ export function FieldGrid({ page, fields, editable, cols }: Props) {
                 <option value="">—</option>
                 {refOptions.map((p) => (
                   <option key={p.id} value={p.id}>{p.title}</option>
+                ))}
+              </select>
+            ) : field.kind === 'select' ? (
+              <select
+                className="field field--mono"
+                value={value}
+                onChange={(e) => setPageField(page.id, field, e.target.value)}
+              >
+                <option value="">—</option>
+                {/* A value written before the choices changed still has to be
+                    readable, so it is offered alongside them rather than dropped. */}
+                {[...new Set([...(field.options ?? []), ...(value ? [value] : [])])].map((o) => (
+                  <option key={o} value={o}>{o}</option>
                 ))}
               </select>
             ) : field.kind === 'long' ? (

@@ -579,6 +579,7 @@ export const useDoc = create<DocStore>()(
       addElement: (pageId, kind) => {
         const labels: Record<FieldKind, string> = {
           text: 'Label', number: 'Number', long: 'Notes', ref: 'Link', heading: 'Section', date: 'Date',
+          select: 'Choice',
         };
         get().setCustom(pageId, (fields) =>
           fields.concat([{
