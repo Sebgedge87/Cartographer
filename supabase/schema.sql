@@ -81,6 +81,9 @@ create table if not exists public.pages (
   images     jsonb not null default '[]'::jsonb,
   -- Which id in `images` is the header shown on the card and in the inspector.
   header     text,
+  -- Cross-cutting labels. A page lives on exactly one board, so this is the only
+  -- axis that can group pages filed under different subjects.
+  tags       jsonb not null default '[]'::jsonb,
   updated    bigint not null default 0,
   updated_at timestamptz not null default now()
 );
@@ -88,6 +91,8 @@ create table if not exists public.pages (
 -- Added after the first release; harmless on a fresh database.
 alter table public.pages add column if not exists images jsonb not null default '[]'::jsonb;
 alter table public.pages add column if not exists header text;
+-- Tags arrived after the first release; harmless on a fresh database.
+alter table public.pages add column if not exists tags jsonb not null default '[]'::jsonb;
 -- The project's world calendar: months, week, leap rule and moons, whole.
 alter table public.projects add column if not exists calendar jsonb;
 -- Words added to the project's spellchecker, so a name invented on one device is

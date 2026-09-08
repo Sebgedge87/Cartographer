@@ -4,6 +4,7 @@ import { FieldGrid } from './FieldGrid';
 import { assetUrl } from '../lib/assets';
 import { useAssets } from '../lib/useAssets';
 import { useRetitle } from '../lib/useRetitle';
+import { TagBar } from './TagBar';
 
 export function Inspector() {
   const doc = useDoc();
@@ -80,6 +81,7 @@ export function Inspector() {
           onChange={(e) => doc.patchPage(page.id, { title: e.target.value })}
           {...retitle}
         />
+        <TagBar page={page} />
       </div>
 
       <div className="inspector__section">

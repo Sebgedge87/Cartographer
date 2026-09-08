@@ -6,7 +6,7 @@ import type { Field, Page } from '../state/types';
 const page = (patch: Partial<Page>): Page => ({
   id: 'p1', projectId: 'pr1', boardId: 'b1', type: 'note', title: 'Untitled',
   x: 0, y: 0, w: 244, h: 116, fields: {}, custom: null, cols: 0, body: '',
-  images: [], header: null, updated: 0, ...patch,
+  tags: [], images: [], header: null, updated: 0, ...patch,
 });
 const fields: Field[] = [
   { key: 'hp', label: 'Hit points', kind: 'number' },
@@ -67,6 +67,26 @@ test('newlines do not break the excerpt onto several lines', () => {
   const m = matchPage(page({ body: 'One\nTwo\nAshen\nFour' }), 'ashen', fields);
   assert.ok(!`${m!.excerpt.before}${m!.excerpt.hit}${m!.excerpt.after}`.includes('\n'));
   assert.equal(m!.excerpt.hit, 'Ashen');
+});
+
+test('tags are searchable', () => {
+  const m = matchPage(page({ tags: ['Merchant Guild'] }), 'guild', fields);
+  assert.equal(m?.where, 'tag');
+  assert.equal(m?.excerpt.hit, 'Guild');
+});
+
+test('a tag is preferred over a field and the body', () => {
+  const m = matchPage(page({ tags: ['Guild'], fields: { notes: 'Guild' }, body: 'Guild' }), 'guild', fields);
+  assert.equal(m?.where, 'tag');
+});
+
+test('a leading hash searches tags only', () => {
+  assert.equal(matchPage(page({ body: 'Guild business' }), '#guild', fields), null);
+  assert.equal(matchPage(page({ tags: ['Guild'] }), '#guild', fields)?.where, 'tag');
+});
+
+test('a bare hash matches nothing rather than every tagged page', () => {
+  assert.equal(matchPage(page({ tags: ['Guild'] }), '#', fields), null);
 });
 
 test('a field with no value on this page is skipped', () => {

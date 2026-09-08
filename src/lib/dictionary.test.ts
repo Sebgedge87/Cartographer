@@ -17,7 +17,7 @@ function doc(): Doc {
       {
         id: 'g1', projectId: 'p1', boardId: 'b1', type: 'npc', title: 'Cassiel Vane',
         x: 0, y: 0, w: 244, h: 116, fields: {}, custom: null, cols: 0, body: '',
-        images: [], header: null, updated: 0,
+        tags: [], images: [], header: null, updated: 0,
       },
     ],
     edges: [],

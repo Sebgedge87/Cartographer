@@ -6,7 +6,7 @@ import { arrangeLayout } from './graph';
 const page = (id: string, title = id, type = 'note'): Page => ({
   id, projectId: 'p1', boardId: 'b1', type, title,
   x: 0, y: 0, w: 244, h: 116, fields: {}, custom: null, cols: 0,
-  body: '', images: [], header: null, updated: 0,
+  body: '', tags: [], images: [], header: null, updated: 0,
 });
 const link = (from: string, to: string): Edge => ({ id: `${from}-${to}`, from, to, kind: 'manual' });
 const lay = (pages: Page[], edges: Edge[]) => arrangeLayout(pages, edges, () => 0);

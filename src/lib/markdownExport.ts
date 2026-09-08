@@ -108,6 +108,7 @@ export function projectToMarkdown(doc: Doc, projectId: string): string | null {
         const type = schema?.types[page.type];
         out.push(`\n#### ${page.title}`);
         if (type) out.push(`\n\`${type.label}\``);
+        if (page.tags.length) out.push(`\n${page.tags.map((t) => `\`#${t}\``).join(' ')}`);
 
         const rows = effectiveFields(page, type?.fields ?? [])
           .filter((f) => f.kind !== 'heading')

@@ -91,6 +91,7 @@ function completePage(raw: Partial<Page>, projectId: string, boardId: string, ty
     custom: Array.isArray(raw.custom) ? raw.custom : null,
     cols: (cols >= 0 && cols <= 4 ? Math.round(cols) : 0) as Page['cols'],
     body: str(raw.body, ''),
+    tags: Array.isArray(raw.tags) ? raw.tags.filter((t): t is string => typeof t === 'string') : [],
     images: Array.isArray(raw.images) ? raw.images : [],
     header: typeof raw.header === 'string' ? raw.header : null,
     updated: num(raw.updated, Date.now()),

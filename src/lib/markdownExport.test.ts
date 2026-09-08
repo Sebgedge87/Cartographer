@@ -7,7 +7,7 @@ import { starterSchema } from '../state/defaults';
 const page = (patch: Partial<Page>): Page => ({
   id: 'p1', projectId: 'pr1', boardId: 'b1', type: 'creature', title: 'Untitled',
   x: 0, y: 0, w: 244, h: 116, fields: {}, custom: null, cols: 0, body: '',
-  images: [], header: null, updated: 0, ...patch,
+  tags: [], images: [], header: null, updated: 0, ...patch,
 });
 
 const doc = (pages: Page[]): Doc => ({
@@ -106,6 +106,16 @@ test('the placeholder system is not printed as a subtitle', () => {
   const d = doc([]);
   d.projects[0]!.system = 'Untitled';
   assert.doesNotMatch(projectToMarkdown(d, 'pr1')!, /\*Untitled\*/);
+});
+
+test('tags travel with the page', () => {
+  const md = projectToMarkdown(doc([page({ tags: ['Merchant Guild', 'Coastal'] })]), 'pr1')!;
+  assert.match(md, /`#Merchant Guild` `#Coastal`/);
+});
+
+test('a page with no tags gains no empty line for them', () => {
+  const md = projectToMarkdown(doc([page({ tags: [] })]), 'pr1')!;
+  assert.doesNotMatch(md, /`#/);
 });
 
 test('an unknown project is null, not an empty document', () => {

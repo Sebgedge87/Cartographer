@@ -6,7 +6,7 @@ import { edgePath } from './graph';
 const card = (id: string, x: number, y: number): Page => ({
   id, projectId: 'p1', boardId: 'b1', type: 'note', title: id,
   x, y, w: 244, h: 116, fields: {}, custom: null, cols: 0,
-  body: '', images: [], header: null, updated: 0,
+  body: '', tags: [], images: [], header: null, updated: 0,
 });
 
 /**

@@ -1571,3 +1571,33 @@ textarea.field { resize: vertical; min-height: 62px; line-height: 1.6; }
   font: 600 8.5px var(--font-mono); letter-spacing: .1em; color: var(--faint);
 }
 .picker__empty { padding: 16px 10px; text-align: center; color: var(--muted); font-size: 12.5px; }
+
+/* ---------- tags ---------- */
+
+.tags {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 8px;
+}
+.tag {
+  display: inline-flex; align-items: center; flex: none;
+  border: 1px solid var(--border-strong); border-radius: 999px; background: var(--wash-1);
+  overflow: hidden;
+}
+.tag__name {
+  padding: 3px 4px 3px 9px; border: none; background: transparent;
+  font: 500 10.5px var(--font-ui); color: var(--text-soft); cursor: pointer;
+}
+.tag:hover { border-color: var(--border-hover); }
+.tag__name:hover { color: var(--text-strong); }
+.tag__drop {
+  display: grid; place-items: center; width: 17px; height: 19px;
+  padding: 0; border: none; background: transparent; color: var(--faint); cursor: pointer;
+}
+.tag__drop:hover { color: var(--danger-text); }
+/* Grows with what is typed rather than reserving a fixed slot beside the chips. */
+.tags__input {
+  flex: 1 1 88px; min-width: 88px;
+  padding: 3px 6px; border: 1px dashed var(--border-strong); border-radius: 999px;
+  background: transparent; font: 400 10.5px var(--font-ui); color: var(--text);
+}
+.tags__input::placeholder { color: var(--faint); }
+.tags__input:focus { outline: none; border-style: solid; border-color: var(--accent); }

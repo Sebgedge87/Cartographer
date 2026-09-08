@@ -19,8 +19,8 @@ export interface Excerpt {
 }
 
 export interface PageMatch {
-  /** Title matches rank first, then fields, then the body. */
-  where: 'title' | 'field' | 'body';
+  /** Title matches rank first, then tags, then fields, then the body. */
+  where: 'title' | 'tag' | 'field' | 'body';
   /** The field's label, when the match was in a field value. */
   label: string | null;
   excerpt: Excerpt;
@@ -49,12 +49,32 @@ function excerptAt(text: string, at: number, length: number): Excerpt {
  * not fuzzy matching that would put every page in the list.
  */
 export function matchPage(page: Page, query: string, fields: readonly Field[]): PageMatch | null {
-  const q = query.trim().toLowerCase();
-  if (!q) return null;
+  const raw = query.trim();
+  if (!raw) return null;
 
+  /*
+   * A leading # searches tags and nothing else. Tags are the one axis that cuts
+   * across the hierarchy, so narrowing to them is worth a shorthand — and it is
+   * how the tag chips themselves search when you click one.
+   */
+  if (raw.startsWith('#')) {
+    const wanted = raw.slice(1).trim().toLowerCase();
+    if (!wanted) return null;
+    const tag = page.tags.find((t) => t.toLowerCase().includes(wanted));
+    return tag
+      ? { where: 'tag', label: null, excerpt: excerptAt(tag, tag.toLowerCase().indexOf(wanted), wanted.length) }
+      : null;
+  }
+
+  const q = raw.toLowerCase();
   const inTitle = page.title.toLowerCase().indexOf(q);
   if (inTitle >= 0) {
     return { where: 'title', label: null, excerpt: excerptAt(page.title, inTitle, q.length) };
+  }
+
+  for (const tag of page.tags) {
+    const at = tag.toLowerCase().indexOf(q);
+    if (at >= 0) return { where: 'tag', label: null, excerpt: excerptAt(tag, at, q.length) };
   }
 
   for (const field of fields) {

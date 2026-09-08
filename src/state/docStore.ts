@@ -53,6 +53,8 @@ interface DocActions {
    * keystroke would be nonsense — this runs once, when the field is left.
    */
   retitlePage: (id: string, previousTitle: string) => { refs: number; pages: number; skipped: number };
+  /** Replace a page's tags. Trimmed, de-duplicated case-insensitively, order kept. */
+  setTags: (id: string, tags: string[]) => void;
   /**
    * Send pages to another board, laying them out below whatever is already there.
    * Pages could only ever be created on a board, never moved off one, so putting a
@@ -369,7 +371,7 @@ export const useDoc = create<DocStore>()(
           title: title ?? (typeKey === 'blank' ? 'Untitled page' : `Untitled ${blockType.label}`),
           x: at.x, y: at.y, w: CARD_W, h: CARD_H,
           fields, custom: typeKey === 'blank' ? [] : null, cols: 0,
-          body: '', images: [], header: null, updated: Date.now(),
+          body: '', tags: [], images: [], header: null, updated: Date.now(),
         };
         set((st) => {
           const pages = [...st.pages, page];
@@ -417,6 +419,23 @@ export const useDoc = create<DocStore>()(
         if (!refs) return { refs: 0, pages: 0, skipped };
         set({ pages, edges: deriveWikiEdges(pages, s.edges) });
         return { refs, pages: touched, skipped };
+      },
+
+      setTags: (id, tags) => {
+        const seen = new Set<string>();
+        const clean: string[] = [];
+        for (const raw of tags) {
+          const tag = raw.trim();
+          const key = tag.toLowerCase();
+          // "Guild" and "guild" are the same label; keeping both would split a group
+          // in two and neither half would look wrong.
+          if (!tag || seen.has(key)) continue;
+          seen.add(key);
+          clean.push(tag);
+        }
+        set((s) => ({
+          pages: s.pages.map((p) => (p.id === id ? { ...p, tags: clean, updated: Date.now() } : p)),
+        }));
       },
 
       movePagesToBoard: (ids, boardId) => {
@@ -818,15 +837,18 @@ type LegacyPage = Page & { areaId?: string };
  * one level deeper.
  */
 export function migrate(doc: Doc): Doc {
-  // Images arrived after v1 shipped, so every page gets the fields whether or not
-  // the rest of this migration has anything to do.
-  const withImages = doc.pages.some((p) => !Array.isArray(p.images) || p.header === undefined)
+  // Images, and later tags, arrived after v1 shipped, so every page gets the fields
+  // whether or not the rest of this migration has anything to do.
+  const withImages = doc.pages.some(
+    (p) => !Array.isArray(p.images) || p.header === undefined || !Array.isArray(p.tags),
+  )
     ? {
         ...doc,
         pages: doc.pages.map((p) => ({
           ...p,
           images: Array.isArray(p.images) ? p.images : [],
           header: p.header ?? null,
+          tags: Array.isArray(p.tags) ? p.tags : [],
         })),
       }
     : doc;

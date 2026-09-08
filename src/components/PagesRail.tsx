@@ -285,6 +285,7 @@ export function PagesRail() {
 function Hit({ match }: { match: PageMatch }) {
   return (
     <span className="page-row__hit">
+      {match.where === 'tag' && <span className="page-row__hit-label">tag</span>}
       {match.label && <span className="page-row__hit-label">{match.label}</span>}
       <span className="truncate">
         {match.excerpt.before}

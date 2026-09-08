@@ -187,6 +187,12 @@ export interface Page {
   cols: 0 | 1 | 2 | 3 | 4;
   /** Markdown source. */
   body: string;
+  /**
+   * Cross-cutting labels. Hierarchy is the only other axis a page has — it lives on
+   * exactly one board — so a city belonging to both a region and a guild had
+   * nowhere to say so.
+   */
+  tags: string[];
   /** Images attached to this page, in the order they were added. */
   images: PageImage[];
   /**
