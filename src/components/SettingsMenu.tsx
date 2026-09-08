@@ -3,7 +3,7 @@ import { useDismiss } from '../lib/useDismiss';
 import type { ViewMode } from '../state/types';
 import { useUI, type Density, type GridStyle } from '../state/uiStore';
 import { useSync } from '../state/syncStore';
-import { exportCurrentProject } from '../state/actions';
+import { exportCurrentProject, exportCurrentProjectAsMarkdown } from '../state/actions';
 import { signOut } from '../state/sync/auth';
 import { saveNow, syncNow } from '../state/sync/engine';
 import { importImage } from '../lib/assets';
@@ -286,6 +286,9 @@ export function SettingsMenu() {
               <div className="settings__label">Project</div>
               <button className="settings__item" onClick={() => { close(); exportCurrentProject(); }}>
                 Export as JSON
+              </button>
+              <button className="settings__item" onClick={() => { close(); exportCurrentProjectAsMarkdown(); }}>
+                Export as Markdown
               </button>
               <button className="settings__item" onClick={() => { close(); goHome(); }}>
                 All projects

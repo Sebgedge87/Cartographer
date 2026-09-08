@@ -1,7 +1,8 @@
 import { schemaFor, useDoc } from './docStore';
 import { useUI, type NamePrompt } from './uiStore';
 import { rollDice } from './graph';
-import { buildProjectFile, downloadProject, parseProjectFile } from '../lib/io';
+import { buildProjectFile, downloadProject, downloadMarkdown, parseProjectFile } from '../lib/io';
+import { projectToMarkdown } from '../lib/markdownExport';
 import { uniqueTitle } from '../lib/text';
 import { LIMITS, importImage } from '../lib/assets';
 import { webglAvailable } from '../lib/webgl';
@@ -205,6 +206,18 @@ export function exportCurrentProject(): void {
   if (!file) return;
   downloadProject(file);
   showToast(`Exported ${file.pages.length} pages as JSON`);
+}
+
+/** The same project, readable: for printing, sharing, or opening in another tool. */
+export function exportCurrentProjectAsMarkdown(): void {
+  const { projectId, showToast } = useUI.getState();
+  if (!projectId) return;
+  const doc = useDoc.getState();
+  const project = doc.projects.find((p) => p.id === projectId);
+  const body = projectToMarkdown(doc, projectId);
+  if (!project || !body) return;
+  downloadMarkdown(project.name, body);
+  showToast(`Exported ${doc.pages.filter((p) => p.projectId === projectId).length} pages as Markdown`);
 }
 
 export async function importProjectFile(file: File): Promise<void> {

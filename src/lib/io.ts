@@ -27,14 +27,26 @@ export function slug(name: string): string {
   return name.trim().replace(/\s+/g, '-').toLowerCase() || 'project';
 }
 
-export function downloadProject(file: ProjectFile): void {
-  const blob = new Blob([JSON.stringify(file, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
+function download(name: string, body: string, type: string): void {
+  const url = URL.createObjectURL(new Blob([body], { type }));
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${slug(file.project.name)}.cartographer.json`;
+  a.download = name;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+export function downloadProject(file: ProjectFile): void {
+  download(
+    `${slug(file.project.name)}.cartographer.json`,
+    JSON.stringify(file, null, 2),
+    'application/json',
+  );
+}
+
+/** The readable export: for printing, sharing, or reading in any other tool. */
+export function downloadMarkdown(name: string, body: string): void {
+  download(`${slug(name)}.md`, body, 'text/markdown');
 }
 
 /* ---------- import ---------- */
