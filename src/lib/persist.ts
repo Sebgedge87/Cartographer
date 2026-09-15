@@ -108,6 +108,35 @@ export async function saveDoc(value: unknown): Promise<void> {
   await saveKey(DOC_KEY, value);
 }
 
+/**
+ * Ask the browser not to evict this origin's storage.
+ *
+ * Without it IndexedDB is "best effort" and can be cleared under storage pressure
+ * with no warning — which is where the whole document lives, and where up to five
+ * minutes of unsaved work sits waiting for the autosave. Chrome grants this
+ * silently on engagement signals, Firefox may prompt, and Safari decides for
+ * itself; a refusal is not an error, it just means the old guarantees apply.
+ */
+export async function requestPersistence(): Promise<boolean> {
+  try {
+    if (!navigator.storage?.persist) return false;
+    // Already granted: asking again would prompt a second time for no reason.
+    if (await navigator.storage.persisted?.()) return true;
+    return await navigator.storage.persist();
+  } catch {
+    return false;
+  }
+}
+
+/** Whether this origin's storage is exempt from eviction, as far as it will say. */
+export async function storageIsPersisted(): Promise<boolean> {
+  try {
+    return (await navigator.storage?.persisted?.()) ?? false;
+  } catch {
+    return false;
+  }
+}
+
 /** Trailing-edge debounce, so a drag writes once when it settles rather than per frame. */
 export function debounce<A extends unknown[]>(fn: (...args: A) => void, ms: number) {
   let t: ReturnType<typeof setTimeout> | undefined;

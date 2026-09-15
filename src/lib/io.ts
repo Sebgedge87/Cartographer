@@ -19,6 +19,7 @@ export function buildProjectFile(doc: Doc, projectId: string): ProjectFile | nul
     typeOrder: schema?.typeOrder ?? [],
     calendar: schema?.calendar,
     dictionary: schema?.dictionary ?? [],
+    sheet: schema?.sheet ?? null,
     links: doc.edges.filter((e) => ids.has(e.from) && ids.has(e.to)),
   };
 }
@@ -184,6 +185,7 @@ export function parseProjectFile(raw: string): ProjectFile | null {
       typeOrder: data.typeOrder ?? [],
       calendar: data.calendar,
       dictionary: Array.isArray(data.dictionary) ? data.dictionary : [],
+      sheet: typeof data.sheet === 'string' ? data.sheet : null,
       // Links to pages the file does not contain would be edges to nothing.
       links: (data.links ?? []).filter((e) => e && ids.has(e.from) && ids.has(e.to)),
     };

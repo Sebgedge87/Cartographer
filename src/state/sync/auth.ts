@@ -1,6 +1,6 @@
 import { supabase, syncConfigured } from '../../lib/supabase';
 import { useSync } from '../syncStore';
-import { startSync, stopSync } from './engine';
+import { saveNow, startSync, stopSync } from './engine';
 
 /**
  * Watch the session and run the sync engine for exactly as long as someone is
@@ -86,6 +86,28 @@ export async function signInWithGoogle(): Promise<string | null> {
   }
 }
 
-export async function signOut(): Promise<void> {
+/**
+ * Save what is held here, then sign out.
+ *
+ * Signing out takes the session with it, and with it any way of sending what this
+ * device is still holding — so the save has to happen first, while there is still
+ * an account to save to. Nothing is lost either way: unsaved work stays in
+ * IndexedDB and goes up on the next sign-in. But it would sit there unmentioned,
+ * which is how you find out a fortnight later.
+ *
+ * A save that fails does not block the sign-out — that would strand anyone whose
+ * server is unreachable — it just comes back as a message worth showing.
+ */
+export async function signOut(): Promise<string | null> {
+  try {
+    await saveNow();
+  } catch {
+    /* the pending count below is the real test of whether it landed */
+  }
+  const held = useSync.getState().pending;
   await supabase().auth.signOut();
+  if (!held) return null;
+  const what = held === 1 ? '1 change' : `${held} changes`;
+  const it = held === 1 ? 'It is' : 'They are';
+  return `Signed out with ${what} unsaved. ${it} still on this device, and will go up next time you sign in.`;
 }

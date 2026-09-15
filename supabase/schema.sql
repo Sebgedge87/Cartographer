@@ -36,6 +36,9 @@ create table if not exists public.projects (
   -- Words added to this project's spellchecker, by hand. Names the document already
   -- carries are harvested from it on load rather than stored twice.
   dictionary  jsonb not null default '[]'::jsonb,
+  -- Asset id of the project's parchment sheet. The bytes live in the assets bucket
+  -- like any other image; this is the ref that makes them mean something.
+  sheet       text,
   updated     bigint not null default 0,
   updated_at  timestamptz not null default now()
 );
@@ -98,6 +101,8 @@ alter table public.projects add column if not exists calendar jsonb;
 -- Words added to the project's spellchecker, so a name invented on one device is
 -- not underlined on the next.
 alter table public.projects add column if not exists dictionary jsonb not null default '[]'::jsonb;
+-- The parchment sheet moved off the device and onto the project it belongs to.
+alter table public.projects add column if not exists sheet text;
 
 create table if not exists public.edges (
   id         text primary key,

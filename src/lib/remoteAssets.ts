@@ -61,12 +61,17 @@ export async function downloadAsset(id: string): Promise<{ full: Blob; thumb: Bl
   }
 }
 
-/** Ids already in the bucket, so a catch-up pass only uploads what is missing. */
-export async function remoteAssetIds(): Promise<Set<string> | null> {
+/**
+ * What is in the bucket, and when each object arrived.
+ *
+ * The catch-up pass needs the ids to know what to upload, and the ages to know
+ * what is old enough to be safely reaped — see `syncAssets`.
+ */
+export async function remoteAssets(): Promise<Map<string, number> | null> {
   const userId = await owner();
   if (!userId) return null;
   try {
-    const out = new Set<string>();
+    const out = new Map<string, number>();
     // Paged: the default page is 100, and a project can easily hold more.
     for (let offset = 0; ; offset += 100) {
       const { data, error } = await supabase().storage
@@ -74,11 +79,28 @@ export async function remoteAssetIds(): Promise<Set<string> | null> {
         .list(userId, { limit: 100, offset });
       if (error || !data) return out.size ? out : null;
       for (const object of data) {
-        if (!object.name.endsWith('-thumb')) out.add(object.name);
+        if (object.name.endsWith('-thumb')) continue;
+        const at = Date.parse(object.created_at ?? '');
+        // An object whose age the server will not state is treated as new, which
+        // means the reaper leaves it alone.
+        out.set(object.name, Number.isNaN(at) ? Date.now() : at);
       }
       if (data.length < 100) return out;
     }
   } catch {
     return null;
+  }
+}
+
+/** Remove both sizes of one asset from the bucket. */
+export async function deleteRemoteAsset(id: string): Promise<boolean> {
+  const userId = await owner();
+  if (!userId) return false;
+  const at = paths(userId, id);
+  try {
+    const { error } = await supabase().storage.from(BUCKET).remove([at.full, at.thumb]);
+    return !error;
+  } catch {
+    return false;
   }
 }

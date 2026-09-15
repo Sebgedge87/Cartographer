@@ -9,6 +9,7 @@ const schema = {
   typeOrder: ['note'],
   calendar: starterCalendar(),
   dictionary: [],
+  sheet: null,
 };
 
 const page = (id: string, title: string, extra: Partial<Page> = {}): Page => ({

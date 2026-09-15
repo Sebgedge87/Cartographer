@@ -6,7 +6,7 @@ import type {
 } from './types';
 import { ORIGIN, PITCH_X, PITCH_Y, arrangeLayout, deriveWikiEdges, effectiveFields, isCustomPage } from './graph';
 import { codeFor, emptyDoc, normaliseSchema, starterSchema } from './defaults';
-import { debounce, loadDoc, saveDoc, throttleLeading } from '../lib/persist';
+import { debounce, loadDoc, requestPersistence, saveDoc, throttleLeading } from '../lib/persist';
 import { LIMITS, sweepAssets } from '../lib/assets';
 import { serialiseDate } from '../lib/calendar';
 import { retitleBody } from '../lib/retitle';
@@ -89,6 +89,8 @@ interface DocActions {
   deleteType: (projectId: string, key: string) => boolean;
   /** Replace the project's world calendar. It is small, so it is written whole. */
   setCalendar: (projectId: string, calendar: WorldCalendar) => void;
+  /** Set the project's parchment sheet; null goes back to the drawn one. */
+  setSheet: (projectId: string, assetId: string | null) => void;
   /** Teach the spellchecker a word for this project. A duplicate is a no-op. */
   addWord: (projectId: string, word: string) => void;
   removeWord: (projectId: string, word: string) => void;
@@ -239,6 +241,10 @@ export const useDoc = create<DocStore>()(
           typeOrder: file.typeOrder ?? starterSchema().typeOrder,
           calendar: file.calendar as ProjectSchema['calendar'],
           dictionary: file.dictionary ?? [],
+          // An imported file may name a sheet whose bytes are not here. The ref is
+          // kept — the picture arrives if the bucket has it — and the drawn sheet
+          // stands in until then.
+          sheet: file.sheet ?? null,
         });
         set((s) => {
           const pages = [...s.pages, ...pagesOut];
@@ -714,6 +720,9 @@ export const useDoc = create<DocStore>()(
       setCalendar: (projectId, calendar) =>
         set((s) => withSchema(s, projectId, (schema) => ({ ...schema, calendar }))),
 
+      setSheet: (projectId, assetId) =>
+        set((s) => withSchema(s, projectId, (schema) => ({ ...schema, sheet: assetId }))),
+
       addWord: (projectId, word) =>
         set((s) =>
           withSchema(s, projectId, (schema) => {
@@ -836,6 +845,19 @@ type LegacyPage = Page & { areaId?: string };
  * move onto that board — so an existing project opens looking exactly as it did,
  * one level deeper.
  */
+/**
+ * Every asset id the document still refers to: page images, and the parchment sheet
+ * each project carries. Body `asset:` refs are added by the caller that knows how
+ * to parse markdown — this is the part the document can answer on its own.
+ */
+export function liveAssets(doc: Doc): string[] {
+  const ids = doc.pages.flatMap((p) => p.images.map((i) => i.id));
+  for (const schema of Object.values(doc.schemas)) {
+    if (schema.sheet) ids.push(schema.sheet);
+  }
+  return ids;
+}
+
 export function migrate(doc: Doc): Doc {
   // Images, and later tags, arrived after v1 shipped, so every page gets the fields
   // whether or not the rest of this migration has anything to do.
@@ -918,9 +940,17 @@ export async function bootDoc(): Promise<void> {
   useDoc.getState().hydrate(doc);
   useDoc.temporal.getState().clear();
 
+  // Never awaited: whether the browser agrees to keep this storage has no bearing
+  // on whether the document opens.
+  void requestPersistence();
+
   // History is empty at this point, so an unreferenced blob cannot be undone back
   // into use. This is the one safe moment to free them.
-  void sweepAssets(doc.pages.flatMap((p) => p.images.map((i) => i.id)));
+  //
+  // Sheets count as referenced. They did not, which meant a supplied parchment
+  // sheet was swept on the very next boot while the ref that pointed at it
+  // survived — the picture was gone and nothing said so.
+  void sweepAssets(liveAssets(doc));
 
   const write = debounce((d: Doc) => void saveDoc(d), 400);
   useDoc.subscribe(({ projects, areas, boards, pages, edges, schemas: sc }) =>

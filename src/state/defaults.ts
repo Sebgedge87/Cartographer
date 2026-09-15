@@ -80,6 +80,7 @@ export function starterSchema(): ProjectSchema {
     typeOrder: STARTER_ORDER.slice(),
     calendar: starterCalendar(),
     dictionary: [],
+    sheet: null,
   };
 }
 
@@ -149,7 +150,7 @@ export function normaliseSchema(schema: ProjectSchema): ProjectSchema {
     seen.add(word.toLowerCase());
     dictionary.push(word);
   }
-  return { types, typeOrder, calendar, dictionary };
+  return { types, typeOrder, calendar, dictionary, sheet: schema.sheet ?? null };
 }
 
 /** Fill in anything a stored or imported calendar is missing, or make a whole one. */

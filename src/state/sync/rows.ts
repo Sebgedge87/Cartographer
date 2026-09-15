@@ -14,6 +14,8 @@ export interface ProjectRow {
   calendar: WorldCalendar | null;
   /** Words added to the project's spellchecker, so they follow it between devices. */
   dictionary: string[] | null;
+  /** Asset id of the project's parchment sheet; the bytes travel through the bucket. */
+  sheet: string | null;
   updated: number;
 }
 export interface AreaRow {
@@ -44,7 +46,7 @@ export function projectRow(p: Project, schema: ProjectSchema | undefined, update
   return {
     id: p.id, name: p.name, system: p.system, accent: p.accent,
     types: s.types, type_order: s.typeOrder, calendar: s.calendar,
-    dictionary: s.dictionary, updated,
+    dictionary: s.dictionary, sheet: s.sheet, updated,
   };
 }
 
@@ -83,7 +85,7 @@ export function toSchema(r: ProjectRow): ProjectSchema {
     types: r.types ?? {},
     typeOrder: r.type_order ?? [],
     calendar: r.calendar as ProjectSchema['calendar'],
-    dictionary: r.dictionary ?? [],
+    dictionary: r.dictionary ?? [], sheet: r.sheet ?? null,
   });
 }
 

@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useDismiss } from '../lib/useDismiss';
 import type { ViewMode } from '../state/types';
 import { useUI, type Density, type GridStyle } from '../state/uiStore';
@@ -7,6 +7,7 @@ import { exportCurrentProject, exportCurrentProjectAsMarkdown } from '../state/a
 import { signOut } from '../state/sync/auth';
 import { saveNow, syncNow } from '../state/sync/engine';
 import { importImage } from '../lib/assets';
+import { requestPersistence, storageIsPersisted } from '../lib/persist';
 import { useDoc } from '../state/docStore';
 import type { Theme } from '../lib/theme';
 import { X } from 'lucide-react';
@@ -59,17 +60,22 @@ export function SettingsMenu() {
   const focus = useUI((s) => s.focus);
   const setFocus = useUI((s) => s.setFocus);
   const theme = useUI((s) => s.theme);
-  const sheet = useUI((s) => s.sheet);
   const setTheme = useUI((s) => s.setTheme);
-  const setSheet = useUI((s) => s.setSheet);
   const showToast = useUI((s) => s.showToast);
   const sheetPicker = useRef<HTMLInputElement>(null);
+  /** null until the browser has been asked; it is the only one who knows. */
+  const [persisted, setPersisted] = useState<boolean | null>(null);
+  useEffect(() => { if (open) void storageIsPersisted().then(setPersisted); }, [open]);
   const set = useUI((s) => s.set);
   const goHome = useUI((s) => s.goHome);
 
   const spelling = useUI((s) => s.spelling);
   const setSpelling = useUI((s) => s.setSpelling);
   const projectId = useUI((s) => s.projectId);
+  // The sheet belongs to the project, so it follows it between devices rather than
+  // being re-picked on each one. Declared after projectId, which its selector reads.
+  const sheet = useDoc((s) => (projectId ? s.schemas[projectId]?.sheet ?? null : null));
+  const setSheet = useDoc((s) => s.setSheet);
   const doc = useDoc();
   const added = (projectId ? doc.schemas[projectId]?.dictionary : undefined) ?? [];
 
@@ -149,7 +155,7 @@ export function SettingsMenu() {
                         {sheet ? 'REPLACE' : 'USE AN IMAGE'}
                       </button>
                       {sheet && (
-                        <button className="segment" onClick={() => setSheet(null)}>
+                        <button className="segment" onClick={() => projectId && setSheet(projectId, null)}>
                           DRAWN
                         </button>
                       )}
@@ -170,7 +176,7 @@ export function SettingsMenu() {
                       if (!file) return;
                       const result = await importImage(file);
                       if (result.ok) {
-                        setSheet(result.image.id);
+                        if (projectId) setSheet(projectId, result.image.id);
                         showToast('Sheet set');
                       } else {
                         showToast(result.reason);
@@ -283,6 +289,28 @@ export function SettingsMenu() {
             </div>
 
             <div className="settings__group">
+              <div className="settings__label">Storage</div>
+              <div className="settings__row">
+                <span>On this device</span>
+                <div className="segments">
+                  <button
+                    className="segment"
+                    aria-pressed={persisted === true}
+                    disabled={persisted === true}
+                    onClick={() => void requestPersistence().then(setPersisted)}
+                  >
+                    {persisted === true ? 'PROTECTED' : 'ASK AGAIN'}
+                  </button>
+                </div>
+              </div>
+              <div className="settings__hint">
+                {persisted === true
+                  ? 'The browser has agreed not to clear this project when space runs short.'
+                  : 'The browser may clear stored projects when space runs short. It decides this itself, on how much you use the site — keep working and it usually grants it. Exports are the guarantee.'}
+              </div>
+            </div>
+
+            <div className="settings__group">
               <div className="settings__label">Project</div>
               <button className="settings__item" onClick={() => { close(); exportCurrentProject(); }}>
                 Export as JSON
@@ -339,8 +367,14 @@ export function SettingsMenu() {
                 </button>
               )}
               {email && (
-                <button className="settings__item" onClick={() => { close(); void signOut(); }}>
-                  Sign out
+                <button
+                  className="settings__item"
+                  onClick={() => {
+                    close();
+                    void signOut().then((warning) => { if (warning) showToast(warning); });
+                  }}
+                >
+                  {pending > 0 ? 'Save and sign out' : 'Sign out'}
                 </button>
               )}
             </div>

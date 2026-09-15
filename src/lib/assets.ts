@@ -9,7 +9,8 @@
 
 import type { PageImage } from '../state/types';
 import { openDb } from './persist';
-import { downloadAsset, remoteAssetIds, uploadAsset } from './remoteAssets';
+import { deleteRemoteAsset, downloadAsset, remoteAssets, uploadAsset } from './remoteAssets';
+import { reapable } from './reap';
 
 export const ASSET_STORE = 'assets';
 
@@ -158,31 +159,43 @@ async function pullAsset(id: string): Promise<AssetRecord | null> {
 }
 
 /**
- * Upload every asset this device holds that the bucket is missing.
+ * Make the bucket agree with this document: upload what is missing, remove what is
+ * long dead.
  *
- * Covers the cases a single upload-on-import cannot: images added before sync was
- * configured, an upload that failed while offline, and a device that had a project
- * before it had an account. Called after a pull, when the document is current
- * enough to say which assets are still referenced.
+ * Uploading covers what a single upload-on-import cannot — images added before
+ * sync was configured, an upload that failed while offline, a device that had a
+ * project before it had an account. Reaping covers the other direction: removing
+ * an image from a page freed the local bytes but left the bucket's copy for ever.
+ *
+ * Called after a pull, which is the only moment `live` is worth trusting: before
+ * one, this device's idea of what is referenced is however stale its last session
+ * left it.
  */
-export async function syncAssets(live: Iterable<string>): Promise<number> {
-  const remote = await remoteAssetIds();
-  if (!remote) return 0;
+export async function syncAssets(live: Iterable<string>): Promise<{ sent: number; reaped: number }> {
+  const remote = await remoteAssets();
+  if (!remote) return { sent: 0, reaped: 0 };
+  const wanted = new Set(live);
   let sent = 0;
-  for (const id of new Set(live)) {
+  let reaped = 0;
+
+  for (const id of wanted) {
     if (remote.has(id)) continue;
     const rec = await get(id).catch(() => null);
     if (!rec) continue;
     if (await uploadAsset(id, rec.full, rec.thumb)) sent++;
   }
-  return sent;
+
+  for (const id of reapable(remote, wanted, Date.now())) {
+    if (await deleteRemoteAsset(id)) reaped++;
+  }
+
+  return { sent, reaped };
 }
 
 /**
- * Local only. The bucket is deliberately left alone: this is called by the boot
- * sweep, whose idea of what is still referenced comes from the last document this
- * device happened to have, and deleting another machine's picture on the strength
- * of that is not a trade worth making. Orphaned objects are small and rare.
+ * Local only, still. The bucket is left to `syncAssets`, which runs after a pull
+ * and so has a current document to judge by — this one is called by the boot sweep,
+ * whose idea of what is referenced is whatever the last session left behind.
  */
 export async function deleteAsset(id: string): Promise<void> {
   for (const variant of ['full', 'thumb'] as const) {

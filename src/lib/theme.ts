@@ -38,7 +38,14 @@ export function storedTheme(): Theme {
   }
 }
 
-/** The asset id of a supplied sheet, or null for the built-in one. */
+/**
+ * The last sheet applied on this device.
+ *
+ * The sheet itself belongs to the project, but the document is not loaded yet when
+ * the first paint happens, so this caches the id purely so boot puts the right
+ * paper up rather than flashing the drawn one. App corrects it either way once the
+ * document arrives.
+ */
 export function storedSheet(): string | null {
   try {
     return localStorage.getItem(SHEET_KEY);
@@ -77,6 +84,7 @@ export function applyTheme(theme: Theme, sheet: string | null = storedSheet()): 
   if (theme === 'parchment') void applySheet(sheet);
 }
 
+/** Update the boot paint cache. Not where the sheet is stored — that is the project. */
 export function rememberSheet(assetId: string | null): void {
   write(SHEET_KEY, assetId);
   void applySheet(assetId);

@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Camera, ViewMode } from './types';
 import { ZOOM_MAX, ZOOM_MIN } from './graph';
-import { applyTheme, rememberSheet, storedSheet, storedTheme, type Theme } from '../lib/theme';
+import { applyTheme, storedTheme, type Theme } from '../lib/theme';
 import { rememberSpelling, stopSpelling, storedSpelling } from '../lib/spell';
 
 export type GridStyle = 'blueprint' | 'dots' | 'none';
@@ -153,8 +153,6 @@ interface UIState {
    */
   focus: boolean;
   theme: Theme;
-  /** Asset id of a supplied parchment sheet, or null for the drawn one. */
-  sheet: string | null;
   /** Whether the editor checks spelling. Remembered across sessions. */
   spelling: boolean;
 }
@@ -163,8 +161,6 @@ interface UIActions {
   set: <K extends keyof UIState>(patch: Pick<UIState, K> | Partial<UIState>) => void;
   /** Switch theme: writes it to the root element and remembers it, then to state. */
   setTheme: (theme: Theme) => void;
-  /** Use this stored image as the parchment sheet; null goes back to the drawn one. */
-  setSheet: (assetId: string | null) => void;
   /** Turn spellchecking on or off. Off also frees the dictionary the worker holds. */
   setSpelling: (on: boolean) => void;
   openProject: (projectId: string, areaId: string | null, boardId: string | null) => void;
@@ -224,19 +220,15 @@ export const useUI = create<UIStore>()((set, get) => ({
   // Read from storage rather than defaulted: the theme is applied before the first
   // paint in main.tsx, and the store has to agree with what is already on screen.
   theme: storedTheme(),
-  sheet: storedSheet(),
   spelling: storedSpelling(),
 
   set: (patch) => set(patch as Partial<UIState>),
 
   setTheme: (theme) => {
-    applyTheme(theme, get().sheet);
+    // The sheet belongs to the project now, and App keeps it on the page; this
+    // only has to say which theme is showing.
+    applyTheme(theme);
     set({ theme });
-  },
-
-  setSheet: (assetId) => {
-    rememberSheet(assetId);
-    set({ sheet: assetId });
   },
 
   setSpelling: (on) => {

@@ -1,5 +1,5 @@
 import type { Doc } from '../types';
-import { useDoc } from '../docStore';
+import { liveAssets, useDoc } from '../docStore';
 import { useSync } from '../syncStore';
 import { mergeDoc, type MergeMeta } from './merge';
 import { supabase } from '../../lib/supabase';
@@ -306,10 +306,11 @@ export async function startSync(): Promise<void> {
 
 /** Send any image this device holds that the bucket has not got. */
 async function catchUpAssets(): Promise<void> {
-  const live = useDoc.getState().pages.flatMap((p) => [
-    ...p.images.map((i) => i.id),
-    ...assetRefs(p.body),
-  ]);
+  const doc = useDoc.getState();
+  const live = [
+    ...liveAssets(doc),
+    ...doc.pages.flatMap((p) => assetRefs(p.body)),
+  ];
   try {
     await syncAssets(live);
   } catch {

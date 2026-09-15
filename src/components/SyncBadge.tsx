@@ -1,4 +1,5 @@
 import { useSync } from '../state/syncStore';
+import { useUI } from '../state/uiStore';
 import { signOut } from '../state/sync/auth';
 import { saveNow, syncNow } from '../state/sync/engine';
 
@@ -17,6 +18,7 @@ export function SyncBadge() {
   const email = useSync((s) => s.email);
   const error = useSync((s) => s.error);
   const pending = useSync((s) => s.pending);
+  const showToast = useUI((s) => s.showToast);
 
   // Unsaved work is the thing worth shouting about, so it wins the label.
   const unsaved = pending > 0 && status !== 'connecting' && status !== 'syncing';
@@ -40,7 +42,9 @@ export function SyncBadge() {
         if (unsaved) { void saveNow(); return; }
         if (status === 'synced' || status === 'error') void syncNow();
       }}
-      onDoubleClick={() => { if (email) void signOut(); }}
+      onDoubleClick={() => {
+        if (email) void signOut().then((warning) => { if (warning) showToast(warning); });
+      }}
     >
       <span className="sync__dot" />
       {label}

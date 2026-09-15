@@ -116,6 +116,13 @@ export interface ProjectSchema {
    * stored, so this holds only what nothing else in the document already says.
    */
   dictionary: string[];
+  /**
+   * Asset id of the parchment sheet, or null for the drawn one. It belongs to the
+   * project rather than the device: it is the world's paper, and a device that has
+   * never seen the picture should still get it. Which *theme* you are in stays a
+   * device preference — this is only what paper the parchment theme uses.
+   */
+  sheet: string | null;
 }
 
 export interface Project {
@@ -240,6 +247,8 @@ export interface ProjectFile {
   calendar?: WorldCalendar;
   /** Words added to this project's spellchecker. Absent in older files. */
   dictionary?: string[];
+  /** Asset id of the parchment sheet. The bytes are not in the file; the ref is. */
+  sheet?: string | null;
   links: Edge[];
 }
 

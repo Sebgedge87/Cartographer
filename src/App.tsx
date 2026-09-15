@@ -22,6 +22,7 @@ import { DeleteProject } from './components/DeleteProject';
 import { SignIn } from './components/SignIn';
 import { useSync } from './state/syncStore';
 import { MoveToBoard } from './components/MoveToBoard';
+import { applySheet, rememberSheet } from './lib/theme';
 
 function isTyping(target: EventTarget | null): boolean {
   const tag = (target as HTMLElement | null)?.tagName?.toLowerCase();
@@ -96,6 +97,30 @@ function useGlobalContextMenu() {
   }, []);
 }
 
+/**
+ * Keep the parchment sheet on the page as the project changes.
+ *
+ * The sheet belongs to the project, so switching projects — or receiving one from
+ * another device — changes which paper the parchment theme should be showing, and
+ * the bytes may need fetching before it can.
+ */
+function useProjectSheet(): void {
+  const theme = useUI((s) => s.theme);
+  const projectId = useUI((s) => s.projectId);
+  const sheet = useDoc((s) => (projectId ? s.schemas[projectId]?.sheet ?? null : null));
+
+  useEffect(() => {
+    // No project open — the home screen — means no project to take paper from, so
+    // leave up whatever the first paint put there rather than blanking it back to
+    // the drawn sheet on the way past.
+    if (!projectId) return;
+    // Remembered even when another theme is showing, so switching to parchment, or
+    // reloading into it, puts the right paper up on the very first paint.
+    rememberSheet(sheet);
+    if (theme === 'parchment') void applySheet(sheet);
+  }, [theme, sheet, projectId]);
+}
+
 export function App() {
   const view = useUI((s) => s.view);
   const mode = useUI((s) => s.mode);
@@ -106,9 +131,17 @@ export function App() {
   const chooseOffline = useSync((s) => s.chooseOffline);
   useGlobalKeys();
   useGlobalContextMenu();
+  useProjectSheet();
 
   if (syncStatus === 'signed-out' && !offlineChosen) {
-    return <SignIn onSkip={() => chooseOffline(true)} />;
+    // With the toast: signing out is the one thing that can have something to say
+    // on the way to this screen, and it was landing where nothing rendered it.
+    return (
+      <>
+        <SignIn onSkip={() => chooseOffline(true)} />
+        <Toast />
+      </>
+    );
   }
 
   return (
