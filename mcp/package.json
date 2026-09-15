@@ -1,0 +1,23 @@
+{
+  "name": "cartographer-mcp",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Model Context Protocol server for Cartographer — lets Claude read and write a project",
+  "bin": { "cartographer-mcp": "dist/stdio.js" },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "start": "node dist/stdio.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.30.0",
+    "@supabase/supabase-js": "^2.112.4"
+  },
+  "devDependencies": {
+    "@types/node": "^26.3.0",
+    "tsx": "^4.23.12",
+    "typescript": "^5.6.3"
+  }
+}
