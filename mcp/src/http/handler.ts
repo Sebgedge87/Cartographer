@@ -45,17 +45,15 @@ const oauthError = (error: string, description: string, status = 400) =>
 /**
  * Where this server lives, as the outside world sees it.
  *
- * Behind a proxy the request URL is not necessarily the public one, so a
- * configured value wins; the forwarded headers are the fallback, and the request's
- * own URL the last resort.
+ * Configured, never guessed. Deriving it from the request looks reasonable and is
+ * not: mounted at /functions/v1/mcp, the MCP endpoint *is* the function root, so
+ * stripping a trailing "/mcp" yields /functions/v1 and every URL in the discovery
+ * documents points at nothing. Every one of them has to be right for the handshake
+ * to start at all, so a missing value is an error worth saying out loud rather than
+ * a default worth inventing.
  */
-function publicBase(request: Request, env: Env): string {
-  if (env.MCP_PUBLIC_URL) return env.MCP_PUBLIC_URL.replace(/\/+$/, '');
-  const url = new URL(request.url);
-  const host = request.headers.get('x-forwarded-host') ?? url.host;
-  const proto = request.headers.get('x-forwarded-proto') ?? url.protocol.replace(':', '');
-  const path = url.pathname.replace(/\/(authorize|token|register|mcp)$/, '').replace(/\/+$/, '');
-  return `${proto}://${host}${path}`;
+function publicBase(env: Env): string | null {
+  return env.MCP_PUBLIC_URL ? env.MCP_PUBLIC_URL.replace(/\/+$/, '') : null;
 }
 
 /** The path within this function, whatever prefix it happens to be mounted at. */
@@ -96,7 +94,16 @@ async function formOrJson(request: Request): Promise<Record<string, string>> {
 export async function handler(request: Request, env: Env): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
-  const base = publicBase(request, env);
+  const base = publicBase(env);
+  if (!base) {
+    return json({
+      error: 'server_misconfigured',
+      error_description:
+        'MCP_PUBLIC_URL is not set. It must be the full public URL of this function, e.g. '
+        + 'https://YOUR-PROJECT.supabase.co/functions/v1/mcp — every address in the OAuth '
+        + 'discovery documents is built from it. Set it with: supabase secrets set MCP_PUBLIC_URL=...',
+    }, 500);
+  }
   const path = route(request);
 
   switch (path) {
@@ -240,6 +247,8 @@ async function authorize(request: Request, env: Env, base: string): Promise<Resp
     redirect_uri: redirectUri,
     code_challenge: challenge,
     refresh_token: session.session.refresh_token,
+    access_token: session.session.access_token,
+    access_expires: new Date((session.session.expires_at ?? 0) * 1000).toISOString(),
     expires_at: new Date(Date.now() + CODE_TTL_SECONDS * 1000).toISOString(),
   });
   if (saveError) return page(saveError.message);
@@ -260,6 +269,19 @@ async function token(request: Request, env: Env): Promise<Response> {
   const code = params['code'] ?? '';
   const { data: row } = await db.from('mcp_codes').select('*').eq('code', code).maybeSingle();
   if (!row) return oauthError('invalid_grant', 'That code is not valid.');
+
+  // PKCE is what binds this exchange to the client that started it, so a secret is
+  // not required — but a client that sends one is asserting something, and an
+  // assertion that is never checked is worse than one never made.
+  const secret = params['client_secret'];
+  if (secret) {
+    const { data: client } = await db.from('mcp_clients').select('client_secret')
+      .eq('client_id', row.client_id).maybeSingle();
+    if (!client || client.client_secret !== secret) {
+      await db.from('mcp_codes').delete().eq('code', code);
+      return oauthError('invalid_client', 'Client authentication failed.');
+    }
+  }
 
   // Single use, whatever happens next: delete before deciding, so a code cannot be
   // replayed by racing two exchanges.
@@ -284,6 +306,8 @@ async function token(request: Request, env: Env): Promise<Response> {
     client_id: row.client_id,
     user_id: row.user_id,
     refresh_token: row.refresh_token,
+    access_token: row.access_token ?? '',
+    access_expires: row.access_expires ?? new Date(0).toISOString(),
     expires_at: new Date(Date.now() + TOKEN_TTL_SECONDS * 1000).toISOString(),
   });
   if (error) return oauthError('server_error', error.message, 500);
@@ -305,6 +329,89 @@ function unauthorized(base: string): Response {
   });
 }
 
+/** Refresh a little before the token actually runs out, so a slow call is not caught out. */
+const REFRESH_MARGIN_MS = 60_000;
+
+/**
+ * A live Supabase access token for this connector token, or null.
+ *
+ * Supabase invalidates a refresh token as it is used and issues another. Refreshing
+ * on every call therefore cannot survive Claude doing what Claude does — issuing
+ * several tool calls at once — because the second would present a token the first
+ * had already spent. Worse, treating that failure as revocation deleted the row and
+ * locked the connector out for good.
+ *
+ * So the access token is held until it expires, and only then refreshed. A refresh
+ * that loses a race re-reads the row, where the winner has just left a fresh token.
+ */
+async function userSession(
+  env: Env,
+  db: SupabaseClient,
+  row: Record<string, unknown>,
+): Promise<string | null> {
+  /*
+   * Two different questions, and conflating them is a trap. "Should I refresh?"
+   * wants a margin, so a call that takes a moment is not caught out mid-flight.
+   * "Can I use what is here?" does not: a token someone else just minted may be
+   * shorter-lived than the margin, and demanding the margin of it would refuse a
+   * perfectly good token and refresh for ever without ever being satisfied.
+   */
+  const token = (r: Record<string, unknown>) =>
+    typeof r['access_token'] === 'string' && r['access_token'] ? r['access_token'] : null;
+  const expiresAt = (r: Record<string, unknown>) => new Date(String(r['access_expires'])).getTime();
+  const fresh = (r: Record<string, unknown>) => token(r) && expiresAt(r) - REFRESH_MARGIN_MS > Date.now();
+  const usable = (r: Record<string, unknown>) => token(r) && expiresAt(r) > Date.now();
+
+  if (fresh(row)) return token(row);
+
+  const refreshed = await refresh(env, db, row);
+  if (refreshed) return refreshed;
+
+  /*
+   * The refresh failed. Nearly always that means another call got there first and
+   * spent the token — so wait for the winner's write and take what it left, rather
+   * than reporting a dead grant. Two short backoffs is enough for a write that is
+   * already in flight, and bounded so a genuinely revoked grant still fails
+   * promptly rather than hanging.
+   *
+   * Real Supabase has a reuse window in which the same refresh token returns the
+   * same session, which alone would cover most of this. Not relying on it: it is a
+   * configurable server setting, and a connector that quietly depends on a default
+   * is a connector that breaks when someone changes it.
+   */
+  for (const wait of [120, 300]) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    const { data: latest } = await db.from('mcp_tokens').select('*')
+      .eq('token_hash', row['token_hash']).maybeSingle();
+    if (latest && usable(latest)) return token(latest);
+  }
+  return null;
+}
+
+async function refresh(
+  env: Env,
+  db: SupabaseClient,
+  row: Record<string, unknown>,
+): Promise<string | null> {
+  const auth = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await auth.auth.refreshSession({
+    refresh_token: row['refresh_token'] as string,
+  });
+  if (error || !data.session) return null;
+
+  // Never deleted on failure: a lost race is not a revoked grant, and throwing the
+  // row away would have meant re-adding the connector by hand.
+  await db.from('mcp_tokens').update({
+    refresh_token: data.session.refresh_token,
+    access_token: data.session.access_token,
+    access_expires: new Date((data.session.expires_at ?? 0) * 1000).toISOString(),
+  }).eq('token_hash', row['token_hash']);
+
+  return data.session.access_token;
+}
+
 async function mcp(request: Request, env: Env, base: string): Promise<Response> {
   // No server-initiated stream, so there is nothing to open a GET on.
   if (request.method === 'GET') return json({ error: 'method_not_allowed' }, 405);
@@ -324,22 +431,12 @@ async function mcp(request: Request, env: Env, base: string): Promise<Response> 
 
   // Act as the user, with their own row-level security deciding what is reachable.
   // The service role never touches a project table.
+  const session = await userSession(env, db, row);
+  if (!session) return unauthorized(base);
   const asUser = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
     auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${session}` } },
   });
-  const { data: session, error } = await asUser.auth.refreshSession({
-    refresh_token: row.refresh_token as string,
-  });
-  if (error || !session.session) {
-    // The session behind this token is gone — signed out elsewhere, or revoked.
-    await db.from('mcp_tokens').delete().eq('token_hash', row.token_hash);
-    return unauthorized(base);
-  }
-  // Supabase rotates refresh tokens on use, so keep the new one or the next call
-  // would present one that has already been spent.
-  await db.from('mcp_tokens')
-    .update({ refresh_token: session.session.refresh_token })
-    .eq('token_hash', row.token_hash);
 
   const body = await request.json().catch(() => null);
   if (!body) return json({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'Parse error.' } });

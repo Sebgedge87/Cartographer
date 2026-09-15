@@ -728,13 +728,8 @@ var CORS = {
 };
 var json = (body, status = 200, extra = {}) => new Response(JSON.stringify(body), { status, headers: { ...JSON_HEADERS, ...CORS, ...extra } });
 var oauthError = (error, description, status = 400) => json({ error, error_description: description }, status);
-function publicBase(request, env) {
-  if (env.MCP_PUBLIC_URL) return env.MCP_PUBLIC_URL.replace(/\/+$/, "");
-  const url = new URL(request.url);
-  const host = request.headers.get("x-forwarded-host") ?? url.host;
-  const proto = request.headers.get("x-forwarded-proto") ?? url.protocol.replace(":", "");
-  const path = url.pathname.replace(/\/(authorize|token|register|mcp)$/, "").replace(/\/+$/, "");
-  return `${proto}://${host}${path}`;
+function publicBase(env) {
+  return env.MCP_PUBLIC_URL ? env.MCP_PUBLIC_URL.replace(/\/+$/, "") : null;
 }
 function route(request) {
   const path = new URL(request.url).pathname.replace(/\/+$/, "");
@@ -773,7 +768,13 @@ async function formOrJson(request) {
 }
 async function handler(request, env) {
   if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
-  const base = publicBase(request, env);
+  const base = publicBase(env);
+  if (!base) {
+    return json({
+      error: "server_misconfigured",
+      error_description: "MCP_PUBLIC_URL is not set. It must be the full public URL of this function, e.g. https://YOUR-PROJECT.supabase.co/functions/v1/mcp \u2014 every address in the OAuth discovery documents is built from it. Set it with: supabase secrets set MCP_PUBLIC_URL=..."
+    }, 500);
+  }
   const path = route(request);
   switch (path) {
     case "/.well-known/oauth-protected-resource":
@@ -884,6 +885,8 @@ async function authorize(request, env, base) {
     redirect_uri: redirectUri,
     code_challenge: challenge,
     refresh_token: session.session.refresh_token,
+    access_token: session.session.access_token,
+    access_expires: new Date((session.session.expires_at ?? 0) * 1e3).toISOString(),
     expires_at: new Date(Date.now() + CODE_TTL_SECONDS * 1e3).toISOString()
   });
   if (saveError) return page(saveError.message);
@@ -899,6 +902,14 @@ async function token(request, env) {
   const code = params["code"] ?? "";
   const { data: row } = await db.from("mcp_codes").select("*").eq("code", code).maybeSingle();
   if (!row) return oauthError("invalid_grant", "That code is not valid.");
+  const secret = params["client_secret"];
+  if (secret) {
+    const { data: client } = await db.from("mcp_clients").select("client_secret").eq("client_id", row.client_id).maybeSingle();
+    if (!client || client.client_secret !== secret) {
+      await db.from("mcp_codes").delete().eq("code", code);
+      return oauthError("invalid_client", "Client authentication failed.");
+    }
+  }
   await db.from("mcp_codes").delete().eq("code", code);
   if (new Date(row.expires_at).getTime() < Date.now()) {
     return oauthError("invalid_grant", "That code has expired.");
@@ -918,6 +929,8 @@ async function token(request, env) {
     client_id: row.client_id,
     user_id: row.user_id,
     refresh_token: row.refresh_token,
+    access_token: row.access_token ?? "",
+    access_expires: row.access_expires ?? (/* @__PURE__ */ new Date(0)).toISOString(),
     expires_at: new Date(Date.now() + TOKEN_TTL_SECONDS * 1e3).toISOString()
   });
   if (error) return oauthError("server_error", error.message, 500);
@@ -933,6 +946,37 @@ function unauthorized(base) {
     "www-authenticate": `Bearer resource_metadata="${base}/.well-known/oauth-protected-resource"`
   });
 }
+var REFRESH_MARGIN_MS = 6e4;
+async function userSession(env, db, row) {
+  const token2 = (r) => typeof r["access_token"] === "string" && r["access_token"] ? r["access_token"] : null;
+  const expiresAt = (r) => new Date(String(r["access_expires"])).getTime();
+  const fresh = (r) => token2(r) && expiresAt(r) - REFRESH_MARGIN_MS > Date.now();
+  const usable = (r) => token2(r) && expiresAt(r) > Date.now();
+  if (fresh(row)) return token2(row);
+  const refreshed = await refresh(env, db, row);
+  if (refreshed) return refreshed;
+  for (const wait of [120, 300]) {
+    await new Promise((resolve) => setTimeout(resolve, wait));
+    const { data: latest } = await db.from("mcp_tokens").select("*").eq("token_hash", row["token_hash"]).maybeSingle();
+    if (latest && usable(latest)) return token2(latest);
+  }
+  return null;
+}
+async function refresh(env, db, row) {
+  const auth = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false }
+  });
+  const { data, error } = await auth.auth.refreshSession({
+    refresh_token: row["refresh_token"]
+  });
+  if (error || !data.session) return null;
+  await db.from("mcp_tokens").update({
+    refresh_token: data.session.refresh_token,
+    access_token: data.session.access_token,
+    access_expires: new Date((data.session.expires_at ?? 0) * 1e3).toISOString()
+  }).eq("token_hash", row["token_hash"]);
+  return data.session.access_token;
+}
 async function mcp(request, env, base) {
   if (request.method === "GET") return json({ error: "method_not_allowed" }, 405);
   if (request.method !== "POST") return json({ error: "method_not_allowed" }, 405);
@@ -945,17 +989,12 @@ async function mcp(request, env, base) {
     await db.from("mcp_tokens").delete().eq("token_hash", row.token_hash);
     return unauthorized(base);
   }
+  const session = await userSession(env, db, row);
+  if (!session) return unauthorized(base);
   const asUser = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false }
+    auth: { persistSession: false, autoRefreshToken: false },
+    global: { headers: { Authorization: `Bearer ${session}` } }
   });
-  const { data: session, error } = await asUser.auth.refreshSession({
-    refresh_token: row.refresh_token
-  });
-  if (error || !session.session) {
-    await db.from("mcp_tokens").delete().eq("token_hash", row.token_hash);
-    return unauthorized(base);
-  }
-  await db.from("mcp_tokens").update({ refresh_token: session.session.refresh_token }).eq("token_hash", row.token_hash);
   const body = await request.json().catch(() => null);
   if (!body) return json({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "Parse error." } });
   const allowWrites = env.CARTOGRAPHER_READ_ONLY !== "1";

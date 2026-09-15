@@ -58,6 +58,11 @@ any token exists — the platform's built-in JWT gate would refuse them.
 supabase secrets set MCP_PUBLIC_URL=https://YOUR-PROJECT.supabase.co/functions/v1/mcp
 ```
 
+`MCP_PUBLIC_URL` is required, not a nicety: every address in the OAuth discovery
+documents is built from it, and it cannot be worked out from the request — mounted
+at `/functions/v1/mcp`, the MCP endpoint *is* the function root, so there is
+nothing to strip. Leave it out and every endpoint answers with a 500 saying so.
+
 `SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are set for
 you by the platform. Add `CARTOGRAPHER_READ_ONLY=1` if you want Claude to look but
 not touch.

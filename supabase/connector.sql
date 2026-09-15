@@ -37,8 +37,11 @@ create table if not exists public.mcp_codes (
   redirect_uri    text not null,
   code_challenge  text not null,
   -- The Supabase session this authorisation stands for. Moved to the token row on
-  -- exchange and deleted with the code.
+  -- exchange and deleted with the code. The access token is carried too so the
+  -- first call after connecting needs no round trip to mint one.
   refresh_token   text not null,
+  access_token    text not null default '',
+  access_expires  timestamptz not null default now(),
   expires_at      timestamptz not null,
   created_at      timestamptz not null default now()
 );
@@ -54,9 +57,22 @@ create table if not exists public.mcp_tokens (
   client_id     text not null references public.mcp_clients (client_id) on delete cascade,
   user_id       uuid not null references auth.users (id) on delete cascade,
   refresh_token text not null,
+  -- The live Supabase access token and when it runs out. Holding it is what keeps
+  -- the connector from refreshing on every single call: Supabase invalidates a
+  -- refresh token as it is used, so two calls arriving together would have raced,
+  -- one would have presented a spent token, and the connector would have locked
+  -- itself out. It refreshes only when this has actually expired.
+  access_token  text not null default '',
+  access_expires timestamptz not null default now(),
   expires_at    timestamptz not null,
   created_at    timestamptz not null default now()
 );
+
+-- Added after the connector first shipped; harmless on a fresh database.
+alter table public.mcp_tokens add column if not exists access_token text not null default '';
+alter table public.mcp_tokens add column if not exists access_expires timestamptz not null default now();
+alter table public.mcp_codes  add column if not exists access_token text not null default '';
+alter table public.mcp_codes  add column if not exists access_expires timestamptz not null default now();
 
 create index if not exists mcp_tokens_user_idx on public.mcp_tokens (user_id);
 create index if not exists mcp_codes_expiry_idx on public.mcp_codes (expires_at);
