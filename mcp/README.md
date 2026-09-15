@@ -30,6 +30,55 @@ matches several things, the tool says so and lists what it found.
 
 Set `CARTOGRAPHER_READ_ONLY=1` to publish only the reading tools.
 
+## claude.ai in the browser
+
+The hosted connector is a Supabase Edge Function in your own project, so there is
+no new account and nothing else to pay for.
+
+**1. Add the tables.** Paste `supabase/connector.sql` into the Supabase SQL editor,
+alongside `schema.sql`. It creates three small tables for the connector's own
+bookkeeping — which Claude installation registered itself, which authorisation
+codes are outstanding, which tokens are live. All three are service-role only:
+row-level security is on with no policy at all, so the anon key cannot touch them.
+
+**2. Build and deploy.**
+
+```sh
+cd mcp && npm install && npm run build
+cd .. && supabase functions deploy mcp --no-verify-jwt
+```
+
+`--no-verify-jwt` is not optional. The function is its own OAuth authorization
+server, and its discovery, registration and token endpoints have to answer before
+any token exists — the platform's built-in JWT gate would refuse them.
+
+**3. Tell it where it lives.**
+
+```sh
+supabase secrets set MCP_PUBLIC_URL=https://YOUR-PROJECT.supabase.co/functions/v1/mcp
+```
+
+`SUPABASE_URL`, `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are set for
+you by the platform. Add `CARTOGRAPHER_READ_ONLY=1` if you want Claude to look but
+not touch.
+
+**4. Add it in claude.ai.** Settings → Connectors → Add custom connector, with that
+same URL. Claude registers itself, sends you to a Cartographer sign-in page, and
+you are connected.
+
+Sign-in there is by email and password. If your account only has Google, set a
+password first: Supabase → Authentication → Users → your user → Send password
+recovery.
+
+### What it does with your session
+
+Signing in at that page gets a normal Supabase session. The connector keeps the
+refresh token so it can act as you on later calls, and every project query then
+runs under your own row-level security — the service role never touches a project
+table, only the three bookkeeping ones. Only a hash of the bearer token is stored,
+so a copy of that table hands nobody a working token. Removing the connector in
+claude.ai stops it being used; deleting the row in `mcp_tokens` revokes it outright.
+
 ## Claude Desktop, or Claude Code
 
 Build it once:

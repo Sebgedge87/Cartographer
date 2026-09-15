@@ -2,8 +2,9 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { CallToolRequestSchema, ListToolsRequestSchema } from '@modelcontextprotocol/sdk/types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { TOOLS, ToolError } from './tools.js';
+import { SERVER_INFO } from './info.js';
 
-export const SERVER_INFO = { name: 'cartographer', version: '0.1.0' } as const;
+export { SERVER_INFO };
 
 /**
  * An MCP server bound to one signed-in Supabase session.

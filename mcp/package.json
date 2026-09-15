@@ -3,13 +3,16 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "Model Context Protocol server for Cartographer — lets Claude read and write a project",
-  "bin": { "cartographer-mcp": "dist/stdio.js" },
+  "description": "Model Context Protocol server for Cartographer \u2014 lets Claude read and write a project",
+  "bin": {
+    "cartographer-mcp": "dist/stdio.js"
+  },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node scripts/bundle.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
-    "start": "node dist/stdio.js"
+    "start": "node dist/stdio.js",
+    "bundle": "node scripts/bundle.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.30.0",
