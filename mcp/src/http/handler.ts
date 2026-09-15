@@ -56,12 +56,38 @@ function publicBase(env: Env): string | null {
   return env.MCP_PUBLIC_URL ? env.MCP_PUBLIC_URL.replace(/\/+$/, '') : null;
 }
 
-/** The path within this function, whatever prefix it happens to be mounted at. */
+/**
+ * The path within this function, whatever prefix it happens to be mounted at.
+ *
+ * Discovery is checked first, and by looking anywhere in the path rather than only
+ * at the end. RFC 8414 builds a metadata URL by inserting the well-known segment
+ * *before* the issuer's path — so a client asking about
+ * https://host/functions/v1/mcp fetches
+ * https://host/.well-known/oauth-authorization-server/functions/v1/mcp, which ends
+ * in "/mcp" and was therefore being answered as the MCP endpoint: a 401 auth
+ * challenge in reply to a discovery probe, which is a handshake that never starts.
+ *
+ * Whether that URL reaches this function at all is the host's business — Supabase
+ * routes only /functions/v1/<name>, so in practice the path-appended form is the
+ * one that arrives, and the 401 challenge names the protected-resource document
+ * outright so discovery never depends on guessing the shape. But answering every
+ * form we are actually handed costs one predicate, and getting it wrong costs a
+ * connector that cannot be added at all.
+ */
 function route(request: Request): string {
   const path = new URL(request.url).pathname.replace(/\/+$/, '');
-  const known = ['/.well-known/oauth-protected-resource', '/.well-known/oauth-authorization-server',
-    '/register', '/authorize', '/token', '/mcp'];
-  for (const candidate of known) {
+
+  if (path.includes('/.well-known/oauth-protected-resource')) {
+    return '/.well-known/oauth-protected-resource';
+  }
+  // openid-configuration is the OIDC spelling. Some clients try it before, or
+  // instead of, the OAuth one; answering it is free.
+  if (path.includes('/.well-known/oauth-authorization-server')
+    || path.includes('/.well-known/openid-configuration')) {
+    return '/.well-known/oauth-authorization-server';
+  }
+
+  for (const candidate of ['/register', '/authorize', '/token', '/mcp'] as const) {
     if (path === candidate || path.endsWith(candidate)) return candidate;
   }
   return path;

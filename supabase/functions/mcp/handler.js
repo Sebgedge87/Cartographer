@@ -733,15 +733,13 @@ function publicBase(env) {
 }
 function route(request) {
   const path = new URL(request.url).pathname.replace(/\/+$/, "");
-  const known = [
-    "/.well-known/oauth-protected-resource",
-    "/.well-known/oauth-authorization-server",
-    "/register",
-    "/authorize",
-    "/token",
-    "/mcp"
-  ];
-  for (const candidate of known) {
+  if (path.includes("/.well-known/oauth-protected-resource")) {
+    return "/.well-known/oauth-protected-resource";
+  }
+  if (path.includes("/.well-known/oauth-authorization-server") || path.includes("/.well-known/openid-configuration")) {
+    return "/.well-known/oauth-authorization-server";
+  }
+  for (const candidate of ["/register", "/authorize", "/token", "/mcp"]) {
     if (path === candidate || path.endsWith(candidate)) return candidate;
   }
   return path;

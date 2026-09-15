@@ -3,9 +3,13 @@ import { useSync } from '../state/syncStore';
 import { signIn, signInWithGoogle, signUp } from '../state/sync/auth';
 
 /**
- * Shown when sync is configured but nobody is signed in. Working offline stays
- * available — this machine's projects are already local, and refusing to open them
- * because a server is unreachable would be the wrong trade.
+ * Shown when sync is configured but nobody is signed in. There is no way past it:
+ * the app is behind the login.
+ *
+ * The one exception is an unreachable server. This machine's projects are already
+ * local, and refusing to open them because someone else's service is down would be
+ * the wrong trade — so that offer appears only once a sign-in has actually failed
+ * to connect, and lasts for the session rather than being remembered.
  */
 export function SignIn({ onSkip }: { onSkip: () => void }) {
   const [mode, setMode] = useState<'in' | 'up'>('in');
@@ -13,6 +17,8 @@ export function SignIn({ onSkip }: { onSkip: () => void }) {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  /** Set when an attempt could not reach the server, as opposed to being refused. */
+  const [unreachable, setUnreachable] = useState(false);
   const error = useSync((s) => s.error);
 
   const submit = async (e: React.FormEvent) => {
@@ -21,6 +27,9 @@ export function SignIn({ onSkip }: { onSkip: () => void }) {
     setMessage(null);
     const result = mode === 'in' ? await signIn(email, password) : await signUp(email, password);
     setMessage(result);
+    // The wording comes from auth.ts, which is the one place that decides what a
+    // connection failure looks like.
+    if (result?.startsWith('Could not reach the sync server')) setUnreachable(true);
     setBusy(false);
   };
 
@@ -30,8 +39,8 @@ export function SignIn({ onSkip }: { onSkip: () => void }) {
         <div className="home__kicker">CARTOGRAPHER</div>
         <h1 className="signin__title">{mode === 'in' ? 'Sign in' : 'Create an account'}</h1>
         <p className="signin__desc">
-          Signing in keeps your projects on every machine you use. Without it,
-          Cartographer still works — projects just stay in this browser.
+          Your projects live in your account, and follow you to every machine you
+          sign in on.
         </p>
 
         <button
@@ -46,6 +55,7 @@ export function SignIn({ onSkip }: { onSkip: () => void }) {
             const failure = await signInWithGoogle();
             if (failure) {
               setMessage(failure);
+              if (failure.startsWith('Could not reach the sync server')) setUnreachable(true);
               setBusy(false);
             }
           }}
@@ -97,7 +107,11 @@ export function SignIn({ onSkip }: { onSkip: () => void }) {
           <button className="linkish" onClick={() => { setMode(mode === 'in' ? 'up' : 'in'); setMessage(null); }}>
             {mode === 'in' ? 'Create an account' : 'I already have an account'}
           </button>
-          <button className="linkish" onClick={onSkip}>Work offline on this device</button>
+          {unreachable && (
+            <button className="linkish" onClick={onSkip}>
+              Work offline until the server is back
+            </button>
+          )}
         </div>
       </div>
     </div>

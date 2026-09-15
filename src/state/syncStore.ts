@@ -10,17 +10,23 @@ export type SyncStatus =
   | 'error';
 
 /**
- * "Work offline on this device" is a decision about this browser, so it is kept in
- * this browser. In memory it lasted until the next reload, which made a choice the
- * button describes as lasting look like it had been ignored.
+ * Working offline is no longer a remembered decision.
+ *
+ * It used to be kept in this browser, which made it a permanent bypass: one press
+ * and the sign-in screen never appeared again. With the app behind a login that is
+ * the wrong shape — so it now lasts for the session only, and is offered solely
+ * when the server cannot be reached, because refusing someone their own local work
+ * during an outage would be worse than the outage.
+ *
+ * The old key is cleared on load so a choice made before this still has to sign in.
  */
 const OFFLINE_KEY = 'cartographer.offline';
 
-function storedOffline(): boolean {
+function forgetStoredOffline(): void {
   try {
-    return localStorage.getItem(OFFLINE_KEY) === 'yes';
+    localStorage.removeItem(OFFLINE_KEY);
   } catch {
-    return false;
+    /* private mode; there was nothing remembered to forget */
   }
 }
 
@@ -35,12 +41,17 @@ interface SyncState {
    * safe in local storage; this is how many are waiting for the next save.
    */
   pending: number;
-  /** The user chose to work on this device without signing in. */
+  /**
+   * Working on this device without signing in, for this session only. Offered when
+   * the server cannot be reached, never as a standing way past the login.
+   */
   offlineChosen: boolean;
   set: (patch: Partial<SyncState>) => void;
   /** Take or give back the offline choice, remembering it for next time. */
   chooseOffline: (offline: boolean) => void;
 }
+
+forgetStoredOffline();
 
 export const useSync = create<SyncState>()((set) => ({
   status: 'off',
@@ -48,16 +59,11 @@ export const useSync = create<SyncState>()((set) => ({
   error: null,
   lastSyncedAt: null,
   pending: 0,
-  offlineChosen: storedOffline(),
+  offlineChosen: false,
   set: (patch) => set(patch),
 
   chooseOffline: (offline) => {
-    try {
-      if (offline) localStorage.setItem(OFFLINE_KEY, 'yes');
-      else localStorage.removeItem(OFFLINE_KEY);
-    } catch {
-      /* private mode; the choice just will not survive a reload */
-    }
+    forgetStoredOffline();
     set({ offlineChosen: offline });
   },
 }));
