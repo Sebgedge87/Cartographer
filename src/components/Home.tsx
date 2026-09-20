@@ -2,6 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useDoc } from '../state/docStore';
 import { useUI } from '../state/uiStore';
 import { importProjectFile, openProject, promptNew } from '../state/actions';
+import { downloadTemplate } from '../lib/template';
 
 /** A project is named before it exists, like everything else in the app. */
 const newProject = () => promptNew({ kind: 'project', initial: 'New project' });
@@ -56,6 +57,12 @@ export function Home() {
           </div>
           <div className="spacer" />
           <div className="home__actions">
+            {/* A starter file, beside the button that wants one: IMPORT JSON on its
+                own assumes you already have something to import, which is no help
+                the first time you meet it. */}
+            <button className="btn" onClick={downloadTemplate} title="A filled-in example to edit and import">
+              GET A TEMPLATE
+            </button>
             <button className="btn" onClick={() => fileInput.current?.click()}>IMPORT JSON</button>
             <button className="btn btn--fill" onClick={newProject}>+ NEW PROJECT</button>
           </div>

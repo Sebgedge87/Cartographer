@@ -124,15 +124,17 @@ test('the shipped templates both parse', () => {
   assert.equal(minimal.pages.length, 3);
   assert.ok(minimal.pages.every((p) => p.boardId && p.projectId));
 
+  // Structure, not contents: this file is generated from src/lib/template.ts, and
+  // pinning its prose here would mean editing a test every time the example is
+  // reworded. What has to hold is that it is a whole, importable project.
   const full = load('project.cartographer.json');
   assert.ok(full);
-  assert.equal(full.project.name, 'Example Setting');
-  assert.equal(full.areas.length, 2);
-  assert.equal(full.boards.length, 2);
-  assert.equal(full.pages.length, 5);
-  assert.equal(full.links.length, 1);
-  assert.ok(full.calendar);
-  assert.deepEqual(full.dictionary, ['Ashcoat', 'Mirrorwalker']);
+  assert.ok(full.project.name);
+  assert.ok(full.areas.length > 0);
+  assert.ok(full.boards.length > 0);
+  assert.ok(full.pages.length > 0);
+  assert.ok(full.links.length > 0);
+  assert.ok(full.calendar, 'the importer fills in a calendar even when the file has none');
   // Every page lands on a board the file declares.
   const boards = new Set(full.boards.map((b) => b.id));
   assert.ok(full.pages.every((p) => boards.has(p.boardId)));

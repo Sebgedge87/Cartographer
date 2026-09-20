@@ -1,116 +1,219 @@
 {
   "format": "cartographer/v1",
-
+  "_readme": "Only \"pages\" is required — everything else has a sensible default. Ids are yours to choose and only have to match each other within this file. A page may name its board by id; leave it out and one is invented. Field values are keyed by the field's \"key\". [[Double brackets]] link to another page by title. Delete this line before importing if you like; it is ignored.",
   "project": {
-    "id": "p-example",
-    "name": "Example Setting",
-    "system": "TTRPG · system-agnostic",
-    "accent": "#c9a26b"
+    "name": "The Ashen Reach",
+    "system": "Homebrew · d6 pool",
+    "accent": "#c98a3a"
   },
-
   "areas": [
-    { "id": "a-lore", "name": "Lore", "defaultType": "note" },
-    { "id": "a-cast", "name": "Cast", "defaultType": "npc" }
+    {
+      "id": "locations",
+      "name": "Locations",
+      "defaultType": "location"
+    },
+    {
+      "id": "people",
+      "name": "People",
+      "defaultType": "npc"
+    }
   ],
-
   "boards": [
-    { "id": "b-overview", "areaId": "a-lore", "name": "Overview" },
-    { "id": "b-people", "areaId": "a-cast", "name": "People" }
+    {
+      "id": "the-reach",
+      "areaId": "locations",
+      "name": "The Reach"
+    },
+    {
+      "id": "the-guild",
+      "areaId": "people",
+      "name": "The Merchant Guild"
+    }
   ],
-
   "types": {
-    "note": { "label": "Note", "code": "NTE", "color": "#8a919e", "fields": [] },
+    "location": {
+      "label": "Location",
+      "code": "LOC",
+      "color": "#4a8f7b",
+      "fields": [
+        {
+          "key": "ruler",
+          "label": "Ruler",
+          "kind": "ref"
+        },
+        {
+          "key": "population",
+          "label": "Population",
+          "kind": "number"
+        },
+        {
+          "key": "threat",
+          "label": "Threat",
+          "kind": "select",
+          "options": [
+            "Calm",
+            "Tense",
+            "Hostile"
+          ]
+        },
+        {
+          "key": "founded",
+          "label": "Founded",
+          "kind": "date"
+        },
+        {
+          "key": "notes",
+          "label": "Notes",
+          "kind": "long",
+          "wide": true
+        }
+      ]
+    },
     "npc": {
       "label": "NPC",
       "code": "NPC",
-      "color": "#d98cc0",
+      "color": "#b4633f",
       "fields": [
-        { "key": "role", "label": "Role", "kind": "text" },
-        { "key": "faction", "label": "Faction", "kind": "ref" },
-        { "key": "attitude", "label": "Attitude", "kind": "text" },
-        { "key": "notes", "label": "Notes", "kind": "long" }
+        {
+          "key": "role",
+          "label": "Role",
+          "kind": "text"
+        },
+        {
+          "key": "allegiance",
+          "label": "Allegiance",
+          "kind": "select",
+          "options": [
+            "Guild",
+            "Crown",
+            "Neither"
+          ]
+        },
+        {
+          "key": "home",
+          "label": "Home",
+          "kind": "ref"
+        },
+        {
+          "key": "notes",
+          "label": "Notes",
+          "kind": "long",
+          "wide": true
+        }
       ]
-    },
-    "event": {
-      "label": "Event",
-      "code": "EVT",
-      "color": "#c98fd0",
-      "fields": [
-        { "key": "when", "label": "When", "kind": "date" },
-        { "key": "outcome", "label": "Outcome", "kind": "long" }
-      ]
-    },
-    "blank": { "label": "Blank", "code": "BLK", "color": "#8a919e", "fields": [] }
+    }
   },
-  "typeOrder": ["note", "npc", "event", "blank"],
-
+  "typeOrder": [
+    "location",
+    "npc"
+  ],
   "calendar": {
-    "name": "Common Reckoning",
+    "name": "Reach Reckoning",
     "months": [
-      { "name": "Frostwane", "days": 31 },
-      { "name": "Thawing", "days": 28 },
-      { "name": "Seedfall", "days": 31 }
+      {
+        "name": "Emberfall",
+        "days": 30
+      },
+      {
+        "name": "Hollowtide",
+        "days": 30
+      },
+      {
+        "name": "Kilnrise",
+        "days": 31
+      },
+      {
+        "name": "Saltwane",
+        "days": 30
+      }
     ],
-    "weekdays": ["Sunsday", "Moonsday", "Forgeday", "Wardsday", "Thornsday", "Farsday", "Restday"],
+    "weekdays": [
+      "Kiln",
+      "Ash",
+      "Salt",
+      "Reed",
+      "Rest"
+    ],
     "hoursPerDay": 24,
-    "era": "CR",
-    "leap": { "every": 4, "skipEvery": 100, "keepEvery": 400, "monthIndex": 1 },
+    "era": "AR",
+    "leap": {
+      "every": 4,
+      "skipEvery": 0,
+      "keepEvery": 0,
+      "monthIndex": 1
+    },
     "moons": [
-      { "id": "moon1", "name": "The Pale", "cycle": 29.5, "newMoonOn": 1, "color": "#d8dde6" }
+      {
+        "id": "vess",
+        "name": "Vess",
+        "cycle": 29.5,
+        "newMoonOn": 0,
+        "color": "#cdd6e4"
+      }
     ],
-    "today": { "year": 1147, "month": 2, "day": 12 }
+    "today": {
+      "year": 412,
+      "month": 2,
+      "day": 14
+    }
   },
-
-  "dictionary": ["Ashcoat", "Mirrorwalker"],
-
+  "dictionary": [
+    "kilnmaster",
+    "silts"
+  ],
   "pages": [
     {
-      "id": "n-veil",
-      "boardId": "b-overview",
-      "type": "note",
-      "title": "The Veil",
-      "body": "The membrane between the seen and the reflected.\n\n## Signs\n\n- Mirrors fog from the inside\n- A [[Mirrorwalker]] casts two shadows\n\nRoll 2d6+3 when someone looks too long."
-    },
-    {
-      "id": "n-mirrorwalker",
-      "boardId": "b-people",
-      "type": "npc",
-      "title": "Mirrorwalker",
+      "id": "emberhold",
+      "boardId": "the-reach",
+      "type": "location",
+      "title": "Emberhold",
+      "tags": [
+        "Frontier",
+        "Merchant Guild"
+      ],
       "fields": {
-        "role": "Guide, of a sort",
-        "faction": "The Nine Sightless",
-        "attitude": "Curious, unhurried",
-        "notes": "Answers three questions, then asks one."
+        "ruler": "Mara Vell",
+        "population": "2100",
+        "threat": "Tense",
+        "founded": "318-3-2",
+        "notes": "Ash falls for a week after every firing of the kilns."
       },
-      "body": "Met at the edge of [[The Hollow Arcade]]."
+      "body": "A stone town above the ash flats, built around kilns that have not gone cold in ninety years.\n\n## The Kilns\n\nGuild-owned, Crown-taxed, and the reason anyone lives here.\n\nIts ruler is [[Mara Vell]], who answers to nobody in [[Saltmarsh]]."
     },
     {
-      "id": "n-arcade",
-      "boardId": "b-overview",
-      "type": "note",
-      "title": "The Hollow Arcade",
-      "x": 620,
-      "y": 120,
-      "body": "A shuttered mall the Veil bleeds into. Stat line: @Mirrorwalker.role"
+      "id": "saltmarsh",
+      "boardId": "the-reach",
+      "type": "location",
+      "title": "Saltmarsh",
+      "tags": [
+        "Coastal"
+      ],
+      "fields": {
+        "population": "400",
+        "threat": "Calm"
+      },
+      "body": "Reeds, fog, and a harbour that silts up faster than it can be dredged."
     },
     {
-      "id": "n-sightless",
-      "boardId": "b-people",
-      "type": "note",
-      "title": "The Nine Sightless",
-      "body": "A faction. Named here so the Mirrorwalker's **Faction** field has a page to point at — a `ref` value is a page title, and one that matches nothing shows as empty."
-    },
-    {
-      "id": "n-breach",
-      "boardId": "b-overview",
-      "type": "event",
-      "title": "The First Breach",
-      "fields": { "when": "1102-2-9", "outcome": "Nine went in. Two came back." },
-      "body": "Appears on the timeline, and on the calendar if the date is set to repeat."
+      "id": "mara-vell",
+      "boardId": "the-guild",
+      "type": "npc",
+      "title": "Mara Vell",
+      "tags": [
+        "Merchant Guild"
+      ],
+      "fields": {
+        "role": "Kilnmaster",
+        "allegiance": "Guild",
+        "home": "emberhold"
+      },
+      "body": "Runs the kilns, and most of what the kilns pay for."
     }
   ],
-
   "links": [
-    { "id": "e-1", "from": "n-mirrorwalker", "to": "n-arcade", "kind": "manual" }
+    {
+      "from": "emberhold",
+      "to": "saltmarsh"
+    }
   ]
 }
